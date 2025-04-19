@@ -15,9 +15,16 @@ import { signOut as firebaseSignOut } from "firebase/auth";
 const Profile = ({ navigation }) => {
 
   const signOut = async () => {
+    console.log("Sign out button pressed");
     try {
-      await firebaseSignOut(auth);
+      const result = await firebaseSignOut(auth);
+      console.log("Sign out successful:", result);
+      alert("Sign out successful!");
+      navigation.navigate("Login");
     } catch (error) {
+      console.error("Sign out error:", error);
+      console.error("Firebase error code:", error.code);
+      console.error("Firebase error message:", error.message);
       alert('Sign out failed: ' + error.message);
     }
   };

@@ -9,7 +9,13 @@ import {
   ScrollView,
 } from "react-native";
 
+import { Dimensions } from "react-native";
+
+const { width, height } = Dimensions.get("window");
+
 const Library = ({navigation}) => {
+
+  
   return (
     <SafeAreaView style={{ width: "100%", height: "100%" }}>
       <View> 
@@ -213,18 +219,16 @@ const styles = StyleSheet.create({
     justifyContent: "space-evenly",
   },
   books: {
-    width: 110,
-    height: 150,
+    width: width * 0.3,
+    height: height *0.2,
     borderWidth: 1,
     resizeMode: 'cover',
   },
   bookContainer: {
     flexDirection: "row",
-    paddingRight: 10,
-    paddingLeft: 10,
     paddingTop: 5,
-    justifyContent: 'flex-start',
-    gap: 20,
+    justifyContent: "space-evenly",
+    flex: 1,
     marginTop: 12,
   },
   Button: { 
@@ -232,15 +236,15 @@ const styles = StyleSheet.create({
     marginLeft: 3,
     marginTop: 5,
     borderRadius: 5,
-    width: 80,
-    height: 25,
+    width: width * 0.2,
+    height: height * 0.03,
     alignSelf: 'left',
   }, 
   text: { 
     alignSelf: "center",
     marginRight: 0,
     marginTop: 5, 
-    fontSize: 12, 
+    fontSize: width * 0.03, 
     fontFamily: 'sans-serif-medium', 
     color: 'white',
   }, 

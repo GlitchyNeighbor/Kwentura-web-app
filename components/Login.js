@@ -9,7 +9,7 @@ import {
 } from "react-native";
 
 import { auth } from "../FirebaseConfig";
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { useState } from "react";
 
 const Login = ({ navigation }) => {
@@ -27,6 +27,17 @@ const Login = ({ navigation }) => {
       alert('Sign in failed: ' + error.message)
     }
   }
+
+  // const signUp = async () => {
+  //   try{ 
+  //     const user = await createUserWithEmailAndPassword(auth, email, password)
+  //     if (user) navigation.navigate("Home");
+  //   }
+  //   catch (error) { 
+  //     console.log(error) 
+  //     alert('Sign in failed: ' + error.message)
+  //   }
+  // }
 
   return (
 
@@ -63,12 +74,7 @@ const Login = ({ navigation }) => {
         <Text style={{marginBottom: 20, color: 'grey', fontSize: 16, alignSelf: 'center'}}>with Filipino Stories!</Text>
 
         <TextInput style={styles.input} placeholder="Email" onChangeText={setEmail}/>
-        <TextInput style={styles.input} placeholder="Password" onChangeText={setPassword}/>
-
-        {/* <TouchableOpacity
-          style={styles.button}
-          onPress={() => navigation.navigate("Home")}
-        > */}
+        <TextInput style={styles.input} placeholder="Password" onChangeText={setPassword} secureTextEntry={true}/>
 
         <TouchableOpacity
           style={styles.button}
@@ -83,6 +89,21 @@ const Login = ({ navigation }) => {
             }}
           >
             Log in
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={signIn}
+        >
+          <Text
+            style={{
+              fontWeight: "bold",
+              fontSize: 16,
+              alignSelf: "center",
+              color: 'pink',
+            }}
+          >
+            Forgot your password?
           </Text>
         </TouchableOpacity>
         

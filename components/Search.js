@@ -230,20 +230,6 @@ const Home = ({ navigation }) => {
           </View>
         </View>
 
-        <View style={{ paddingLeft: 10, paddingRight: 10, marginTop: 15 }}>
-          <View style={{ flexDirection: "row" }}>
-            <Text
-              style={{ fontFamily: "sans-serif-medium", fontWeight: "bold" }}
-            >
-              New Release
-            </Text>
-
-            <TouchableOpacity style={{ marginLeft: "auto" }}>
-              <Text style={{ fontFamily: "sans-serif-medium" }}>View All</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
       </ScrollView>
 
       <View

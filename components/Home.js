@@ -7,7 +7,10 @@ import {
   TouchableOpacity,
   Image,
   ScrollView,
+  Dimensions
 } from "react-native";
+
+const { width, height } = Dimensions.get("window");
 
 const Home = ({ navigation }) => {
 
@@ -363,8 +366,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-evenly",
   },
   books: {
-    width: 110,
-    height: 150,
+    width: width * 0.3,
+    height: height * 0.2,
     borderWidth: 1,
     resizeMode: "cover",
   },
@@ -381,8 +384,8 @@ const styles = StyleSheet.create({
     marginLeft: 3,
     marginTop: 5,
     borderRadius: 5,
-    width: 80,
-    height: 25,
+    width: width * 0.2,
+    height: height * 0.03,
     alignSelf: "left",
   },
   text: {
