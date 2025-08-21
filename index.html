@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My App</title>
+</head>
+<body>
+    <!-- Your app's HTML content -->
+
+    <script>
+    // --- Configuration ---
+    const DAILY_USAGE_LIMIT_MS = 1 * 60 * 1000; // 1 minute for testing
+    //const DAILY_USAGE_LIMIT_MS = 90 * 60 * 1000; // 90 minutes in milliseconds
+    const SLEEP_UNTIL_NEXT_DAY_KEY = 'appSleepUntilNextDayTimestamp';
+    const USAGE_START_TIME_KEY = 'appDailyUsageStartTime';
+
+    // --- State Variables ---
+    let usageTimer = null; // Timer for the daily usage limit
+    let isAppSleeping = false; // Flag to reflect the app's current sleep/active state
+
+    // --- Countdown Timer Display ---
+    let countdownInterval = null;
+    let countdownDisplayElement = null;
+    let countdownContainerElement = null;
+
+    /**
+     * Formats milliseconds into HH:MM:SS or MM:SS string.
+     * @param {number} ms - Milliseconds.
+     * @returns {string} Formatted time string.
+     */
+    function formatTime(ms) {
+        if (ms < 0) ms = 0;
+        let totalSeconds = Math.floor(ms / 1000);
+        let hours = Math.floor(totalSeconds / 3600);
+        totalSeconds %= 3600;
+        let minutes = Math.floor(totalSeconds / 60);
+        let seconds = totalSeconds % 60;
+
+        minutes = String(minutes).padStart(2, '0');
+        seconds = String(seconds).padStart(2, '0');
+
+        if (hours > 0) {
+            return `${String(hours).padStart(2, '0')}:${minutes}:${seconds}`;
+        }
+        return `${minutes}:${seconds}`;
+    }
+
+    /**
+     * Updates the countdown timer display in the UI.
+     * @param {number} remainingMs - Remaining time in milliseconds.
+     */
+    function updateCountdownDisplay(remainingMs) {
+        if (countdownDisplayElement) {
+            if (isAppSleeping) { // If the app is globally in sleep mode
+                countdownDisplayElement.textContent = "Resting";
+            } else if (remainingMs <= 0) { // Timer has run out
+                countdownDisplayElement.textContent = formatTime(0);
+            } else { // Timer is active and has time
+                countdownDisplayElement.textContent = formatTime(remainingMs);
+            }
+        }
+    }
+
+    /**
+     * Starts the visual countdown timer.
+     * @param {number} usageEndTimeTimestamp - The timestamp when the usage period ends.
+     */
+    function startVisualCountdown(usageEndTimeTimestamp) {
+        clearInterval(countdownInterval);
+        if (isAppSleeping) { updateCountdownDisplay(0); return; }
+
+        const update = () => {
+            const remainingMs = usageEndTimeTimestamp - Date.now();
+            updateCountdownDisplay(remainingMs);
+            if (remainingMs <= 0) clearInterval(countdownInterval);
+        };
+        update(); // Initial update
+        countdownInterval = setInterval(update, 1000);
+    }
+
+    /**
+     * Stops the visual countdown timer.
+     */
+    function stopVisualCountdown() {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+    }
+
+    // --- Core UI Functions ---
+    /**
+     * Sets the application to its active, usable state.
+     */
+    function setAppActiveState() {
+        if (isAppSleeping) console.log('App is now active.');
+        isAppSleeping = false;
+        document.body.classList.remove('app-is-sleeping');
+
+        const sleepMessageElement = document.getElementById('app-rest-message-overlay');
+        if (sleepMessageElement) sleepMessageElement.style.display = 'none';
+        
+        if (countdownContainerElement) countdownContainerElement.style.display = 'block'; // Show countdown
+    }
+
+    /**
+     * Sets the application to its "rest" or "sleep" state.
+     * @param {string} message - The message to display to the user.
+     */
+    function setAppRestState(message) {
+        if (!isAppSleeping) console.log(`Activating rest mode: ${message}`);
+        isAppSleeping = true;
+        document.body.classList.add('app-is-sleeping');
+
+        let restMessageElement = document.getElementById('app-rest-message-overlay');
+        if (!restMessageElement) {
+            restMessageElement = document.createElement('div');
+            restMessageElement.id = 'app-rest-message-overlay';
+            Object.assign(restMessageElement.style, {
+                position: 'fixed', top: '0', left: '0', width: '100%', height: '100%',
+                backgroundColor: 'rgba(0, 0, 0, 0.9)', color: 'white',
+                display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center',
+                fontSize: 'clamp(1.2em, 4vw, 2em)', textAlign: 'center', zIndex: '10000',
+                padding: '20px', boxSizing: 'border-box', lineHeight: '1.5'
+            });
+            document.body.appendChild(restMessageElement);
+        }
+        restMessageElement.textContent = message;
+        restMessageElement.style.display = 'flex';
+
+        stopVisualCountdown();
+        updateCountdownDisplay(0); // Will show "Resting" as isAppSleeping is true
+        // if (countdownContainerElement) countdownContainerElement.style.display = 'none'; // Optionally hide
+    }
+
+    // --- Logic Functions ---
+    /**
+     * Activates the rest mode when the daily usage limit is reached.
+     */
+    function activateRestModeDueToUsageLimit() {
+        clearTimeout(usageTimer);
+        usageTimer = null;
+
+        stopVisualCountdown();
+        updateCountdownDisplay(0); // Show 00:00 briefly before "Resting"
+
+        const message = "You've used the app for 1 hour and 30 minutes. Time for a rest! The app will be available tomorrow.";
+        setAppRestState(message);
+
+        localStorage.setItem(SLEEP_UNTIL_NEXT_DAY_KEY, new Date().toISOString());
+    }
+
+    /**
+     * Starts or restarts the usage timer for the allowed duration.
+     * @param {number} durationMs - The duration in milliseconds for the timer.
+     */
+    function startUsageTimer(durationMs) {
+        clearTimeout(usageTimer);
+        stopVisualCountdown(); // Clear any previous countdown
+
+        if (isAppSleeping) {
+            console.log('App is in rest state, usage timer not started.');
+            updateCountdownDisplay(0); // Ensure countdown shows "Resting"
+            return;
+        }
+
+        if (durationMs <= 0) {
+            console.log('No usage time remaining for today. Activating rest mode.');
+            activateRestModeDueToUsageLimit();
+        } else {
+            console.log(`Usage timer started. App available for ${Math.round(durationMs / 60000)} minutes.`);
+            const usageEndTime = Date.now() + durationMs;
+            startVisualCountdown(usageEndTime);
+            usageTimer = setTimeout(activateRestModeDueToUsageLimit, durationMs);
+            setAppActiveState();
+        }
+    }
+
+    /**
+     * Checks the app's status on load (or reload).
+     */
+    function checkAppStatusOnLoad() {
+        const now = new Date();
+        const todayDateStr = now.toDateString();
+
+        const sleepTimestampStr = localStorage.getItem(SLEEP_UNTIL_NEXT_DAY_KEY);
+
+        if (sleepTimestampStr) {
+            const sleepUntilDate = new Date(sleepTimestampStr);
+            if (sleepUntilDate.toDateString() === todayDateStr || sleepUntilDate > now) {
+                const message = "The app is currently resting. Please come back tomorrow.";
+                setAppRestState(message); // This will also update countdown to "Resting"
+                console.log('App is in rest mode from today or a previous session.');
+                return;
+            } else {
+                console.log('Rest period ended. Waking up for a new day.');
+                localStorage.removeItem(SLEEP_UNTIL_NEXT_DAY_KEY);
+                localStorage.removeItem(USAGE_START_TIME_KEY);
+            }
+        }
+
+        let dailyUsageStartTime;
+        const usageStartTimeStr = localStorage.getItem(USAGE_START_TIME_KEY);
+
+        if (usageStartTimeStr) {
+            dailyUsageStartTime = new Date(usageStartTimeStr);
+            if (dailyUsageStartTime.toDateString() !== todayDateStr) {
+                console.log('Usage start time from a previous day. Resetting for today.');
+                localStorage.setItem(USAGE_START_TIME_KEY, now.toISOString());
+                dailyUsageStartTime = now;
+            }
+        } else {
+            console.log('No usage start time found for today. Starting fresh.');
+            localStorage.setItem(USAGE_START_TIME_KEY, now.toISOString());
+            dailyUsageStartTime = now;
+        }
+
+        const elapsedTodayMs = now.getTime() - dailyUsageStartTime.getTime();
+
+        if (elapsedTodayMs >= DAILY_USAGE_LIMIT_MS) {
+            console.log('Daily usage limit already exhausted for today upon load.');
+            activateRestModeDueToUsageLimit();
+        } else {
+            const remainingTimeMs = DAILY_USAGE_LIMIT_MS - elapsedTodayMs;
+            startUsageTimer(remainingTimeMs);
+        }
+    }
+
+    // --- Initialization ---
+    document.addEventListener('DOMContentLoaded', () => {
+        countdownDisplayElement = document.getElementById('usage-countdown-timer');
+        countdownContainerElement = document.getElementById('usage-timer-display-container');
+        checkAppStatusOnLoad();
+    });
+
+    // --- Recommended CSS (place in your CSS file) ---
+    /*
+    body.app-is-sleeping > *:not(#app-rest-message-overlay):not(#usage-timer-display-container) { // Keep timer visible if desired
+        display: none !important;
+    }
+    #app-rest-message-overlay { z-index: 10000; }
+    #usage-timer-display-container { z-index: 10001; } // Ensure timer can be above overlay if not part of it
+    */
+    </script>
+</body>
+</html>

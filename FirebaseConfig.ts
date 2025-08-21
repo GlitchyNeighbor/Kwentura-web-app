@@ -7,14 +7,16 @@ import { getFirestore } from "firebase/firestore"
 import { getStorage } from "firebase/storage"
 
 
+import { API_KEY, AUTH_DOMAIN, PROJECT_ID, STORAGE_BUCKET, MESSAGING_SENDER_ID, APP_ID, MEASUREMENT_ID } from '@env';
+
 const firebaseConfig = {
-  apiKey: "AIzaSyBySBosjKeJ4l-iQ5Ll1OOo40RaPCeBlwo",
-  authDomain: "kwentura-39597.firebaseapp.com",
-  projectId: "kwentura-39597",
-  storageBucket: "kwentura-39597.firebasestorage.app",
-  messagingSenderId: "516248841412",
-  appId: "1:516248841412:web:b72100855b78de0e27ed91",
-  measurementId: "G-SNX7VNLBD5"
+  apiKey: API_KEY,
+  authDomain: AUTH_DOMAIN,
+  projectId: PROJECT_ID,
+  storageBucket: STORAGE_BUCKET,
+  messagingSenderId: MESSAGING_SENDER_ID,
+  appId: APP_ID,
+  measurementId: MEASUREMENT_ID
 };
 
 // Initialize Firebase

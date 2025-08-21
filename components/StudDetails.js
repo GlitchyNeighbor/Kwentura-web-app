@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   Image,
   Alert,
+  ImageBackground
 } from "react-native";
 import React, { useState, useEffect } from "react";
 import { Picker } from "@react-native-picker/picker";
@@ -106,7 +107,11 @@ const StudDetails = ({ navigation, route }) => {
         },
         { merge: true }
       );
-      // Optionally navigate or show success here
+      Alert.alert(
+        "Registration Successful",
+        "Your account has been created and is now pending approval from your section adviser. Please wait for confirmation before logging in.",
+        [{ text: "OK", onPress: () => firebaseSignOut(auth) }]
+      );
     } catch (error) {
       console.error("Failed to save student details:", error);
       Alert.alert(
@@ -127,7 +132,7 @@ const StudDetails = ({ navigation, route }) => {
       "Are you sure you want to go back? All information you entered will be deleted.",
       [
         { text: "Stay", style: "cancel" },
-        {
+        {  
           text: "Cancel",
           style: "destructive",
           onPress: async () => {
@@ -136,15 +141,13 @@ const StudDetails = ({ navigation, route }) => {
               // Delete the student document from Firestore
               await deleteDoc(doc(db, "students", userId));
               // Delete the user from Firebase Authentication
-              if (auth.currentUser) {
+              const user = auth.currentUser;
+              if (user) {
                 await deleteUser(auth.currentUser);
+                await firebaseSignOut(auth);
               }
-              // Sign out the user (in case deleteUser fails)
-              await firebaseSignOut(auth);
+              navigation.navigate("Register");
 
-              // Since we're signed out, the auth state change will automatically
-              // redirect to the Auth stack. No need for manual navigation reset.
-              // The useEffect in App.js will handle the navigation automatically.
             } catch (error) {
               console.error("Error during cancellation:", error);
               Alert.alert(
@@ -161,6 +164,34 @@ const StudDetails = ({ navigation, route }) => {
 
   // --- Main Component Return (JSX) ---
   return (
+    <ImageBackground
+      source={require('../images/Signup.png')}
+      style={styles.background}
+      resizeMode="cover"
+    >
+    
+    <View style={styles.bushContainer}>
+      <Image source={require('../images/Bush.png')} style={styles.bush1} />
+      <Image source={require('../images/Bush.png')} style={styles.bush2} />
+      <Image source={require('../images/Bush.png')} style={styles.bush3} />
+    </View>
+
+    <View style={styles.flowerContainer}>
+      <Image source={require('../images/Flower1.png')} style={styles.flower1} />
+      <Image source={require('../images/Flower2.png')} style={styles.flower2} />
+      <Image source={require('../images/Flower3.png')} style={styles.flower3} />
+      <Image source={require('../images/Flower4.png')} style={styles.flower4} />
+      <Image source={require('../images/Flower5.png')} style={styles.flower5} />
+    </View>   
+
+    <Image source={require('../images/Star.png')} style={styles.star1} />
+    <Image source={require('../images/Star.png')} style={styles.star2} />
+    <Image source={require('../images/Star.png')} style={styles.star3} />
+    <Image source={require('../images/Star.png')} style={styles.star4} />
+
+    <Image source={require('../images/Rainbow.png')} style={styles.Rainbow} />
+
+
     <SafeAreaView style={styles.container}>
       <Text style={styles.heading}>Student Details</Text>
       <Text style={styles.subheading}>
@@ -196,26 +227,37 @@ const StudDetails = ({ navigation, route }) => {
           selectedValue={gradeLevel}
           onValueChange={(itemValue) => setGradeLevel(itemValue)}
           style={styles.picker}
-          prompt="Select Grade Level"
+          prompt="Grade Level"
         >
           <Picker.Item
-            label="Select Grade Level..."
+            label="Select Grade Level"
             value=""
             enabled={false}
-            style={{ color: "grey" }}
+            style={{ color: "#5a5a5aff", fontSize: 14,  }}
           />
           <Picker.Item label="Kinder 1" value="Kinder 1" />
           <Picker.Item label="Kinder 2" value="Kinder 2" />
           <Picker.Item label="Grade 1" value="Grade 1" />
         </Picker>
       </View>
-      <TextInput
-        style={styles.input}
-        placeholder="Student section"
-        value={section}
-        onChangeText={setSection}
-        autoCapitalize="words"
-      />
+      <View style={styles.pickerContainer}>
+        <Picker
+          selectedValue={section}
+          onValueChange={(itemValue) => setSection(itemValue)}
+          style={styles.picker}
+          prompt="Student Section"
+        >
+          <Picker.Item
+            label="Select Section"
+            value=""
+            enabled={false}
+            style={{ color: "#5a5a5aff", fontSize: 14 }}
+          />
+          <Picker.Item label="Kinder 1" value="Kinder 1" />
+          <Picker.Item label="Kinder 2" value="Kinder 2" />
+          <Picker.Item label="Grade 1" value="Grade 1" />
+        </Picker>
+      </View>
 
       {/* Button Container */}
       <View style={styles.buttonContainer}>
@@ -246,88 +288,112 @@ const StudDetails = ({ navigation, route }) => {
         </TouchableOpacity>
       </View>
     </SafeAreaView>
+    </ImageBackground>
   );
 };
 
 // --- Styles ---
 const styles = StyleSheet.create({
+  background: {
+    flex: 1,
+  },
+  Rainbow: {
+    position: 'absolute',
+    top: -130,
+    width: '100%',
+    height: '30%',
+    alignSelf: 'center',
+  },
+  
   container: {
     flex: 1,
-    padding: 30,
-    backgroundColor: "#f9f9f9",
+    paddingHorizontal: 20,
     justifyContent: "center", // Center content vertically
+    alignItems: "center", // Center content horizontally
   },
   heading: {
     fontSize: 26,
-    fontWeight: "bold",
-    color: "#ff4081",
+    fontFamily: 'Fredoka-SemiBold',
+    color: "black",
     textAlign: "center",
-    marginBottom: 10,
+    marginBottom: 5,
   },
   subheading: {
     fontSize: 15,
-    color: "#666",
+    color: "black",
     textAlign: "center",
-    marginBottom: 30,
+    marginBottom: 20,
   },
   input: {
-    width: "100%",
-    height: 50,
+    flexDirection: "row",
+    alignItems: "center",
+    width: "90%",
     borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
+    borderColor: "#929292ff",
+    borderRadius: 15,
     paddingHorizontal: 15,
-    marginBottom: 15,
+    marginBottom: 10,
     backgroundColor: "#fff",
-    fontSize: 16,
+    height: 50,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.07,
+    shadowRadius: 2,
   },
   readOnlyInput: {
     backgroundColor: "#e9e9e9",
     color: "#555",
   },
   pickerContainer: {
-    width: "100%",
+    width: "90%",
     height: 50,
     borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    marginBottom: 15,
+    borderColor: "#000000ff",
+    borderRadius: 15,
+    marginBottom: 10,
     justifyContent: "center",
     backgroundColor: "#fff",
     overflow: "hidden",
+    borderColor: "#bbb",
+    
+    
   },
   picker: {
     width: "100%",
     height: "100%",
+    
+    
   },
   buttonContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    width: "100%",
-    marginTop: 20, // Add margin above buttons
+    width: "90%",
+    marginTop: 10, // Add margin above buttons
   },
   backButton: {
     flex: 1,
     marginRight: 10,
-    padding: 15,
-    borderWidth: 1,
-    borderColor: "#ff4081",
-    borderRadius: 8,
+    paddingVertical: 15,
+    borderWidth: 2,
+    borderColor: "#FFCF2D",
+    backgroundColor: "#fff",
+    borderRadius: 15,
     alignItems: "center",
     justifyContent: "center",
     minHeight: 50,
   },
   backButtonText: {
-    color: "#ff4081",
+    color: "#FFCF2D",
     fontWeight: "bold",
     fontSize: 16,
   },
   nextButton: {
     flex: 1,
     marginLeft: 10,
-    padding: 15,
-    backgroundColor: "#ff4081",
-    borderRadius: 8,
+    paddingVertical: 15,
+    backgroundColor: "#FFCF2D",
+    borderRadius: 15,
     alignItems: "center",
     minHeight: 50,
     justifyContent: "center",
@@ -338,9 +404,103 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   disabledButton: {
-    backgroundColor: "#ff99b9",
-    borderColor: "#ff99b9",
+    backgroundColor: "#fcdf7fff",
+    borderColor: "#fcdf7fff",
     opacity: 0.7,
+  },
+  star1: {
+    position: 'absolute',
+    top: '10%',
+    left: '20%',
+    width: 15,
+    height: 15,
+  },
+  star2: {
+    position: 'absolute',
+    top: '13%',
+    right: '3%',
+    width: 15,
+    height: 15,
+  },
+  star3: {
+    position: 'absolute',
+    top: '13%',
+    left: '5%',
+    width: 10,
+    height: 10,
+  },
+  star4: {
+    position: 'absolute',
+    top: '13%',
+    right: '38%',
+    width: 10,
+    height: 10,
+  },
+  flowerContainer: {
+    position: 'absolute',
+    bottom: -20, // Allow flowers to slightly overflow the bottom
+    left: -40,
+    right: -40,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'flex-end', // Align items to the bottom
+  },
+  flower1: {
+    width: 110,
+    height: 110,
+    left: '10%', // Adjusts the horizontal position of the flower
+    bottom: '-10%', // Adjusts the vertical position of the flower
+    transform: [{ rotate: '50deg' }],
+  },
+  flower2: {
+    width: 100, // Reduce width
+    height: 100, // Reduce height
+    left: '7%', // Adjusts the horizontal position of the flower
+    bottom: '-15%', // Adjusts the vertical position of the flower
+  },
+  flower3: {
+    width: 100, // Reduce width
+    height: 100, // Reduce height
+    left: '2%', // Adjusts the horizontal position of the flower
+    bottom: '-15%',
+  },
+  flower4: {
+    width: 100, // Reduce width
+    height: 100, // Reduce height
+    right: '5%', // Adjusts the horizontal position of the flower
+    bottom: '-11.5%'
+  },
+  flower5: {
+    width: 130, // Reduce width
+    height: 130, // Reduce height
+    right: '10%', // Adjusts the horizontal position of the flower
+    bottom: '-25%', // Reduce bottom margin
+    transform: [{ rotate: '-20deg' }]
+  },
+  bushContainer: {
+    position: 'absolute',
+    bottom: '-2%', // Allow flowers to slightly overflow the bottom
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'flex-end', // Align items to the bottom
+  },
+  bush1: {
+    width: 200,
+    height: 100,
+    bottom: '-20%', // Adjusts the vertical position of the flower
+    left: '-10%' // Adjusts the horizontal position of the flower
+  },
+  bush2: {
+    width: 200,
+    height: 100,
+    bottom: '-20%', // Adjusts the vertical position of the flower
+    left: '-20%', // Adjusts the horizontal position of the flower
+  },
+  bush3: {
+    width: 200,
+    height: 100,
+    bottom: '-20%',
+    right: '30%'
   },
 });
 

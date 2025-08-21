@@ -9,12 +9,24 @@ import {
   Dimensions,
   ActivityIndicator,
   StatusBar,
+  Alert,
 } from "react-native";
 import React, { useState, useEffect } from "react";
-import { db } from "../FirebaseConfig";
-import { collection, getDocs, orderBy, query } from "firebase/firestore";
+import { db, auth } from "../FirebaseConfig";
+import { onAuthStateChanged } from "firebase/auth";
+import {
+  collection,
+  getDocs,
+  orderBy,
+  query,
+  doc,
+  setDoc,
+  deleteDoc,
+  onSnapshot,
+} from "firebase/firestore";
 import AppHeader from "./Header";
 import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
 
 const { width, height } = Dimensions.get("window");
 
@@ -23,10 +35,47 @@ const Categories = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [bookmarkedStories, setBookmarkedStories] = useState(new Set());
+  const [user, setUser] = useState(null);
+  const [bookmarkLoading, setBookmarkLoading] = useState(false);
 
   useEffect(() => {
     fetchAllStories();
   }, []);
+
+  // Listen for auth state and load bookmarks
+  useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        loadUserBookmarks(currentUser.uid);
+      } else {
+        setBookmarkedStories(new Set());
+      }
+    });
+    return () => unsubscribeAuth();
+  }, []);
+
+  const loadUserBookmarks = (userId) => {
+    try {
+      const bookmarksRef = collection(db, "users", userId, "bookmarks");
+      const unsubscribe = onSnapshot(
+        bookmarksRef,
+        (snapshot) => {
+          const bookmarkIds = new Set();
+          snapshot.forEach((doc) => {
+            bookmarkIds.add(doc.data().storyId);
+          });
+          setBookmarkedStories(bookmarkIds);
+        },
+        (error) => {
+          console.error("Error loading bookmarks: ", error);
+        }
+      );
+      return unsubscribe;
+    } catch (error) {
+      console.error("Error setting up bookmark listener: ", error);
+    }
+  };
 
   const fetchAllStories = async () => {
     setLoading(true);
@@ -35,10 +84,15 @@ const Categories = ({ navigation }) => {
       const storiesCollectionRef = collection(db, "stories");
       const q = query(storiesCollectionRef, orderBy("createdAt", "desc"));
       const querySnapshot = await getDocs(q);
-      const allStories = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const allStories = querySnapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          imageUrl: data.image, // Map Firestore 'image' to 'imageUrl'
+          synopsis: data.generatedSynopsis || data.synopsis, // Map 'generatedSynopsis' or 'synopsis'
+        };
+      });
       setStories(allStories);
     } catch (error) {
       console.error("Error fetching stories: ", error);
@@ -57,25 +111,54 @@ const Categories = ({ navigation }) => {
   };
 
   const handleViewStory = (story) => {
-    navigation.navigate("StoryDetails", {
-      storyId: story.id,
-      story: story,
+    // Navigate to the HomeTab, then to the ViewStory screen within HomeStack
+    navigation.navigate("HomeTab", {
+      screen: "ViewStory",
+      params: { storyId: story.id, story: story },
     });
   };
 
-  const handleBookmark = (story) => {
-    const newBookmarkedStories = new Set(bookmarkedStories);
-    if (bookmarkedStories.has(story.id)) {
-      newBookmarkedStories.delete(story.id);
-    } else {
-      newBookmarkedStories.add(story.id);
-    }
-    setBookmarkedStories(newBookmarkedStories);
-    console.log("Bookmarking story:", story.title);
+  const handleViewAll = (category) => {
+    //
   };
 
-  const handleViewAll = (category) => {
-    navigation.navigate("CategoryStories", { category });
+  const handleBookmark = async (story) => {
+    if (!user) {
+      Alert.alert("Login Required", "Please log in to bookmark stories.", [
+        { text: "Cancel", style: "cancel" },
+        { text: "Login", onPress: () => navigation.navigate("Login") },
+      ]);
+      return;
+    }
+    setBookmarkLoading(true);
+    try {
+      const bookmarkRef = doc(db, "users", user.uid, "bookmarks", story.id);
+      const isBookmarked = bookmarkedStories.has(story.id);
+      if (isBookmarked) {
+        await deleteDoc(bookmarkRef);
+        console.log("Bookmark removed:", story.title);
+      } else {
+        const bookmarkData = {
+          storyId: story.id,
+          title: story.title,
+          author: story.author || "Unknown",
+          imageUrl: story.imageUrl || null,
+          category: story.category || "Story",
+          synopsis: story.synopsis || "No synopsis available.",
+          bookmarkedAt: new Date(),
+          createdAt: story.createdAt,
+        };
+        await setDoc(bookmarkRef, bookmarkData);
+        console.log("Story bookmarked:", story.title);
+      }
+    } catch (error) {
+      console.error("Error handling bookmark: ", error);
+      Alert.alert("Error", "Failed to update bookmark. Please try again.", [
+        { text: "OK" },
+      ]);
+    } finally {
+      setBookmarkLoading(false);
+    }
   };
 
   const renderBookItem = (item) => (
@@ -94,16 +177,14 @@ const Categories = ({ navigation }) => {
           />
         ) : (
           <LinearGradient
-            colors={["#FF6B6B", "#FF8E8E"]}
+            colors={["#FF78AF", "#000"]}
             style={[styles.bookImage, styles.placeholderImage]}
           >
-            <Text style={styles.placeholderText}>📚</Text>
+            <Ionicons name="book-outline" size={40} color="#ccc" />
           </LinearGradient>
         )}
         <View style={styles.categoryBadge}>
-          <Text style={styles.categoryBadgeText}>
-            {item.category?.substring(0, 3).toUpperCase() || "STY"}
-          </Text>
+          <Text style={styles.categoryBadgeText}>{item.category}</Text>
         </View>
       </View>
 
@@ -118,21 +199,41 @@ const Categories = ({ navigation }) => {
           </Text>
         )}
 
+        {item.synopsis && (
+          <Text style={styles.storySynopsis} numberOfLines={2}>
+            {item.synopsis}
+          </Text>
+        )}
+
         <View style={styles.bookActions}>
           <TouchableOpacity
             style={styles.readButton}
             onPress={() => handleViewStory(item)}
           >
-            <Text style={styles.readButtonText}>Read Now</Text>
+            <Text style={styles.readButtonText}>View Story</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.bookmarkButton}
+            style={[
+              styles.bookmarkButton,
+              bookmarkLoading && styles.bookmarkButtonDisabled,
+            ]}
             onPress={() => handleBookmark(item)}
+            disabled={bookmarkLoading}
           >
-            <Text style={styles.bookmarkIcon}>
-              {bookmarkedStories.has(item.id) ? "🔖" : "🏷️"}
-            </Text>
+            {bookmarkLoading ? (
+              <ActivityIndicator size="small" color="#FF6B6B" />
+            ) : (
+              <Ionicons
+                name={
+                  bookmarkedStories.has(item.id)
+                    ? "bookmark"
+                    : "bookmark-outline"
+                }
+                size={20}
+                color={bookmarkedStories.has(item.id) ? "#FF6DA8" : "#FF6DA8"}
+              />
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -251,7 +352,7 @@ const styles = StyleSheet.create({
   },
   viewAllText: {
     fontSize: 14,
-    color: "#FF6B6B",
+    color: "darkGray",
     fontWeight: "600",
   },
   horizontalScrollContainer: {
@@ -321,13 +422,20 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     fontStyle: "italic",
   },
+  storySynopsis: {
+    fontSize: 12,
+    color: "#777",
+    marginBottom: 10,
+    lineHeight: 16,
+    fontStyle: "italic",
+  },
   bookActions: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
   readButton: {
-    backgroundColor: "#FF6B6B",
+    backgroundColor: "#FF6DA8",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 15,
@@ -342,6 +450,9 @@ const styles = StyleSheet.create({
   },
   bookmarkButton: {
     padding: 6,
+  },
+  bookmarkButtonDisabled: {
+    opacity: 0.6,
   },
   bookmarkIcon: {
     fontSize: 16,

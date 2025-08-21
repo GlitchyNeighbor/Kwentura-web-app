@@ -7,6 +7,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Image,
+  ImageBackground,
 } from "react-native";
 
 const SetPass = ({ navigation }) => {
@@ -15,12 +16,31 @@ const SetPass = ({ navigation }) => {
   const [showPassword, setShowPassword] = useState(false);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Image source={require("../assets/Logo.png")} style={styles.logo} />
-        <Text style={styles.title}>Kwentura</Text>
-      </View>
+    <ImageBackground
+      source={require('../images/Landing.png')}
+      style={styles.background}
+      resizeMode="cover"
+    >
+          
+    <Image source={require('../images/Cloud.png')} style={[styles.cloud1]} />
+    <Image source={require('../images/Cloud.png')} style={[styles.cloud2]} />
+    <Image source={require('../images/Cloud.png')} style={[styles.cloud3]} />
+    <Image source={require('../images/Cloud.png')} style={[styles.cloud4]} />
+          
+    <Image source={require('../images/Star.png')} style={styles.star1} />
+    <Image source={require('../images/Star.png')} style={styles.star2} />
+    <Image source={require('../images/Star.png')} style={styles.star3} />
+    <Image source={require('../images/Star.png')} style={styles.star4} />
+              
+    <View style={styles.flowerContainer}>
+      <Image source={require('../images/Flower1.png')} style={styles.flower1} />
+      <Image source={require('../images/Flower2.png')} style={styles.flower2} />
+      <Image source={require('../images/Flower3.png')} style={styles.flower3} />
+      <Image source={require('../images/Flower4.png')} style={styles.flower4} />
+      <Image source={require('../images/Flower5.png')} style={styles.flower5} />
+    </View>        
 
+    <SafeAreaView style={styles.container}>
       <Text style={styles.heading}>Set your password</Text>
       <Text style={styles.subheading}>
         Please do not share your password to others.
@@ -77,6 +97,7 @@ const SetPass = ({ navigation }) => {
         </TouchableOpacity>
       </View>
     </SafeAreaView>
+    </ImageBackground>
   );
 };
 
@@ -84,7 +105,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: "#f9f9f9",
     justifyContent: "center",
     alignItems: "center",
   },
