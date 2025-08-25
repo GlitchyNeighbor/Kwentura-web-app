@@ -4,24 +4,10 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { auth, db } from "../FirebaseConfig"; // Adjust path as needed
 import { doc, onSnapshot } from "firebase/firestore";
 import { rewardsConfig } from "./rewardsConfig";
-
-const AVATAR_OPTIONS = [
-  require("../assets/avatars/boy.png"),
-  require("../assets/avatars/boy2.png"),
-  require("../assets/avatars/boy3.png"),
-  require("../assets/avatars/boy4.png"),
-  require("../assets/avatars/boy5.png"),
-  require("../assets/avatars/boy6.png"),
-  require("../assets/avatars/girl.png"),
-  require("../assets/avatars/girl2.png"),
-  require("../assets/avatars/girl3.png"),
-  require("../assets/avatars/girl4.png"),
-  require("../assets/avatars/girl5.png"),
-  require("../assets/avatars/girl6.png"),
-];
+import { useProfile } from '../context/ProfileContext';
 
 const Header = ({ navigation, leftIconType = "drawer" }) => {
-  const [avatarConfig, setAvatarConfig] = useState(null);
+  const { profileData } = useProfile();
   const [userStars, setUserStars] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -29,56 +15,28 @@ const Header = ({ navigation, leftIconType = "drawer" }) => {
     let unsubscribe;
     const currentUser = auth.currentUser;
 
-    if (currentUser) {
-      // Listen to users collection for stars data
-      const userDocRef = doc(db, "users", currentUser.uid);
-      const unsubscribeUsers = onSnapshot(
-        userDocRef,
-        (docSnap) => {
-          if (docSnap.exists()) {
-            const userData = docSnap.data();
-            setUserStars(userData.stars || 0);
-          } else {
-            setUserStars(0);
-          }
-        },
-        (error) => {
-          console.error("Error fetching user stars:", error);
+  if (currentUser) {
+    const studentDocRef = doc(db, "students", currentUser.uid);
+    const unsubscribeUsers = onSnapshot(
+      studentDocRef,
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const userData = docSnap.data();
+          setUserStars(userData.stars || 0);
+        } else {
           setUserStars(0);
         }
-      );
-
-      // Listen to students collection for avatar data
-      const studentDocRef = doc(db, "students", currentUser.uid);
-      const unsubscribeStudents = onSnapshot(
-        studentDocRef,
-        (docSnap) => {
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            // Use animal avatar index
-            if (typeof data.avatarConfig === "number") {
-              setAvatarConfig(rewardsConfig[data.avatarConfig]?.image);
-            } else {
-              setAvatarConfig(data.avatarConfig ?? null);
-            }
-          } else {
-            setAvatarConfig(null);
-          }
-          setLoading(false);
-        },
-        (error) => {
-          console.error("Error fetching user data:", error);
-          setAvatarConfig(null);
-          setLoading(false);
-        }
-      );
+      },
+      (error) => {
+        console.error("Error fetching user stars:", error);
+        setUserStars(0);
+      }
+    );
 
       unsubscribe = () => {
         unsubscribeUsers();
-        unsubscribeStudents();
       };
     } else {
-      setAvatarConfig(null);
       setUserStars(0);
       setLoading(false);
     }
@@ -101,19 +59,25 @@ const Header = ({ navigation, leftIconType = "drawer" }) => {
 
   return (
     <View style={styles.container}>
-      <Image source={require('../images/Star.png')} style={styles.star1} />
-      <Image source={require('../images/Star.png')} style={styles.star2} />
-      <Image source={require('../images/Star.png')} style={styles.star3} />
-      <Image source={require('../images/Star.png')} style={styles.star4} />
       
+      
+      <View style={styles.starContainer}>
+        {Array.from({ length: userStars }).map((_, index) => (
+          <Image
+            key={index}
+            source={require('../images/Star.png')}
+            style={styles.dynamicStar}
+          />
+        ))}
+      </View>
       <Image source={require('../images/Rainbow.png')} style={styles.Rainbow} />  
 
       <View style={styles.headerRow}>
         {/* Fixed: Single TouchableOpacity for avatar */}
         <TouchableOpacity onPress={handleProfilePress}>
-          {avatarConfig ? (
+          {profileData.avatarConfig ? (
             <Image
-              source={avatarConfig}
+              source={profileData.avatarConfig}
               style={styles.notificationCircle}
             />
           ) : (
@@ -224,33 +188,18 @@ const styles = StyleSheet.create({
     height: '720.5%',
     alignSelf: 'center',
   },
-  star1: {
+  starContainer: {
     position: 'absolute',
     top: '133%',
     left: '15%',
-    width: 10,
-    height: 10,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    width: '70%', // Adjust as needed
   },
-  star2: {
-    position: 'absolute',
-    top: '259%',
-    right: '3%',
+  dynamicStar: {
     width: 15,
     height: 15,
-  },
-  star3: {
-    position: 'absolute',
-    top: '225%',
-    left: '3%',
-    width: 10,
-    height: 10,
-  },
-  star4: {
-    position: 'absolute',
-    top: '24%',
-    left: '43%',
-    width: 10,
-    height: 10,
+    margin: 2, // Adjust spacing between stars
   },
 });
 

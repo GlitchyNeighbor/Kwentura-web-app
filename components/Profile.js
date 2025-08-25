@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { onSnapshot } from "firebase/firestore";
 import {
   TextInput,
   View,
@@ -23,151 +24,12 @@ import { signOut as firebaseSignOut } from "firebase/auth";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import AppHeader from "./HeaderProfile";
+import { useProfile } from '../context/ProfileContext';
 import { getUnlockedAnimalAvatars } from "./rewardsConfig";
 
-// const rewardsConfig = [
-//   { 
-//     id: 1, 
-//     starsRequired: 5, 
-//     title: "Busy Bee", 
-//     description: "The tiniest story helper", 
-//     image: require('../images/animals/Bee.png'),
-//     color: "#FFD700", 
-//     bgColor: "#FFF9C4" 
-//   },
-//   { 
-//     id: 2, 
-//     starsRequired: 15, 
-//     title: "Cheerful Chicken", 
-//     description: "Pecks at beginner tales", 
-//     image: require('../images/animals/Chicken.png'),
-//     color: "#FF9800", 
-//     bgColor: "#FFF3E0" 
-//   },
-//   { 
-//     id: 3, 
-//     starsRequired: 30, 
-//     title: "Steady Snail", 
-//     description: "Slow but sure storyteller", 
-//     image: require('../images/animals/Snail.png'),
-//     color: "#9E9E9E", 
-//     bgColor: "#F5F5F5" 
-//   },
-//   { 
-//     id: 4, 
-//     starsRequired: 50, 
-//     title: "Playful Parrot", 
-//     description: "Repeats stories full of color", 
-//     image: require('../images/animals/Parrot.png'),
-//     color: "#4CAF50", 
-//     bgColor: "#E8F5E8" 
-//   },
-//   { 
-//     id: 5, 
-//     starsRequired: 75, 
-//     title: "Lucky Ladybug", 
-//     description: "Tiny hero of big tales", 
-//     image: require('../images/animals/Ladybug.png'),
-//     color: "#F44336", 
-//     bgColor: "#FFEBEE" 
-//   },
-//   { 
-//     id: 6, 
-//     starsRequired: 100, 
-//     title: "Feisty Fox", 
-//     description: "Clever with curious stories", 
-//     image: require('../images/animals/Fox.png'),
-//     color: "#FF5722", 
-//     bgColor: "#FBE9E7" 
-//   },
-//   { 
-//     id: 7, 
-//     starsRequired: 130, 
-//     title: "Resourceful Raccoon", 
-//     description: "Loves tricky tale adventures", 
-//     image: require('../images/animals/Raccoon.png'),
-//     color: "#607D8B", 
-//     bgColor: "#ECEFF1" 
-//   },
-//   { 
-//     id: 8, 
-//     starsRequired: 170, 
-//     title: "Smart Squirrel", 
-//     description: "Collector of cozy tales", 
-//     image: require('../images/animals/Squirrel.png'),
-//     color: "#795548", 
-//     bgColor: "#EFEBE9" 
-//   },
-//   { 
-//     id: 9, 
-//     starsRequired: 220, 
-//     title: "Calm Capybara", 
-//     description: "Peaceful guardian of tales", 
-//     image: require('../images/animals/Capybara.png'),
-//     color: "#8BC34A", 
-//     bgColor: "#F1F8E9" 
-//   },
-//   { 
-//     id: 10, 
-//     starsRequired: 280, 
-//     title: "Kindly Kangaroo", 
-//     description: "Hops across story lands", 
-//     image: require('../images/animals/Kangaroo.png'),
-//     color: "#9C27B0", 
-//     bgColor: "#F3E5F5" 
-//   },
-//   { 
-//     id: 11, 
-//     starsRequired: 350, 
-//     title: "Friendly Frog", 
-//     description: "Jumps into fun adventures", 
-//     image: require('../images/animals/Frog.png'),
-//     color: "#4CAF50", 
-//     bgColor: "#E8F5E8" 
-//   },
-//   { 
-//     id: 12, 
-//     starsRequired: 430, 
-//     title: "Loyal Lion", 
-//     description: "Protector of mighty stories", 
-//     image: require('../images/animals/Lion.png'),
-//     color: "#FFD700", 
-//     bgColor: "#FFFDE7" 
-//   },
-//   { 
-//     id: 13, 
-//     starsRequired: 520, 
-//     title: "Outstanding Ostrich", 
-//     description: "Runs through thrilling tales", 
-//     image: require('../images/animals/Ostrich.png'),
-//     color: "#FF9800", 
-//     bgColor: "#FFF3E0" 
-//   },
-//   { 
-//     id: 14, 
-//     starsRequired: 620, 
-//     title: "Curious Cat", 
-//     description: "Explorer of magical stories", 
-//     image: require('../images/animals/Cat.png'),
-//     color: "#FF6DA8", 
-//     bgColor: "#FCE4EC" 
-//   },
-//   { 
-//     id: 15, 
-//     starsRequired: 750, 
-//     title: "Daring Dog", 
-//     description: "The ultimate story legend", 
-//     image: require('../images/animals/Dog.png'),
-//     color: "#2196F3", 
-//     bgColor: "#E3F2FD" 
-//   },
-// ];
-
-
-const DAILY_USAGE_LIMIT_MS = 90 * 60 * 1000; // 90 minutes
+const DAILY_USAGE_LIMIT_MS = 90 * 60 * 1000;
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-// Custom Hooks
 const useTimer = (userId) => {
   const [appIsGloballySleeping, setAppIsGloballySleeping] = useState(false);
   const [timerDisplay, setTimerDisplay] = useState("--:--:--");
@@ -443,162 +305,7 @@ const useTimer = (userId) => {
   };
 };
 
-const useProfileData = () => {
-  const [profileData, setProfileData] = useState({
-    parentFirstName: "",
-    parentLastName: "",
-    email: "",
-    contactNumber: "",
-    studentFirstName: "",
-    studentLastName: "",
-    studentId: "",
-    gradeLevel: "",
-    section: "",
-    avatarConfig: null // default to null
-  });
-  const [loading, setLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [unlockedAnimalAvatars, setUnlockedAnimalAvatars] = useState([]);
 
-  useEffect(() => {
-    const fetchUnlockedAnimals = async () => {
-      const user = auth.currentUser;
-      if (!user) return;
-
-      try {
-        const userDocRef = doc(db, "users", user.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
-          const unlockedRewardsArr = userDoc.data().unlockedRewards || [];
-          const unlockedSet = new Set(unlockedRewardsArr);
-          const animalAvatars = getUnlockedAnimalAvatars(unlockedSet);
-          setUnlockedAnimalAvatars(animalAvatars.length > 0 ? animalAvatars : []);
-        }
-      } catch (error) {
-        console.error("Error fetching unlocked animal avatars:", error);
-      }
-    };
-
-    fetchUnlockedAnimals();
-  }, []);
-
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
-      setLoading(true);
-      if (user) {
-        try {
-          const docRef = doc(db, "students", user.uid);
-          const docSnap = await getDoc(docRef);
-
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            let avatarConfig = null;
-            // Use unlockedAnimalAvatars for avatarConfig
-            if (
-              typeof data.avatarConfig === "number" &&
-              unlockedAnimalAvatars.length > 0 &&
-              unlockedAnimalAvatars[data.avatarConfig]
-            ) {
-              avatarConfig = unlockedAnimalAvatars[data.avatarConfig];
-            } else if (
-              unlockedAnimalAvatars.length > 0 &&
-              unlockedAnimalAvatars.includes(data.avatarConfig)
-            ) {
-              avatarConfig = data.avatarConfig;
-            } else if (unlockedAnimalAvatars.length > 0) {
-              avatarConfig = unlockedAnimalAvatars[0];
-            }
-
-            setProfileData({
-              parentFirstName: data.parentFirstName || "",
-              parentLastName: data.parentLastName || "",
-              email: data.email || "",
-              contactNumber: data.parentContactNumber || "",
-              studentFirstName: data.studentFirstName || "",
-              studentLastName: data.studentLastName || "",
-              studentId: data.schoolId || "",
-              gradeLevel: data.gradeLevel || "",
-              section: data.section || "",
-              avatarConfig: avatarConfig
-            });
-          }
-        } catch (error) {
-          console.error("Error fetching user data:", error);
-          Alert.alert("Error", "Failed to fetch user data: " + error.message);
-        }
-      } else {
-        setProfileData({
-          parentFirstName: "",
-          parentLastName: "",
-          email: "",
-          contactNumber: "",
-          studentFirstName: "",
-          studentLastName: "",
-          studentId: "",
-          gradeLevel: "",
-          section: "",
-          avatarConfig: unlockedAnimalAvatars.length > 0 ? unlockedAnimalAvatars[0] : null
-        });
-      }
-      setLoading(false);
-    });
-
-    return unsubscribe;
-  }, [unlockedAnimalAvatars]);
-
-  const updateAvatar = useCallback(async (newAvatar) => {
-    const user = auth.currentUser;
-    if (!user) return false;
-
-    try {
-      const docRef = doc(db, "students", user.uid);
-      const avatarIndex = unlockedAnimalAvatars.indexOf(newAvatar);
-      await updateDoc(docRef, {
-        avatarConfig: avatarIndex,
-        updatedAt: serverTimestamp(),
-      });
-      setProfileData(prev => ({ ...prev, avatarConfig: newAvatar }));
-      return true;
-    } catch (error) {
-      console.error("Error updating avatar:", error);
-      Alert.alert("Error", "Failed to save avatar: " + error.message);
-      return false;
-    }
-  }, [unlockedAnimalAvatars]);
-
-  const saveChanges = useCallback(async (updates) => {
-    const user = auth.currentUser;
-    if (!user || isSaving) return false;
-
-    setIsSaving(true);
-    try {
-      const docRef = doc(db, "students", user.uid);
-      await updateDoc(docRef, {
-        ...updates,
-        updatedAt: serverTimestamp(),
-      });
-      
-      setProfileData(prev => ({ ...prev, ...updates }));
-      Alert.alert("Success", "Changes saved successfully!");
-      return true;
-    } catch (error) {
-      console.error("Error saving changes:", error);
-      Alert.alert("Error", "Failed to save changes: " + error.message);
-      return false;
-    } finally {
-      setIsSaving(false);
-    }
-  }, [isSaving]);
-
-  return {
-    profileData,
-    loading,
-    isSaving,
-    updateAvatar,
-    saveChanges,
-    unlockedAnimalAvatars // expose for AvatarPicker
-  };
-};
 
 // Components
 const LoadingScreen = () => (
@@ -745,7 +452,7 @@ const TimerDisplay = ({ timerDisplay, appIsGloballySleeping }) => (
 const Profile = ({ navigation }) => {
   const currentUser = auth.currentUser;
   // FIX: Add unlockedAnimalAvatars to destructure from useProfileData
-  const { profileData, loading, updateAvatar, unlockedAnimalAvatars } = useProfileData();
+  const { profileData, loading, updateAvatar, unlockedAnimalAvatars } = useProfile();
   const { appIsGloballySleeping, timerDisplay, handleRestartCountdown, formatTime } = useTimer(currentUser?.uid);
   const [avatarModalVisible, setAvatarModalVisible] = useState(false);
 

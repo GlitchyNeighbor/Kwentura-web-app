@@ -56,6 +56,23 @@ const Register = ({ navigation }) => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [termsAgreed, setTermsAgreed] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+
+  const validatePassword = (pwd) => {
+    if (pwd.length < 6) {
+      return "Password must be at least 6 characters long.";
+    }
+    if (!/[A-Z]/.test(pwd)) {
+      return "Password must contain at least one capital letter.";
+    }
+    if (!/\d/.test(pwd)) {
+      return "Password must contain at least one number.";
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(pwd)) {
+      return "Password must contain at least one symbol.";
+    }
+    return ""; // No error
+  };
 
   const signUp = async () => {
     if (
@@ -76,32 +93,8 @@ const Register = ({ navigation }) => {
       );
       return;
     }
-    if (password.length < 6) {
-      Alert.alert(
-        "Weak Password",
-        "Password should be at least 6 characters long."
-      );
-      return;
-    }
-    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
-      Alert.alert(
-        "Weak Password",
-        "Password must contain at least one symbol."
-      );
-      return;
-    }
-    if (!/\d/.test(password)) {
-      Alert.alert(
-        "Weak Password",
-        "Password must contain at least one number."
-      );
-      return;
-    }
-    if (!/[A-Z]/.test(password)) {
-      Alert.alert(
-        "Weak Password",
-        "Password must contain at least one capital letter."
-      );
+    if (passwordError) {
+      Alert.alert("Weak Password", passwordError);
       return;
     }
     if (password !== confirmPassword) {
@@ -148,6 +141,8 @@ const Register = ({ navigation }) => {
         role: "student",
         status: "pending_approval", // Added: Initial status for teacher approval
         approvedBy: null, // Added: No approver initially
+        activeSessionId: null, // Added: activeSessionId
+        isArchived: false, // Added: isArchived
       });
     } catch (error) {
       if (error.code === "auth/email-already-in-use") {
@@ -246,7 +241,10 @@ const Register = ({ navigation }) => {
               style={styles.passwordInput}
               placeholder="Password (min. 6 characters)"
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(text) => {
+                setPassword(text);
+                setPasswordError(validatePassword(text));
+              }}
               secureTextEntry={!showPassword}
             />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
@@ -257,6 +255,7 @@ const Register = ({ navigation }) => {
               />
             </TouchableOpacity>
           </View>
+          {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
           
           <View style={styles.passwordContainer}>
             <TextInput
@@ -628,7 +627,13 @@ const styles = StyleSheet.create({
     bottom: '-20%',
     right: '30%'
   },
-  
+  errorText: {
+    color: 'red',
+    fontSize: 12,
+    marginBottom: 10,
+    width: "90%",
+    textAlign: "left",
+  },
 });
 
 export default Register;

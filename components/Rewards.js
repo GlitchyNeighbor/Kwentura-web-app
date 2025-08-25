@@ -15,6 +15,7 @@ import {
   Modal
 } from "react-native";
 import React, { useState, useEffect, useRef } from "react";
+import { useRoute } from '@react-navigation/native';
 import { db, auth } from "../FirebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
 import {
@@ -40,6 +41,10 @@ const { width, height } = Dimensions.get("window");
 import { rewardsConfig } from "./rewardsConfig";
 
 const Rewards = ({ navigation }) => {
+  const route = useRoute();
+  // const { starsEarned } = route.params || {}; // Removed as stars are added in ComQuestions.js
+  // const starsAddedRef = useRef(false); // Removed as stars are added in ComQuestions.js
+
   const [stories, setStories] = useState([]);
   const [filteredStories, setFilteredStories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -99,32 +104,44 @@ const Rewards = ({ navigation }) => {
     return () => unsubscribeAuth();
   }, []);
 
+  // Effect to handle stars earned from quiz - REMOVED
+  // useEffect(() => {
+  //   if (starsEarned && user && !starsAddedRef.current) {
+  //     addStars(starsEarned, "quiz completion");
+  //     starsAddedRef.current = true; // Mark stars as added
+  //   }
+  // }, [starsEarned, user]);
+
   // Load user's stars and unlocked rewards
-  const loadUserRewardsData = async (userId) => {
+  const loadUserRewardsData = (userId) => {
     setUserRewardsLoading(true);
-    try {
-      const userDocRef = doc(db, "users", userId);
-      const userDoc = await getDoc(userDocRef);
-      
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        setUserStars(userData.stars || 0);
-        setUnlockedRewards(new Set(userData.unlockedRewards || []));
-      } else {
-        // Create user document if it doesn't exist
-        await setDoc(userDocRef, {
-          stars: 0,
-          unlockedRewards: [],
-          createdAt: new Date(),
-        });
-        setUserStars(0);
-        setUnlockedRewards(new Set());
+    const userDocRef = doc(db, "students", userId);
+    const unsubscribe = onSnapshot(userDocRef, async (docSnap) => {
+      try {
+        if (docSnap.exists()) {
+          const userData = docSnap.data();
+          setUserStars(userData.stars || 0);
+          setUnlockedRewards(new Set(userData.unlockedRewards || []));
+        } else {
+          // Create user document if it doesn't exist
+          await setDoc(userDocRef, {
+            stars: 0,
+            unlockedRewards: [],
+            createdAt: new Date(),
+          });
+          setUserStars(0);
+          setUnlockedRewards(new Set());
+        }
+      } catch (error) {
+        console.error("Error loading user rewards data:", error);
+      } finally {
+        setUserRewardsLoading(false);
       }
-    } catch (error) {
-      console.error("Error loading user rewards data:", error);
-    } finally {
+    }, (error) => {
+      console.error("Error listening to user rewards data:", error);
       setUserRewardsLoading(false);
-    }
+    });
+    return unsubscribe;
   };
 
   // Function to unlock a reward
@@ -152,15 +169,32 @@ const Rewards = ({ navigation }) => {
     }
 
     try {
-      const userDocRef = doc(db, "users", user.uid);
+      const userDocRef = doc(db, "students", user.uid);
+      const userDocSnap = await getDoc(userDocRef); // Fetch current user data
       
+      if (!userDocSnap.exists()) {
+        Alert.alert("Error", "User data not found. Please try again.");
+        return;
+      }
+
+      const currentStars = userDocSnap.data().stars || 0;
+
+      if (currentStars < reward.starsRequired) {
+        Alert.alert(
+          "Insufficient Stars",
+          `You need ${reward.starsRequired} stars to unlock "${reward.title}". You currently have ${currentStars} stars.`,
+          [{ text: "OK" }]
+        );
+        return;
+      }
+
       // Update user document
       await updateDoc(userDocRef, {
         stars: increment(-reward.starsRequired),
         unlockedRewards: [...Array.from(unlockedRewards), rewardId],
       });
 
-      // Update local state
+      // Update local state (this will also be updated by the onSnapshot listener)
       setUserStars(prev => prev - reward.starsRequired);
       setUnlockedRewards(prev => new Set([...prev, rewardId]));
 
@@ -179,7 +213,7 @@ const Rewards = ({ navigation }) => {
     if (!user) return;
 
     try {
-      const userDocRef = doc(db, "users", user.uid);
+      const userDocRef = doc(db, "students", user.uid);
       await updateDoc(userDocRef, {
         stars: increment(amount),
       });
@@ -357,7 +391,7 @@ const Rewards = ({ navigation }) => {
 
   const loadUserBookmarks = (userId) => {
     try {
-      const bookmarksRef = collection(db, "users", userId, "bookmarks");
+      const bookmarksRef = collection(db, "students", userId, "bookmarks");
       const unsubscribe = onSnapshot(
         bookmarksRef,
         (snapshot) => {
@@ -549,7 +583,7 @@ const Rewards = ({ navigation }) => {
     }
     setBookmarkLoading(true);
     try {
-      const bookmarkRef = doc(db, "users", user.uid, "bookmarks", story.id);
+      const bookmarkRef = doc(db, "students", user.uid, "bookmarks", story.id);
       const isBookmarked = bookmarkedStories.has(story.id);
       if (isBookmarked) {
         await deleteDoc(bookmarkRef);
@@ -747,6 +781,14 @@ const Rewards = ({ navigation }) => {
             leftIconType="drawer"
             showSearch={true}
           />
+
+          {/* Removed starsEarned display as stars are now added in ComQuestions.js */}
+          {/* {starsEarned > 0 && (
+            <View style={styles.starsEarnedContainer}>
+              <Text style={styles.starsEarnedText}>You earned {starsEarned} ⭐ from the quiz!</Text>
+            </View>
+          )} */}
+
           {/* Demo button to add stars - remove this in production */}
           {user && (
             <View style={styles.demoContainer}>
@@ -1550,6 +1592,24 @@ const styles = StyleSheet.create({
     fontSize: 18,
     textAlign: 'center',
     fontFamily: 'Fredoka-SemiBold',
+  },
+
+  // New styles for earned stars display
+  starsEarnedContainer: {
+    backgroundColor: '#D4EDDA', // Light green background
+    padding: 10,
+    borderRadius: 8,
+    marginHorizontal: 20,
+    marginBottom: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+  },
+  starsEarnedText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#155724', // Dark green text
+    textAlign: 'center',
   },
 
   // Existing styles from original component

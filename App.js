@@ -17,6 +17,7 @@ import { signOut as firebaseSignOut } from "firebase/auth";
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
+import { ProfileProvider } from './context/ProfileContext';
 
 import Home from "./components/Home";
 import Categories from "./components/Categories";
@@ -41,6 +42,7 @@ import PrivacyPolicy from "./components/PrivacyPolicy";
 import ChangePasswordScreen from "./components/ChangePasswordScreen";
 import ReadStory from "./components/ReadStory"; // Import ReadStory
 import About from "./components/About"; 
+import ComQuestions from "./components/ComQuestions"; // Import ComQuestions
 
 import OtpVerificationScreen from "./components/OtpVerificationScreen"; // Import the new screen
 const Tab = createBottomTabNavigator();
@@ -295,6 +297,7 @@ function HomeStack() {
       <Stack.Screen name="Home" component={Home} />
       <Stack.Screen name="ViewStory" component={ViewStory} />
       <Stack.Screen name="ReadStory" component={ReadStory} /> 
+      <Stack.Screen name="ComQuestions" component={ComQuestions} />
     </Stack.Navigator>
   );
 }
@@ -315,7 +318,6 @@ function AppTabs() {
           } else if (route.name === "LibraryTab") {
             iconName = focused ? "library" : "library-outline";
           }
-          // Removed ProfileTab condition - no longer in bottom navigation
 
           return <Ionicons name={iconName} size={size} color={color} style={{ fontWeight: 'bold', borderRadius: 5 }} />;
         },
@@ -789,7 +791,13 @@ function RootNavigator() {
           <Stack.Screen name="Auth" component={AuthStack} />
         ) : isProfileComplete ? (
           <>
-            <Stack.Screen name="App" component={AppDrawer} />
+            <Stack.Screen name="App">
+              {() => (
+                <ProfileProvider>
+                  <AppDrawer />
+                </ProfileProvider>
+              )}
+            </Stack.Screen>
           </>
         ) : (
           <Stack.Screen

@@ -253,9 +253,9 @@ const StudDetails = ({ navigation, route }) => {
             enabled={false}
             style={{ color: "#5a5a5aff", fontSize: 14 }}
           />
-          <Picker.Item label="Kinder 1" value="Kinder 1" />
-          <Picker.Item label="Kinder 2" value="Kinder 2" />
-          <Picker.Item label="Grade 1" value="Grade 1" />
+          <Picker.Item label="INF225" value="INF225" />
+          <Picker.Item label="INF226" value="INF226" />
+          <Picker.Item label="INF227" value="INF227" />
         </Picker>
       </View>
 

@@ -178,8 +178,8 @@ const Login = ({ navigation }) => {
       const isProfileComplete = checkProfileCompleteness(studentProfile);
       // handleOTPFlow(user, studentProfile, isProfileComplete); // Removed OTP flow
 
-      // Directly navigate to Home or appropriate screen after successful login
-      navigation.navigate("Home");
+      // The RootNavigator will handle the navigation to the correct screen
+      // based on the authentication state.
 
     } catch (error) {
       console.error("Login error:", error);

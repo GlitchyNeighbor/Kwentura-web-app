@@ -11,7 +11,8 @@ import {
   ImageBackground,
   Alert
 } from "react-native";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, increment, setDoc, collection } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 import { db } from "../FirebaseConfig";
 import Animated, {
   useSharedValue,
@@ -27,13 +28,14 @@ import {
   PanGestureHandler,
   GestureHandlerRootView,
 } from "react-native-gesture-handler";
-import * as Speech from "expo-speech";
+import Sound from 'react-native-sound';
+
 import AppHeader from "./HeaderReadStory";
 
 const { width, height } = Dimensions.get("window");
 
 const ReadStory = ({ route, navigation }) => {
-  const { storyId } = route.params;
+  const storyId = route.params?.storyId;
   const [pageImages, setPageImages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -44,6 +46,9 @@ const ReadStory = ({ route, navigation }) => {
   const [storyTitle, setStoryTitle] = useState("");
   const [storyAuthor, setStoryAuthor] = useState("");
   const [showCompletion, setShowCompletion] = useState(false);
+  const [audioData, setAudioData] = useState([]);
+  const [currentAudio, setCurrentAudio] = useState(null);
+  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
   
   // Animation values
   const flip = useSharedValue(0);
@@ -79,6 +84,35 @@ const ReadStory = ({ route, navigation }) => {
     }
   }, [showCompletion]);
 
+  // Increment "users read" count when story is completed
+  useEffect(() => {
+    const auth = getAuth();
+    if (showCompletion && auth.currentUser && storyId) {
+      const userId = auth.currentUser.uid;
+      const storyRef = doc(db, "stories", storyId);
+      const userReadRef = doc(collection(storyRef, "readers"), userId);
+
+      const checkIfUserRead = async () => {
+        try {
+          const userReadSnap = await getDoc(userReadRef);
+          if (!userReadSnap.exists()) {
+            // User hasn't read this story before, increment count and mark as read
+            await updateDoc(storyRef, {
+              usersRead: increment(1)
+            });
+            await setDoc(userReadRef, { readAt: new Date() }); // Mark as read
+            console.log(`Story ${storyId} read count incremented for user ${userId}`);
+          } else {
+            console.log(`User ${userId} already read story ${storyId}. Not incrementing.`);
+          }
+        } catch (error) {
+          console.error("Error updating usersRead count:", error);
+        }
+      };
+      checkIfUserRead();
+    }
+  }, [showCompletion, storyId]);
+
   useEffect(() => {
     async function fetchPages() {
       if (!storyId) {
@@ -102,6 +136,11 @@ const ReadStory = ({ route, navigation }) => {
           setStoryTitle(data.title || "");
           setStoryAuthor(data.author || "");
           
+          // Get audio URLs
+          if (data.ttsAudioData && Array.isArray(data.ttsAudioData)) {
+            setAudioData(data.ttsAudioData);
+          }
+          
           if (Array.isArray(data.pageImages)) {
             images = data.pageImages;
           } else if (data.pageImages && typeof data.pageImages === "object") {
@@ -120,11 +159,16 @@ const ReadStory = ({ route, navigation }) => {
           setPageTexts(texts);
           
           if (images.length > 0) {
-            setPageImages(images);
-            const prefetches = images.map((url) => Image.prefetch(url));
+            // Skip the first image (cover)
+            const contentImages = images.slice(1);
+            setPageImages(contentImages);
+            const prefetches = contentImages.map((url) => Image.prefetch(url));
             Promise.all(prefetches)
               .then(() => setImagesReady(true))
-              .catch(() => setImagesReady(true));
+              .catch((e) => {
+                console.error("Error prefetching images:", e);
+                setImagesReady(true);
+              });
           } else {
             setError("Story or page images not found.");
             setImagesReady(true);
@@ -146,32 +190,55 @@ const ReadStory = ({ route, navigation }) => {
   // Auto-play with visual feedback
   useEffect(() => {
     if (imagesReady && pageTexts[currentPage] && !showCompletion) {
-      Speech.stop();
-      setIsPlaying(true);
+      if (currentAudio) {
+        currentAudio.stop();
+        currentAudio.release();
+      }
       
-      // Animate speaker button
-      speakerScale.value = withRepeat(
-        withSequence(
-          withSpring(1.2, { damping: 10 }),
-          withSpring(1, { damping: 10 })
-        ),
-        3,
-        true
-      );
-      
-      Speech.speak(pageTexts[currentPage], { 
-        language: "tl-PH",
-        onDone: () => {
-          setIsPlaying(false);
-          speakerScale.value = withSpring(1);
-        },
-        onStopped: () => {
-          setIsPlaying(false);
-          speakerScale.value = withSpring(1);
-        }
-      });
+      if (audioData[currentPage]) {
+        setIsPlaying(true);
+        speakerScale.value = withRepeat(
+          withSequence(
+            withSpring(1.2, { damping: 10 }),
+            withSpring(1, { damping: 10 })
+          ),
+          3,
+          true
+        );
+        
+        playAudio(audioData[currentPage]);
+      }
     }
   }, [currentPage, imagesReady, pageTexts, showCompletion]);
+
+  // Cleanup audio when component unmounts or loses focus
+  useEffect(() => {
+    const unsubscribeBlur = navigation.addListener('blur', () => {
+      if (currentAudio) {
+        currentAudio.stop();
+        currentAudio.release();
+        setCurrentAudio(null); // Clear the audio object
+      }
+    });
+
+    const unsubscribeBeforeRemove = navigation.addListener('beforeRemove', () => {
+      if (currentAudio) {
+        currentAudio.stop();
+        currentAudio.release();
+        setCurrentAudio(null);
+      }
+    });
+
+    return () => {
+      if (currentAudio) {
+        currentAudio.stop();
+        currentAudio.release();
+        setCurrentAudio(null);
+      }
+      unsubscribeBlur();
+      unsubscribeBeforeRemove();
+    };
+  }, [currentAudio, navigation]);
 
   // Enhanced flip animation with bounce
   const animatedStyle = useAnimatedStyle(() => ({
@@ -245,10 +312,51 @@ const ReadStory = ({ route, navigation }) => {
     },
   });
 
+  // Play audio function
+  const playAudio = (audioUrl) => {
+    setIsLoadingAudio(true);
+    
+    // Ensure any currently playing audio is stopped and released immediately
+    if (currentAudio) {
+      currentAudio.stop();
+      currentAudio.release();
+      setCurrentAudio(null); // Clear the state immediately
+    }
+
+    // Initialize sound with remote URL
+    const sound = new Sound(audioUrl.audioUrl, null, (error) => {
+      setIsLoadingAudio(false);
+      
+      if (error) {
+        console.error('Failed to load sound:', error);
+        setIsPlaying(false);
+        speakerScale.value = withSpring(1);
+        return;
+      }
+
+      setCurrentAudio(sound); // Set the new audio object
+      
+      // Play the sound
+      sound.play((success) => {
+        if (success) {
+          console.log('Successfully finished playing');
+        } else {
+          console.log('Playback failed due to audio decoding errors');
+        }
+        setIsPlaying(false);
+        speakerScale.value = withSpring(1);
+      });
+    });
+  };
+
   // Enhanced navigation functions
   const goToPreviousPage = () => {
     if (currentPage > 0) {
-      Speech.stop();
+      if (currentAudio) {
+        currentAudio.stop();
+        currentAudio.release();
+        setCurrentAudio(null);
+      }
       setShowCompletion(false);
       flip.value = withSpring(180, { damping: 15 }, () => {
         runOnJS(setCurrentPage)(currentPage - 1);
@@ -259,15 +367,22 @@ const ReadStory = ({ route, navigation }) => {
 
   const goToNextPage = () => {
     if (currentPage < pageImages.length - 1) {
-      Speech.stop();
+      if (currentAudio) {
+        currentAudio.stop();
+        currentAudio.release();
+        setCurrentAudio(null);
+      }
       setShowCompletion(false);
       flip.value = withSpring(-180, { damping: 15 }, () => {
         runOnJS(setCurrentPage)(currentPage + 1);
         flip.value = 0;
       });
     } else {
-      // Show completion screen instead of alert
-      Speech.stop();
+      if (currentAudio) {
+        currentAudio.stop();
+        currentAudio.release();
+        setCurrentAudio(null);
+      }
       setShowCompletion(true);
       completionScale.value = 0;
       completionScale.value = withSpring(1, { damping: 15 });
@@ -276,49 +391,38 @@ const ReadStory = ({ route, navigation }) => {
 
   // Enhanced TTS with visual feedback
   const handleSpeak = () => {
-    const text = pageTexts[currentPage] || "No text available for this page.";
-    
-    if (isPlaying) {
-      Speech.stop();
+    if (!audioData[currentPage]) {
+      Alert.alert("No Audio", "No audio is available for this page.");
+      return;
+    }
+
+    if (isPlaying && currentAudio) {
+      currentAudio.stop();
       setIsPlaying(false);
       speakerScale.value = withSpring(1);
+      setCurrentAudio(null); // Add this line
     } else {
-      setIsPlaying(true);
-      speakerScale.value = withRepeat(
-        withSequence(
-          withSpring(1.2, { damping: 10 }),
-          withSpring(1, { damping: 10 })
-        ),
-        -1,
-        true
-      );
-      
-      Speech.speak(text, { 
-        language: "tl-PH",
-        rate: 0.8,
-        pitch: 1.1,
-        onDone: () => {
-          setIsPlaying(false);
-          speakerScale.value = withSpring(1);
-        },
-        onStopped: () => {
-          setIsPlaying(false);
-          speakerScale.value = withSpring(1);
-        }
-      });
+      playAudio(audioData[currentPage]);
     }
   };
 
   const handleReadAgain = () => {
+    if (currentAudio) {
+      currentAudio.stop();
+      currentAudio.release();
+      setCurrentAudio(null);
+    }
     setShowCompletion(false);
     setCurrentPage(0);
-    Speech.stop();
-    completionScale.value = 0;
   };
 
   const handleBackToStories = () => {
-    Speech.stop();
-    navigation.navigate('Home')
+    if (currentAudio) {
+      currentAudio.stop();
+      currentAudio.release();
+      setCurrentAudio(null);
+    }
+    navigation.navigate('Home');
   };
 
   // Completion Screen Component
@@ -334,11 +438,18 @@ const ReadStory = ({ route, navigation }) => {
         <View style={styles.completionButtons}>
           <TouchableOpacity
             style={[styles.completionButton, styles.readAgainButton]}
-            onPress={handleReadAgain}
+            onPress={() => {
+              if (currentAudio) {
+                currentAudio.stop();
+                currentAudio.release();
+                setCurrentAudio(null);
+              }
+              navigation.navigate('ComQuestions', { storyId: storyId, storyTitle: storyTitle });
+            }}
             activeOpacity={0.8}
           >
-            <Text style={styles.completionButtonEmoji}>📖</Text>
-            <Text style={styles.completionButtonText}>Read Again</Text>
+            <Text style={styles.completionButtonEmoji}>📝</Text>
+            <Text style={styles.completionButtonText}>Answer Questions</Text>
           </TouchableOpacity>
           
           <TouchableOpacity
@@ -433,13 +544,14 @@ const ReadStory = ({ route, navigation }) => {
                   style={styles.listenButton}
                   onPress={handleSpeak}
                   activeOpacity={0.8}
+                  disabled={isLoadingAudio}
                 >
                   <Animated.View style={[styles.listenButtonContent, speakerAnimatedStyle]}>
                     <Text style={styles.listenButtonEmoji}>
-                      {isPlaying ? "🔊" : "🎧"}
+                      {isLoadingAudio ? "⌛" : isPlaying ? "🔊" : "🎧"}
                     </Text>
                     <Text style={styles.listenButtonText}>
-                      {isPlaying ? "Stop" : "Listen"}
+                      {isLoadingAudio ? "Loading..." : isPlaying ? "Stop" : "Listen"}
                     </Text>
                   </Animated.View>
                 </TouchableOpacity>

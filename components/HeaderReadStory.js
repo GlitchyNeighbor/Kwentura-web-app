@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { auth, db } from "../FirebaseConfig"; // Adjust path as needed
 import { doc, onSnapshot } from "firebase/firestore";
-import { rewardsConfig } from "./Rewards";
+import { rewardsConfig } from "./rewardsConfig";
 
 const AVATAR_OPTIONS = [
   require("../assets/avatars/boy.png"),
