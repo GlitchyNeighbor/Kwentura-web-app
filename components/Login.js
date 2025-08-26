@@ -20,11 +20,13 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import {
   doc,
   getDoc,
+  setDoc,
   collection,
   query,
   where,
   getDocs,
 } from "firebase/firestore";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { db } from "../FirebaseConfig";
 
 // Constants

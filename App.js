@@ -748,6 +748,41 @@ function RootNavigator() {
     return unsubscribeAuth;
   }, []);
 
+  // This useEffect handles multi-device session validation
+  useEffect(() => {
+    if (user) {
+      const docRef = doc(db, "students", user.uid);
+
+      const unsubscribe = onSnapshot(docRef, async (docSnap) => {
+        if (docSnap.exists()) {
+          const remoteSessionId = docSnap.data()?.activeSessionId;
+          const localSessionId = await AsyncStorage.getItem("userSessionId");
+
+          if (localSessionId && remoteSessionId && localSessionId !== remoteSessionId) {
+            unsubscribe(); // Stop listening to prevent multiple alerts
+
+            Alert.alert(
+              "Session Expired",
+              "You have been logged out because this account was signed into from another device.",
+              [
+                {
+                  text: "OK",
+                  onPress: async () => {
+                    await AsyncStorage.removeItem("userSessionId");
+                    await firebaseSignOut(auth);
+                  },
+                },
+              ],
+              { cancelable: false }
+            );
+          }
+        }
+      });
+
+      return () => unsubscribe(); // Cleanup listener
+    }
+  }, [user]);
+
   useEffect(() => {
     if (user) {
       setIsProfileComplete(null);

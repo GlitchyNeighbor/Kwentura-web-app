@@ -466,11 +466,22 @@ const Profile = ({ navigation }) => {
           text: "Sign Out",
           style: "destructive",
           onPress: async () => {
-            try {
-              await firebaseSignOut(auth);
-            } catch (error) {
-              console.error("Sign out error:", error);
-              Alert.alert("Error", "Sign out failed: " + error.message);
+            const user = auth.currentUser;
+            if (user) {
+              try {
+                const userDocRef = doc(db, "students", user.uid);
+                await updateDoc(userDocRef, {
+                  activeSessionId: null,
+                });
+                await AsyncStorage.removeItem("userSessionId"); // Clear local session ID
+                await firebaseSignOut(auth);
+              } catch (error) {
+                console.error("Sign out error:", error);
+                Alert.alert("Error", "Sign out failed: " + error.message);
+              }
+            } else {
+                // If no user, just attempt to sign out
+                await firebaseSignOut(auth);
             }
           }
         }

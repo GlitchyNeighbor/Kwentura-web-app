@@ -28,7 +28,7 @@ import {
   PanGestureHandler,
   GestureHandlerRootView,
 } from "react-native-gesture-handler";
-import Sound from 'react-native-sound';
+import { Audio } from 'expo-av';
 
 import AppHeader from "./HeaderReadStory";
 
@@ -191,8 +191,7 @@ const ReadStory = ({ route, navigation }) => {
   useEffect(() => {
     if (imagesReady && pageTexts[currentPage] && !showCompletion) {
       if (currentAudio) {
-        currentAudio.stop();
-        currentAudio.release();
+        currentAudio.unloadAsync();
       }
       
       if (audioData[currentPage]) {
@@ -215,24 +214,21 @@ const ReadStory = ({ route, navigation }) => {
   useEffect(() => {
     const unsubscribeBlur = navigation.addListener('blur', () => {
       if (currentAudio) {
-        currentAudio.stop();
-        currentAudio.release();
+        currentAudio.unloadAsync();
         setCurrentAudio(null); // Clear the audio object
       }
     });
 
     const unsubscribeBeforeRemove = navigation.addListener('beforeRemove', () => {
       if (currentAudio) {
-        currentAudio.stop();
-        currentAudio.release();
+        currentAudio.unloadAsync();
         setCurrentAudio(null);
       }
     });
 
     return () => {
       if (currentAudio) {
-        currentAudio.stop();
-        currentAudio.release();
+        currentAudio.unloadAsync();
         setCurrentAudio(null);
       }
       unsubscribeBlur();
@@ -313,48 +309,42 @@ const ReadStory = ({ route, navigation }) => {
   });
 
   // Play audio function
-  const playAudio = (audioUrl) => {
+  const playAudio = async (audioUrl) => {
     setIsLoadingAudio(true);
     
-    // Ensure any currently playing audio is stopped and released immediately
     if (currentAudio) {
-      currentAudio.stop();
-      currentAudio.release();
-      setCurrentAudio(null); // Clear the state immediately
+      await currentAudio.unloadAsync();
+      setCurrentAudio(null);
     }
 
-    // Initialize sound with remote URL
-    const sound = new Sound(audioUrl.audioUrl, null, (error) => {
-      setIsLoadingAudio(false);
-      
-      if (error) {
-        console.error('Failed to load sound:', error);
-        setIsPlaying(false);
-        speakerScale.value = withSpring(1);
-        return;
-      }
-
-      setCurrentAudio(sound); // Set the new audio object
-      
-      // Play the sound
-      sound.play((success) => {
-        if (success) {
-          console.log('Successfully finished playing');
-        } else {
-          console.log('Playback failed due to audio decoding errors');
+    try {
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: audioUrl.audioUrl },
+        { shouldPlay: true },
+        (status) => {
+          if (status.didJustFinish) {
+            setIsPlaying(false);
+            speakerScale.value = withSpring(1);
+            setCurrentAudio(null);
+          }
         }
-        setIsPlaying(false);
-        speakerScale.value = withSpring(1);
-      });
-    });
+      );
+      setCurrentAudio(sound);
+      setIsPlaying(true);
+    } catch (error) {
+      console.error('Failed to load sound:', error);
+      setIsPlaying(false);
+      speakerScale.value = withSpring(1);
+    } finally {
+      setIsLoadingAudio(false);
+    }
   };
 
   // Enhanced navigation functions
   const goToPreviousPage = () => {
     if (currentPage > 0) {
       if (currentAudio) {
-        currentAudio.stop();
-        currentAudio.release();
+        currentAudio.unloadAsync();
         setCurrentAudio(null);
       }
       setShowCompletion(false);
@@ -368,8 +358,7 @@ const ReadStory = ({ route, navigation }) => {
   const goToNextPage = () => {
     if (currentPage < pageImages.length - 1) {
       if (currentAudio) {
-        currentAudio.stop();
-        currentAudio.release();
+        currentAudio.unloadAsync();
         setCurrentAudio(null);
       }
       setShowCompletion(false);
@@ -379,8 +368,7 @@ const ReadStory = ({ route, navigation }) => {
       });
     } else {
       if (currentAudio) {
-        currentAudio.stop();
-        currentAudio.release();
+        currentAudio.unloadAsync();
         setCurrentAudio(null);
       }
       setShowCompletion(true);
@@ -397,7 +385,7 @@ const ReadStory = ({ route, navigation }) => {
     }
 
     if (isPlaying && currentAudio) {
-      currentAudio.stop();
+      currentAudio.unloadAsync();
       setIsPlaying(false);
       speakerScale.value = withSpring(1);
       setCurrentAudio(null); // Add this line
@@ -408,8 +396,7 @@ const ReadStory = ({ route, navigation }) => {
 
   const handleReadAgain = () => {
     if (currentAudio) {
-      currentAudio.stop();
-      currentAudio.release();
+      currentAudio.unloadAsync();
       setCurrentAudio(null);
     }
     setShowCompletion(false);
@@ -418,8 +405,7 @@ const ReadStory = ({ route, navigation }) => {
 
   const handleBackToStories = () => {
     if (currentAudio) {
-      currentAudio.stop();
-      currentAudio.release();
+      currentAudio.unloadAsync();
       setCurrentAudio(null);
     }
     navigation.navigate('Home');
@@ -440,8 +426,7 @@ const ReadStory = ({ route, navigation }) => {
             style={[styles.completionButton, styles.readAgainButton]}
             onPress={() => {
               if (currentAudio) {
-                currentAudio.stop();
-                currentAudio.release();
+                currentAudio.unloadAsync();
                 setCurrentAudio(null);
               }
               navigation.navigate('ComQuestions', { storyId: storyId, storyTitle: storyTitle });
