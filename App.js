@@ -68,216 +68,216 @@ const AVATAR_OPTIONS = [
 const DAILY_USAGE_LIMIT_MS = 90 * 60 * 1000; // 90 minutes in milliseconds
 
 // User-specific keys will be generated dynamically based on UID
-function CustomDrawerContent({ navigation, timerDisplay, appIsSleeping, ...restProps }) {
-  const [studentName, setStudentName] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [avatarConfig, setAvatarConfig] = useState(null);
+// function CustomDrawerContent({ navigation, timerDisplay, appIsSleeping, ...restProps }) {
+//   const [studentName, setStudentName] = useState("");
+//   const [loading, setLoading] = useState(true);
+//   const [avatarConfig, setAvatarConfig] = useState(null);
 
-  useEffect(() => {
-    let unsubscribe;
-    const currentUser = auth.currentUser;
-    if (currentUser) {
-      const docRef = doc(db, "students", currentUser.uid);
-      // Use onSnapshot for real-time updates
-      unsubscribe = onSnapshot(
-        docRef,
-        (docSnap) => {
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            setStudentName(
-              `${data.studentFirstName || ""} ${
-                data.studentLastName || ""
-              }`.trim() || "Error Retrieving Data"
-            );
-            if (typeof data.avatarConfig === "number") {
-              setAvatarConfig(AVATAR_OPTIONS[data.avatarConfig]);
-            } else {
-              setAvatarConfig(data.avatarConfig ?? null);
-            }
-          } else {
-            setStudentName("Error Retrieving Data");
-            setAvatarConfig(null);
-          }
-          setLoading(false);
-        },
-        () => {
-          setStudentName("Error Retrieving Data");
-          setAvatarConfig(null);
-          setLoading(false);
-        }
-      );
-    } else {
-      setStudentName("Error Retrieving Data");
-      setAvatarConfig(null);
-      setLoading(false);
-    }
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
-  }, []);
+//   useEffect(() => {
+//     let unsubscribe;
+//     const currentUser = auth.currentUser;
+//     if (currentUser) {
+//       const docRef = doc(db, "students", currentUser.uid);
+//       // Use onSnapshot for real-time updates
+//       unsubscribe = onSnapshot(
+//         docRef,
+//         (docSnap) => {
+//           if (docSnap.exists()) {
+//             const data = docSnap.data();
+//             setStudentName(
+//               `${data.studentFirstName || ""} ${
+//                 data.studentLastName || ""
+//               }`.trim() || "Error Retrieving Data"
+//             );
+//             if (typeof data.avatarConfig === "number") {
+//               setAvatarConfig(AVATAR_OPTIONS[data.avatarConfig]);
+//             } else {
+//               setAvatarConfig(data.avatarConfig ?? null);
+//             }
+//           } else {
+//             setStudentName("Error Retrieving Data");
+//             setAvatarConfig(null);
+//           }
+//           setLoading(false);
+//         },
+//         () => {
+//           setStudentName("Error Retrieving Data");
+//           setAvatarConfig(null);
+//           setLoading(false);
+//         }
+//       );
+//     } else {
+//       setStudentName("Error Retrieving Data");
+//       setAvatarConfig(null);
+//       setLoading(false);
+//     }
+//     return () => {
+//       if (unsubscribe) unsubscribe();
+//     };
+//   }, []);
 
 
-  const handleSignOut = async () => {
-    try {
-      await firebaseSignOut(auth);
-      console.log("User signed out successfully");
-    } catch (error) {
-      console.error("Sign out error:", error);
-      alert("Sign out failed: " + error.message);
-    }
-  };
+//   const handleSignOut = async () => {
+//     try {
+//       await firebaseSignOut(auth);
+//       console.log("User signed out successfully");
+//     } catch (error) {
+//       console.error("Sign out error:", error);
+//       alert("Sign out failed: " + error.message);
+//     }
+//   };
 
-  return (
-    <DrawerContentScrollView
-      {...restProps}
-      style={{ flex: 1, backgroundColor: "#f8fafc" }}
-      contentContainerStyle={{ padding: 0 }}
-    >
-      <View
-        style={{
-          backgroundColor: "#FF7FB3",
-          paddingVertical: 28,
-          paddingHorizontal: 0, // Remove horizontal padding
-          flexDirection: "row",
-          alignItems: "center",
-          width: "100%",
-          borderRadius: 0,
-          alignSelf: "stretch", // Ensure full width
-        }}
-      >
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            paddingLeft: 18,
-            width: "100%",
-          }}
-        >
+//   return (
+//     <DrawerContentScrollView
+//       {...restProps}
+//       style={{ flex: 1, backgroundColor: "#f8fafc" }}
+//       contentContainerStyle={{ padding: 0 }}
+//     >
+//       <View
+//         style={{
+//           backgroundColor: "#FF7FB3",
+//           paddingVertical: 28,
+//           paddingHorizontal: 0, // Remove horizontal padding
+//           flexDirection: "row",
+//           alignItems: "center",
+//           width: "100%",
+//           borderRadius: 0,
+//           alignSelf: "stretch", // Ensure full width
+//         }}
+//       >
+//         <View
+//           style={{
+//             flexDirection: "row",
+//             alignItems: "center",
+//             paddingLeft: 18,
+//             width: "100%",
+//           }}
+//         >
 
-          {avatarConfig ? (
-            <Image
-              source={avatarConfig}
-              style={{
-                width: 54,
-                height: 54,
-                borderRadius: 27,
-                marginRight: 12,
-                borderWidth: 2,
-                borderColor: "#fff",
-                backgroundColor: "#eee",
-              }}
-            />
+//           {avatarConfig ? (
+//             <Image
+//               source={avatarConfig}
+//               style={{
+//                 width: 54,
+//                 height: 54,
+//                 borderRadius: 27,
+//                 marginRight: 12,
+//                 borderWidth: 2,
+//                 borderColor: "#fff",
+//                 backgroundColor: "#eee",
+//               }}
+//             />
             
-          ) : (
-            <Image
-              source={require("./assets/avatars/default_profile.png")}
-              style={{
-                width: 54,
-                height: 54,
-                borderRadius: 27,
-                marginRight: 12,
-                borderWidth: 2,
-                borderColor: "#fff",
-                backgroundColor: "#eee",
-              }}
-            />
-          )}
-          <Text
-            style={{
-              color: "#fff",
-              fontWeight: "bold",
-              fontSize: 16,
-              flexShrink: 1,
-              flexWrap: "wrap",
-            }}
-          >
-            {loading ? "Loading..." : studentName}
-          </Text>
-        </View>
-      </View>
+//           ) : (
+//             <Image
+//               source={require("./assets/avatars/default_profile.png")}
+//               style={{
+//                 width: 54,
+//                 height: 54,
+//                 borderRadius: 27,
+//                 marginRight: 12,
+//                 borderWidth: 2,
+//                 borderColor: "#fff",
+//                 backgroundColor: "#eee",
+//               }}
+//             />
+//           )}
+//           <Text
+//             style={{
+//               color: "#fff",
+//               fontWeight: "bold",
+//               fontSize: 16,
+//               flexShrink: 1,
+//               flexWrap: "wrap",
+//             }}
+//           >
+//             {loading ? "Loading..." : studentName}
+//           </Text>
+//         </View>
+//       </View>
 
-       {/* Converted Timer Display for React Native */}
-      <View
-        style={{
-          padding: 10,
-          borderTopWidth: 1,
-          borderTopColor: "#ccc",
-          backgroundColor: "#f0f0f0", // Example background
-          alignItems: 'center',
-        }}
-      >
-        <Text style={{ fontWeight: "bold" }}>
-          Time Remaining:
-          <Text style={{ fontWeight: "bold", marginLeft: 5 }}>
-            {appIsSleeping ? "Resting" : timerDisplay}
-          </Text>
-        </Text>
-      </View>
+//        {/* Converted Timer Display for React Native */}
+//       <View
+//         style={{
+//           padding: 10,
+//           borderTopWidth: 1,
+//           borderTopColor: "#ccc",
+//           backgroundColor: "#f0f0f0", // Example background
+//           alignItems: 'center',
+//         }}
+//       >
+//         <Text style={{ fontWeight: "bold" }}>
+//           Time Remaining:
+//           <Text style={{ fontWeight: "bold", marginLeft: 5 }}>
+//             {appIsSleeping ? "Resting" : timerDisplay}
+//           </Text>
+//         </Text>
+//       </View>
 
       
-      <View style={{ marginTop: 18, width: "100%", alignSelf: "stretch" }}>
-        <DrawerItem
-          label="Home"
-          icon={({ color, size }) => (
-            <Ionicons name="home-outline" size={size} color={color} />
-          )}
-          labelStyle={{ fontWeight: "bold", fontSize: 15 }}
-          style={{ marginHorizontal: 0, borderRadius: 0, width: "100%" }}
-          activeTintColor="#ff4081"
-          inactiveTintColor="#222"
-          onPress={() => {
-            navigation.closeDrawer();
-            navigation.navigate("KwenturaHome", { screen: "Home" });
-          }}
-        />
-        <DrawerItem
-          label="Rewards"
-          icon={({ color, size }) => (
-            <Ionicons name="paw-outline" size={size} color={color} />
-          )}
-          labelStyle={{ fontWeight: "bold", fontSize: 15 }}
-          style={{ marginHorizontal: 0, borderRadius: 0, width: "100%" }}
-          activeTintColor="#ff4081"
-          inactiveTintColor="#222"
-          onPress={() => {
-            navigation.closeDrawer();
-            navigation.navigate("KwenturaHome", { screen: "RewardsTab" });
-          }}
-        />
-        <DrawerItem
-          label="Library"
-          icon={({ color, size }) => (
-            <Ionicons name="library" size={size} color={color} />
-          )}
-          labelStyle={{ fontWeight: "bold", fontSize: 15 }}
-          style={{ marginHorizontal: 0, borderRadius: 0, width: "100%" }}
-          activeTintColor="#ff4081"
-          inactiveTintColor="#222"
-          onPress={() => {
-            navigation.closeDrawer();
-            navigation.navigate("KwenturaHome", { screen: "LibraryTab" });
-          }}
-        />
-        <View style={{ flex: 1, justifyContent: "flex-end", width: "100%" }}>
-          <DrawerItem
-            label="Logout"
-            icon={({ color, size }) => (
-              <Ionicons name="log-out-outline" size={size} color="#ff4081" />
-            )}
-            labelStyle={{ color: "#ff4081", fontWeight: "bold", fontSize: 15 }}
-            style={{
-              marginBottom: 10,
-              marginHorizontal: 0,
-              borderRadius: 0,
-              width: "100%",
-            }}
-            onPress={handleSignOut}
-          />
-        </View>
-      </View>
-    </DrawerContentScrollView>
-  );
-}
+//       <View style={{ marginTop: 18, width: "100%", alignSelf: "stretch" }}>
+//         <DrawerItem
+//           label="Home"
+//           icon={({ color, size }) => (
+//             <Ionicons name="home-outline" size={size} color={color} />
+//           )}
+//           labelStyle={{ fontWeight: "bold", fontSize: 15 }}
+//           style={{ marginHorizontal: 0, borderRadius: 0, width: "100%" }}
+//           activeTintColor="#ff4081"
+//           inactiveTintColor="#222"
+//           onPress={() => {
+//             navigation.closeDrawer();
+//             navigation.navigate("KwenturaHome", { screen: "Home" });
+//           }}
+//         />
+//         <DrawerItem
+//           label="Rewards"
+//           icon={({ color, size }) => (
+//             <Ionicons name="paw-outline" size={size} color={color} />
+//           )}
+//           labelStyle={{ fontWeight: "bold", fontSize: 15 }}
+//           style={{ marginHorizontal: 0, borderRadius: 0, width: "100%" }}
+//           activeTintColor="#ff4081"
+//           inactiveTintColor="#222"
+//           onPress={() => {
+//             navigation.closeDrawer();
+//             navigation.navigate("KwenturaHome", { screen: "RewardsTab" });
+//           }}
+//         />
+//         <DrawerItem
+//           label="Library"
+//           icon={({ color, size }) => (
+//             <Ionicons name="library" size={size} color={color} />
+//           )}
+//           labelStyle={{ fontWeight: "bold", fontSize: 15 }}
+//           style={{ marginHorizontal: 0, borderRadius: 0, width: "100%" }}
+//           activeTintColor="#ff4081"
+//           inactiveTintColor="#222"
+//           onPress={() => {
+//             navigation.closeDrawer();
+//             navigation.navigate("KwenturaHome", { screen: "LibraryTab" });
+//           }}
+//         />
+//         <View style={{ flex: 1, justifyContent: "flex-end", width: "100%" }}>
+//           <DrawerItem
+//             label="Logout"
+//             icon={({ color, size }) => (
+//               <Ionicons name="log-out-outline" size={size} color="#ff4081" />
+//             )}
+//             labelStyle={{ color: "#ff4081", fontWeight: "bold", fontSize: 15 }}
+//             style={{
+//               marginBottom: 10,
+//               marginHorizontal: 0,
+//               borderRadius: 0,
+//               width: "100%",
+//             }}
+//             onPress={handleSignOut}
+//           />
+//         </View>
+//       </View>
+//     </DrawerContentScrollView>
+//   );
+// }
 
 // Define a new stack for Profile related screens
 function ProfileStack() {
@@ -688,7 +688,8 @@ function AppDrawer() {
 
 return (
   <Drawer.Navigator
-    drawerContent={(props) => <CustomDrawerContent {...props} timerDisplay={timerDisplay} appIsSleeping={appIsGloballySleeping} />}
+    // drawerContent={(props) =>  <CustomDrawerContent {...props} timerDisplay={timerDisplay} appIsSleeping={appIsGloballySleeping} />}
+    drawerLockmode={false}
     screenOptions={{
       headerShown: false,
     }}

@@ -78,7 +78,7 @@ const Home = ({ navigation }) => {
     useEffect(() => {
       filterStories();
       generateSearchSuggestions();
-    }, [searchQuery, stories]);
+    }, [searchQuery, stories, selectedCategory]);
   
     useEffect(() => {
       generateQuickSearchData();
@@ -377,34 +377,30 @@ const Home = ({ navigation }) => {
   };
 
   const filterStories = () => {
-    if (!searchQuery.trim()) {
-      if (selectedCategory === "All") {
-        setFilteredStories(stories);
-      } else {
-        const filtered = stories.filter(
-          (story) => story.category?.toLowerCase() === selectedCategory.toLowerCase()
-        );
-        setFilteredStories(filtered);
-      }
-      return;
+    let filtered = stories;
+
+    // Filter by category
+    if (selectedCategory !== "All") {
+      filtered = filtered.filter(
+        (story) => story.category?.toLowerCase() === selectedCategory.toLowerCase()
+      );
     }
 
-    const baseStories = selectedCategory === "All" 
-      ? stories 
-      : stories.filter((story) => story.category?.toLowerCase() === selectedCategory.toLowerCase());
-
-    const filtered = baseStories.filter((story) => {
-      const title = story.title?.toLowerCase() || "";
-      const author = story.author?.toLowerCase() || "";
-      const category = story.category?.toLowerCase() || "";
+    // Filter by search query
+    if (searchQuery.trim()) {
       const searchTerm = searchQuery.toLowerCase();
+      filtered = filtered.filter((story) => {
+        const title = story.title?.toLowerCase() || "";
+        const author = story.author?.toLowerCase() || "";
+        const category = story.category?.toLowerCase() || "";
 
-      return (
-        title.includes(searchTerm) ||
-        author.includes(searchTerm) ||
-        category.includes(searchTerm)
-      );
-    });
+        return (
+          title.includes(searchTerm) ||
+          author.includes(searchTerm) ||
+          category.includes(searchTerm)
+        );
+      });
+    }
 
     setFilteredStories(filtered);
   };
@@ -448,57 +444,6 @@ const Home = ({ navigation }) => {
     // Save to storage
     await saveSearchData(updatedRecent, updatedHistory);
   };
-
-  const renderCategorySection = (categoryName, categoryKey) => {
-    const categoryStories = stories.filter(
-      (story) => story.category?.toLowerCase() === categoryKey.toLowerCase()
-    );
-
-    if (categoryStories.length === 0) return null;
-
-    return (
-      <View key={categoryKey} style={styles.categorySection}>
-        <View style={styles.categoryline}>
-          <Text style={styles.sectionTitle}>{categoryName}</Text>
-          <TouchableOpacity
-            onPress={() =>
-              navigation.navigate("CategoriesTab", {
-                selectedCategory: categoryKey,
-              })
-            }
-          >
-            <Text style={styles.viewAllText}>View All</Text>
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.horizontalScrollContainer}
-        >
-          {categoryStories.slice(0, 6).map(renderBookItem)}
-        </ScrollView>
-      </View>
-    );
-  };
-
-  const getAllCategories = () => {
-    const categories = stories
-      .map((story) => story.category)
-      .filter((cat) => !!cat);
-    return Array.from(new Set(categories));
-  };
-
-  const renderStoriesByCategory = () => {
-    const categories = getAllCategories();
-    return (
-      <View style={styles.categoriesContainer}>
-        {categories.map((category) =>
-          renderCategorySection(category, category)
-        )}
-      </View>
-    );
-  };  
 
   const handleViewStory = (story) => {
     // Navigate directly to ViewStory as it's in the same HomeStack
@@ -598,15 +543,6 @@ const Home = ({ navigation }) => {
 
   const handleCategoryPress = (category) => {
     setSelectedCategory(category);
-    if (category === "All") {
-      setFilteredStories(stories);
-    } else {
-      const filtered = stories.filter(
-        (story) => story.category?.toLowerCase() === category.toLowerCase()
-      );
-      setFilteredStories(filtered);
-      navigation.navigate("CategoriesTab", { selectedCategory: category });
-    }
   };
 
   const handleSuggestionPress = (suggestion) => {
@@ -953,39 +889,6 @@ const Home = ({ navigation }) => {
             </View>
           )}
         </View>
-
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#FFCF2D" />
-            <Text style={styles.loadingText}>
-              Discovering amazing stories...
-            </Text>
-          </View>
-        ) : error ? (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorIcon}>📚</Text>
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={fetchStories}>
-              <Text style={styles.retryText}>Try Again</Text>
-            </TouchableOpacity>
-          </View>
-        ) : searchQuery.trim() ? (
-          filteredStories.length > 0 ? (
-            <View style={styles.searchResultsContainer}>
-              {filteredStories.map(renderBookItem)}
-            </View>
-          ) : (
-            <View style={styles.noResultsContainer}>
-              <Ionicons name="search-outline" size={40} color="#ccc" />
-              <Text style={styles.noResultsText}>No stories found</Text>
-              <Text style={styles.noResultsSubtext}>
-                Try different keywords or browse our categories below
-              </Text>
-            </View>
-          )
-        ) : (
-          renderStoriesByCategory()
-        )}
 
         
       </ScrollView>
