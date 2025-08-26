@@ -338,7 +338,7 @@ const ManageAdmins = () => {
         accountType: formData.accountType,
         email: formData.email,
         contactNumber: formData.contactNumber, 
-        role: "admin",
+        role: formData.accountType === "superAdmin" ? "superAdmin" : "admin",
         isArchived: false, 
         updatedAt: new Date(),
       };

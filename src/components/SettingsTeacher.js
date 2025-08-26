@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { User, ChevronLeft, Eye, EyeOff, Camera, Trash2, Upload } from "lucide-react";
+import { User, ChevronLeft, Eye, EyeOff, Camera, Trash2, Upload, Check, RefreshCw } from "lucide-react";
 import { Row, Button, Form, Alert } from "react-bootstrap";
 import SidebarSettingsTeacher from "./SidebarSettingsTeacher.js";
 import TopNavbar from "./TopNavbar";
@@ -11,6 +11,7 @@ import {
   reauthenticateWithCredential,
   updatePassword,
   onAuthStateChanged,
+  sendEmailVerification,
 } from "firebase/auth";
 import {
   getFirestore,
@@ -68,6 +69,7 @@ const SettingsTeacher = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [profileImageUrl, setProfileImageUrl] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
 
   const auth = getAuth();
   const navigate = useNavigate();
@@ -168,6 +170,7 @@ const SettingsTeacher = () => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         await fetchUserDataFromFirestore(user);
+        setIsEmailVerified(user.emailVerified);
       } else {
         navigate("/login");
       }
@@ -192,6 +195,38 @@ const SettingsTeacher = () => {
       }, 500);
     } catch (error) {
       console.error("Error signing out:", error);
+    }
+  };
+
+  const handleSendVerificationEmail = async () => {
+    const user = auth.currentUser;
+    if (user) {
+      console.log("Current user object:", user);
+      try {
+        await sendEmailVerification(user);
+        setUpdateStatus({
+          show: true,
+          message: "Verification email sent! Please check your inbox.",
+          type: "success",
+        });
+        // It's important to reload the user to get the updated emailVerified status
+        await user.reload();
+        setIsEmailVerified(user.emailVerified);
+      } catch (error) {
+        console.error("Error sending verification email:", error);
+        setUpdateStatus({
+          show: true,
+          message: "Failed to send verification email: " + error.message,
+          type: "danger",
+        });
+      }
+    } else {
+      setUpdateStatus({
+        show: true,
+        message: "No authenticated user found to send verification email.",
+        type: "danger",
+      });
+      console.error("No authenticated user found when trying to send verification email.");
     }
   };
 
@@ -501,7 +536,7 @@ const SettingsTeacher = () => {
         <div className="settingsteacher-root" style={{ display: "flex", paddingTop: "56px" }}>
           <div
             className={`sidebar-container${sidebarOpen ? " show" : ""}`}
-            style={{
+            style={{ 
               position: "fixed",
               top: "56px",
               left: 0,
@@ -517,7 +552,7 @@ const SettingsTeacher = () => {
           </div>
           <div
             className={`main-content${sidebarOpen ? " shifted" : ""}`}
-            style={{
+            style={{ 
               flex: 1,
               minHeight: "100vh",
               background: "linear-gradient(135deg, #fdf7fd 0%, #f8f0f8 100%)",
@@ -530,7 +565,7 @@ const SettingsTeacher = () => {
             }}
           >
             <div 
-              style={{
+              style={{ 
                 background: "rgba(255, 255, 255, 0.9)",
                 backdropFilter: "blur(10px)",
                 borderRadius: "20px",
@@ -546,7 +581,7 @@ const SettingsTeacher = () => {
               }}
             >
               <div 
-                style={{
+                style={{ 
                   width: "50px",
                   height: "50px",
                   borderRadius: "50%",
@@ -558,7 +593,7 @@ const SettingsTeacher = () => {
                 }}
               >
                 <div 
-                  style={{
+                  style={{ 
                     width: "30px",
                     height: "30px",
                     border: "3px solid rgba(255, 255, 255, 0.3)",
@@ -600,7 +635,7 @@ const SettingsTeacher = () => {
       <div className="settingsteacher-root" style={{ display: "flex", paddingTop: "56px" }}>
         <div
           className={`sidebar-container${sidebarOpen ? " show" : ""}`}
-          style={{
+          style={{ 
             position: "fixed",
             top: "56px",
             left: 0,
@@ -619,7 +654,7 @@ const SettingsTeacher = () => {
 
         <div
           className={`main-content${sidebarOpen ? " shifted" : ""}`}
-          style={{
+          style={{ 
             flex: 1,
             background: "linear-gradient(135deg, #fdf7fd 0%, #f8f0f8 100%)",
             marginLeft: sidebarOpen ? 250 : 0,
@@ -630,7 +665,7 @@ const SettingsTeacher = () => {
         >
           {/* Header Section */}
           <div 
-            style={{
+            style={{ 
               background: "rgba(255, 255, 255, 0.9)",
               backdropFilter: "blur(10px)",
               borderRadius: "20px",
@@ -713,7 +748,7 @@ const SettingsTeacher = () => {
 
           {/* Content Container */}
           <div 
-            style={{
+            style={{ 
               background: "rgba(255, 255, 255, 0.9)",
               backdropFilter: "blur(10px)",
               borderRadius: "20px",
@@ -726,7 +761,7 @@ const SettingsTeacher = () => {
             {activeTab === "about" && (
               <>
                 <div 
-                  style={{
+                  style={{ 
                     fontSize: "28px",
                     fontWeight: "700",
                     color: "#2D2D2D",
@@ -744,7 +779,7 @@ const SettingsTeacher = () => {
                     }
                     dismissible
                     className="mb-4"
-                    style={{
+                    style={{ 
                       borderRadius: "15px",
                       border: updateStatus.type === "success" 
                         ? "2px solid #28a745" 
@@ -760,7 +795,7 @@ const SettingsTeacher = () => {
                 
                 {/* Profile Picture Section */}
                 <div 
-                  style={{
+                  style={{ 
                     background: "linear-gradient(135deg, rgba(255, 84, 154, 0.05), rgba(194, 24, 91, 0.03))",
                     borderRadius: "20px",
                     padding: "32px",
@@ -771,7 +806,7 @@ const SettingsTeacher = () => {
                 >
                   <div style={{ position: "relative" }}>
                     <div
-                      style={{
+                      style={{ 
                         width: "120px",
                         height: "120px",
                         borderRadius: "50%",
@@ -789,7 +824,7 @@ const SettingsTeacher = () => {
                     >
                       {!profileImageUrl && <User size={50} color="white" />}
                       <div
-                        style={{
+                        style={{ 
                           position: "absolute",
                           bottom: "8px",
                           right: "8px",
@@ -819,7 +854,7 @@ const SettingsTeacher = () => {
                     </p>
                     <div className="d-flex gap-3 flex-wrap">
                       <Button
-                        style={{
+                        style={{ 
                           background: "linear-gradient(135deg, #FF549A)",
                           border: "none",
                           borderRadius: "25px",
@@ -846,7 +881,7 @@ const SettingsTeacher = () => {
                         <input
                           type="file"
                           accept="image/*"
-                          style={{
+                          style={{ 
                             position: "absolute",
                             left: 0,
                             top: 0,
@@ -860,7 +895,7 @@ const SettingsTeacher = () => {
                         />
                       </Button>
                       <Button
-                        style={{
+                        style={{ 
                           background: "transparent",
                           border: "2px solid #FF549A",
                           borderRadius: "25px",
@@ -890,7 +925,7 @@ const SettingsTeacher = () => {
 
                 {/* Profile Information Section */}
                 <div 
-                  style={{
+                  style={{ 
                     fontSize: "28px",
                     fontWeight: "700",
                     color: "#2D2D2D",
@@ -901,7 +936,7 @@ const SettingsTeacher = () => {
                 </div>
                 
                 <div 
-                  style={{
+                  style={{ 
                     background: "linear-gradient(135deg, rgba(255, 84, 154, 0.05), rgba(194, 24, 91, 0.03))",
                     borderRadius: "15px",
                     padding: "16px 20px",
@@ -931,7 +966,7 @@ const SettingsTeacher = () => {
                           type="text"
                           value={userDetails.fullName}
                           readOnly
-                          style={{
+                          style={{ 
                             background: "rgba(240, 240, 240, 0.5)",
                             border: "2px solid rgba(0,0,0,0.1)",
                             borderRadius: "15px",
@@ -952,7 +987,7 @@ const SettingsTeacher = () => {
                           type="text"
                           value={userDetails.schoolId}
                           readOnly
-                          style={{
+                          style={{ 
                             background: "rgba(240, 240, 240, 0.5)",
                             border: "2px solid rgba(0,0,0,0.1)",
                             borderRadius: "15px",
@@ -973,7 +1008,7 @@ const SettingsTeacher = () => {
                           type="tel"
                           value={userDetails.contactNumber}
                           onChange={(e) => handleInputChange("contactNumber", e.target.value)}
-                          style={{
+                          style={{ 
                             border: "2px solid rgba(255, 84, 154, 0.3)",
                             borderRadius: "15px",
                             padding: "16px 20px",
@@ -996,20 +1031,52 @@ const SettingsTeacher = () => {
                         <Form.Label style={{ fontWeight: "600", color: "#2D2D2D", marginBottom: "12px" }}>
                           Email Address
                         </Form.Label>
-                        <Form.Control
-                          type="email"
-                          value={userDetails.emailAddress}
-                          readOnly
-                          style={{
-                            background: "rgba(240, 240, 240, 0.5)",
-                            border: "2px solid rgba(0,0,0,0.1)",
-                            borderRadius: "15px",
-                            padding: "16px 20px",
-                            fontSize: "16px",
-                            color: "#666",
-                            cursor: "not-allowed",
-                          }}
-                        />
+                        <div className="d-flex gap-2 align-items-center">
+                          <Form.Control
+                            type="email"
+                            value={userDetails.emailAddress}
+                            readOnly
+                            style={{ 
+                              background: isEmailVerified ? "#f8f9fa" : "rgba(240, 240, 240, 0.5)",
+                              border: "2px solid rgba(0,0,0,0.1)",
+                              borderRadius: "15px",
+                              padding: "16px 20px",
+                              fontSize: "16px",
+                              color: "#666",
+                              cursor: "not-allowed",
+                            }}
+                          />
+                          {isEmailVerified ? (
+                            <span className="text-success d-flex align-items-center gap-1" style={{ fontSize: "0.9rem", fontWeight: "600" }}>
+                              <Check size={18} /> Email Verified
+                            </span>
+                          ) : (
+                            <Button
+                              variant="outline-primary"
+                              size="sm"
+                              onClick={handleSendVerificationEmail}
+                              style={{ 
+                                minWidth: "100px",
+                                fontSize: "0.9rem",
+                                borderRadius: "15px",
+                                padding: "8px 15px",
+                                borderColor: "#FF549A",
+                                color: "#FF549A",
+                                transition: "all 0.3s ease",
+                              }}
+                              onMouseEnter={(e) => {
+                                e.target.style.background = "#FF549A";
+                                e.target.style.color = "white";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.target.style.background = "transparent";
+                                e.target.style.color = "#FF549A";
+                              }}
+                            >
+                              <RefreshCw size={14} className="me-1" /> Verify
+                            </Button>
+                          )}
+                        </div>
                       </Form.Group>
                     </div>
                     <div className="col-md-6 mb-4">
@@ -1021,7 +1088,7 @@ const SettingsTeacher = () => {
                           type="text"
                           value={userDetails.instructionalLevel}
                           onChange={(e) => handleInputChange("instructionalLevel", e.target.value)}
-                          style={{
+                          style={{ 
                             border: "2px solid rgba(255, 84, 154, 0.3)",
                             borderRadius: "15px",
                             padding: "16px 20px",
@@ -1048,7 +1115,7 @@ const SettingsTeacher = () => {
                           type="text"
                           value={userDetails.section}
                           onChange={(e) => handleInputChange("section", e.target.value)}
-                          style={{
+                          style={{ 
                             border: "2px solid rgba(255, 84, 154, 0.3)",
                             borderRadius: "15px",
                             padding: "16px 20px",
@@ -1071,7 +1138,7 @@ const SettingsTeacher = () => {
                   <div className="d-flex justify-content-start mt-4">
                     <Button
                       onClick={handleUpdateProfile}
-                      style={{
+                      style={{ 
                         background: "linear-gradient(135deg, #FF549A)",
                         border: "none",
                         borderRadius: "25px",
@@ -1102,7 +1169,7 @@ const SettingsTeacher = () => {
             {activeTab === "password" && (
               <>
                 <div 
-                  style={{
+                  style={{ 
                     fontSize: "28px",
                     fontWeight: "700",
                     color: "#2D2D2D",
@@ -1120,7 +1187,7 @@ const SettingsTeacher = () => {
                     }
                     dismissible
                     className="mb-4"
-                    style={{
+                    style={{ 
                       borderRadius: "15px",
                       border: passwordUpdateStatus.type === "success" 
                         ? "2px solid #28a745" 
@@ -1145,7 +1212,7 @@ const SettingsTeacher = () => {
                           type={showCurrentPassword ? "text" : "password"}
                           value={userDetails.currentPassword}
                           onChange={(e) => handleInputChange("currentPassword", e.target.value)}
-                          style={{
+                          style={{ 
                             border: "2px solid rgba(255, 84, 154, 0.3)",
                             borderRadius: "15px",
                             padding: "16px 50px 16px 20px",
@@ -1164,7 +1231,7 @@ const SettingsTeacher = () => {
                         />
                         <Button
                           variant="link"
-                          style={{
+                          style={{ 
                             position: "absolute",
                             right: "15px",
                             top: "50%",
@@ -1196,7 +1263,7 @@ const SettingsTeacher = () => {
                           type={showNewPassword ? "text" : "password"}
                           value={userDetails.newPassword}
                           onChange={(e) => handleInputChange("newPassword", e.target.value)}
-                          style={{
+                          style={{ 
                             border: "2px solid rgba(255, 84, 154, 0.3)",
                             borderRadius: "15px",
                             padding: "16px 50px 16px 20px",
@@ -1215,7 +1282,7 @@ const SettingsTeacher = () => {
                         />
                         <Button
                           variant="link"
-                          style={{
+                          style={{ 
                             position: "absolute",
                             right: "15px",
                             top: "50%",
@@ -1247,7 +1314,7 @@ const SettingsTeacher = () => {
                           type={showConfirmPassword ? "text" : "password"}
                           value={userDetails.confirmPassword}
                           onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
-                          style={{
+                          style={{ 
                             border: "2px solid rgba(255, 84, 154, 0.3)",
                             borderRadius: "15px",
                             padding: "16px 50px 16px 20px",
@@ -1266,7 +1333,7 @@ const SettingsTeacher = () => {
                         />
                         <Button
                           variant="link"
-                          style={{
+                          style={{ 
                             position: "absolute",
                             right: "15px",
                             top: "50%",
@@ -1289,7 +1356,7 @@ const SettingsTeacher = () => {
                   </div>
 
                   <div 
-                    style={{
+                    style={{ 
                       background: "linear-gradient(135deg, rgba(255, 84, 154, 0.05), rgba(194, 24, 91, 0.03))",
                       borderRadius: "15px",
                       padding: "20px",
@@ -1311,7 +1378,7 @@ const SettingsTeacher = () => {
                     <Button
                       onClick={handleUpdatePassword}
                       disabled={isUpdatingPassword}
-                      style={{
+                      style={{ 
                         background: isUpdatingPassword 
                           ? "linear-gradient(135deg, #ccc, #999)" 
                           : "linear-gradient(135deg, #FF549A)",
@@ -1343,7 +1410,7 @@ const SettingsTeacher = () => {
                       {isUpdatingPassword ? (
                         <>
                           <div 
-                            style={{
+                            style={{ 
                               width: "16px",
                               height: "16px",
                               border: "2px solid rgba(255, 255, 255, 0.3)",

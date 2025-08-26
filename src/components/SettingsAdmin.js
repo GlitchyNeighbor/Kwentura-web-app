@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { User, ChevronLeft, Eye, EyeOff, Camera, Trash2, Upload } from "lucide-react";
+import { User, ChevronLeft, Eye, EyeOff, Camera, Trash2, Upload, Check, RefreshCw } from "lucide-react";
 import { Row, Button, Form, Alert } from "react-bootstrap";
 import SidebarSettingsAdmin from "./SidebarSettingsAdmin";
 import TopNavbar from "./TopNavbar";
@@ -11,6 +11,7 @@ import {
   reauthenticateWithCredential,
   updatePassword,
   onAuthStateChanged,
+  sendEmailVerification,
 } from "firebase/auth";
 import {
   getFirestore,
@@ -66,6 +67,7 @@ const SettingsAdmin = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [profileImageUrl, setProfileImageUrl] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
 
   const auth = getAuth();
   const navigate = useNavigate();
@@ -165,6 +167,7 @@ const SettingsAdmin = () => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         await fetchUserDataFromFirestore(user);
+        setIsEmailVerified(user.emailVerified);
       } else {
         navigate("/login");
       }
@@ -172,6 +175,38 @@ const SettingsAdmin = () => {
 
     return () => unsubscribe();
   }, [auth, navigate, uploadingImage, fetchUserDataFromFirestore]);
+
+  const handleSendVerificationEmail = async () => {
+    const user = auth.currentUser;
+    if (user) {
+      console.log("Current user object:", user);
+      try {
+        await sendEmailVerification(user);
+        setUpdateStatus({
+          show: true,
+          message: "Verification email sent! Please check your inbox.",
+          type: "success",
+        });
+        // It's important to reload the user to get the updated emailVerified status
+        await user.reload();
+        setIsEmailVerified(user.emailVerified);
+      } catch (error) {
+        console.error("Error sending verification email:", error);
+        setUpdateStatus({
+          show: true,
+          message: "Failed to send verification email: " + error.message,
+          type: "danger",
+        });
+      }
+    } else {
+      setUpdateStatus({
+        show: true,
+        message: "No authenticated user found to send verification email.",
+        type: "danger",
+      });
+      console.error("No authenticated user found when trying to send verification email.");
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -964,19 +999,51 @@ const SettingsAdmin = () => {
                         >
                           Email Address
                         </Form.Label>
-                        <Form.Control
-                          type="email"
-                          value={userDetails.emailAddress}
-                          disabled
-                          style={{
-                            borderRadius: "15px",
-                            border: "2px solid rgba(255, 84, 154, 0.2)",
-                            padding: "15px 20px",
-                            fontSize: "16px",
-                            background: "rgba(255, 84, 154, 0.05)",
-                            color: "#2D2D2D",
-                          }}
-                        />
+                        <div className="d-flex gap-2 align-items-center">
+                          <Form.Control
+                            type="email"
+                            value={userDetails.emailAddress}
+                            disabled={true}
+                            style={{
+                              borderRadius: "15px",
+                              border: "2px solid rgba(255, 84, 154, 0.2)",
+                              padding: "15px 20px",
+                              fontSize: "16px",
+                              background: isEmailVerified ? "#f8f9fa" : "rgba(255, 84, 154, 0.05)",
+                              color: "#2D2D2D",
+                            }}
+                          />
+                          {isEmailVerified ? (
+                            <span className="text-success d-flex align-items-center gap-1" style={{ fontSize: "0.9rem", fontWeight: "600" }}>
+                              <Check size={18} /> Email Verified
+                            </span>
+                          ) : (
+                            <Button
+                              variant="outline-primary"
+                              size="sm"
+                              onClick={handleSendVerificationEmail}
+                              style={{
+                                minWidth: "100px",
+                                fontSize: "0.9rem",
+                                borderRadius: "15px",
+                                padding: "8px 15px",
+                                borderColor: "#FF549A",
+                                color: "#FF549A",
+                                transition: "all 0.3s ease",
+                              }}
+                              onMouseEnter={(e) => {
+                                e.target.style.background = "#FF549A";
+                                e.target.style.color = "white";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.target.style.background = "transparent";
+                                e.target.style.color = "#FF549A";
+                              }}
+                            >
+                              <RefreshCw size={14} className="me-1" /> Verify
+                            </Button>
+                          )}
+                        </div>
                       </Form.Group>
                     </div>
                     <div className="col-md-6">
