@@ -9,7 +9,8 @@ import {
   Text,
   TouchableOpacity,
   ImageBackground,
-  Alert
+  Alert,
+  TouchableWithoutFeedback
 } from "react-native";
 import { doc, getDoc, updateDoc, increment, setDoc, collection } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
@@ -49,6 +50,8 @@ const ReadStory = ({ route, navigation }) => {
   const [audioData, setAudioData] = useState([]);
   const [currentAudio, setCurrentAudio] = useState(null);
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
+  const [showUI, setShowUI] = useState(true); // State to control UI visibility
+  const uiOpacity = useSharedValue(1); // For animating UI visibility
   
   // Animation values
   const flip = useSharedValue(0);
@@ -83,6 +86,22 @@ const ReadStory = ({ route, navigation }) => {
       completionScale.value = withSpring(1, { damping: 15 });
     }
   }, [showCompletion]);
+
+  // UI visibility timer
+  useEffect(() => {
+    let timer;
+    if (showUI) {
+      uiOpacity.value = withTiming(1, { duration: 300 });
+      timer = setTimeout(() => {
+        uiOpacity.value = withTiming(0, { duration: 300 }, () => {
+          runOnJS(setShowUI)(false);
+        });
+      }, 2000);
+    } else {
+      uiOpacity.value = withTiming(0, { duration: 300 });
+    }
+    return () => clearTimeout(timer);
+  }, [showUI]);
 
   // Increment "users read" count when story is completed
   useEffect(() => {
@@ -236,6 +255,11 @@ const ReadStory = ({ route, navigation }) => {
     };
   }, [currentAudio, navigation]);
 
+  // Reset flip animation when page changes
+  useEffect(() => {
+    flip.value = 0;
+  }, [currentPage]);
+
   // Enhanced flip animation with bounce
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
@@ -273,6 +297,11 @@ const ReadStory = ({ route, navigation }) => {
     transform: [{ scale: celebrationBounce.value }],
   }));
 
+  // UI opacity animation
+  const uiAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: uiOpacity.value,
+  }));
+
   // Enhanced gesture handler with haptic feedback
   const gestureHandler = useAnimatedGestureHandler({
     onStart: () => {
@@ -282,28 +311,9 @@ const ReadStory = ({ route, navigation }) => {
       buttonPulse.value = withSpring(1);
       
       if (event.translationX > 80 && currentPage > 0) {
-        flip.value = withSpring(180, { damping: 15 }, () => {
-          runOnJS(setCurrentPage)(currentPage - 1);
-          flip.value = 0;
-          runOnJS(() => {
-            // Celebrate page turn
-            buttonPulse.value = withSequence(
-              withSpring(1.1),
-              withSpring(1)
-            );
-          })();
-        });
+        runOnJS(goToPreviousPage)();
       } else if (event.translationX < -80 && currentPage < pageImages.length - 1) {
-        flip.value = withSpring(-180, { damping: 15 }, () => {
-          runOnJS(setCurrentPage)(currentPage + 1);
-          flip.value = 0;
-          runOnJS(() => {
-            buttonPulse.value = withSequence(
-              withSpring(1.1),
-              withSpring(1)
-            );
-          })();
-        });
+        runOnJS(goToNextPage)();
       }
     },
   });
@@ -348,10 +358,13 @@ const ReadStory = ({ route, navigation }) => {
         setCurrentAudio(null);
       }
       setShowCompletion(false);
-      flip.value = withSpring(180, { damping: 15 }, () => {
-        runOnJS(setCurrentPage)(currentPage - 1);
-        flip.value = 0;
-      });
+      const newPage = currentPage - 1;
+      setCurrentPage(newPage); // Update state immediately
+      flip.value = withSpring(180, { damping: 15 }); // Animate
+      buttonPulse.value = withSequence(
+        withSpring(1.1),
+        withSpring(1)
+      );
     }
   };
 
@@ -362,10 +375,13 @@ const ReadStory = ({ route, navigation }) => {
         setCurrentAudio(null);
       }
       setShowCompletion(false);
-      flip.value = withSpring(-180, { damping: 15 }, () => {
-        runOnJS(setCurrentPage)(currentPage + 1);
-        flip.value = 0;
-      });
+      const newPage = currentPage + 1;
+      setCurrentPage(newPage); // Update state immediately
+      flip.value = withSpring(-180, { damping: 15 }); // Animate
+      buttonPulse.value = withSequence(
+        withSpring(1.1),
+        withSpring(1)
+      );
     } else {
       if (currentAudio) {
         currentAudio.unloadAsync();
@@ -487,6 +503,8 @@ const ReadStory = ({ route, navigation }) => {
       <GestureHandlerRootView style={{ flex: 1 }}>
       
         <SafeAreaView style={styles.safeArea}>
+          <TouchableWithoutFeedback onPress={() => setShowUI(true)}>
+            <View style={{ flex: 1 }}>
 
            <View style={styles.container}>
             
@@ -494,14 +512,14 @@ const ReadStory = ({ route, navigation }) => {
             {pageImages.length > 0 ? (
               <>
                 {/* Story Title and Author */}
-                <View style={styles.storyHeader}>
+                <Animated.View style={[styles.storyHeader, uiAnimatedStyle]}>
                   {storyTitle ? (
                     <Text style={styles.storyTitle}>{storyTitle}</Text>
                   ) : null}
                   {storyAuthor ? (
                     <Text style={styles.storyAuthor}>by {storyAuthor}</Text>
                   ) : null}
-                </View>
+                </Animated.View>
               
 
                 {/* Show completion screen when story is finished */}
@@ -525,24 +543,26 @@ const ReadStory = ({ route, navigation }) => {
                 
 
                 {/* Enhanced Listen Button */}
-                <TouchableOpacity
-                  style={styles.listenButton}
-                  onPress={handleSpeak}
-                  activeOpacity={0.8}
-                  disabled={isLoadingAudio}
-                >
-                  <Animated.View style={[styles.listenButtonContent, speakerAnimatedStyle]}>
-                    <Text style={styles.listenButtonEmoji}>
-                      {isLoadingAudio ? "⌛" : isPlaying ? "🔊" : "🎧"}
-                    </Text>
-                    <Text style={styles.listenButtonText}>
-                      {isLoadingAudio ? "Loading..." : isPlaying ? "Stop" : "Listen"}
-                    </Text>
-                  </Animated.View>
-                </TouchableOpacity>
+                <Animated.View style={uiAnimatedStyle}>
+                  <TouchableOpacity
+                    style={styles.listenButton}
+                    onPress={handleSpeak}
+                    activeOpacity={0.8}
+                    disabled={isLoadingAudio}
+                  >
+                    <Animated.View style={[styles.listenButtonContent, speakerAnimatedStyle]}>
+                      <Text style={styles.listenButtonEmoji}>
+                        {isLoadingAudio ? "⌛" : isPlaying ? "🔊" : "🎧"}
+                      </Text>
+                      <Text style={styles.listenButtonText}>
+                        {isLoadingAudio ? "Loading..." : isPlaying ? "Stop" : "Listen"}
+                      </Text>
+                    </Animated.View>
+                  </TouchableOpacity>
+                </Animated.View>
 
                 {/* Enhanced Controls */}
-                <View style={styles.controls}>
+                <Animated.View style={[styles.controls, uiAnimatedStyle]}>
                   <TouchableOpacity
                     style={[styles.navButton, currentPage === 0 && styles.disabledButton]}
                     onPress={goToPreviousPage}
@@ -575,7 +595,7 @@ const ReadStory = ({ route, navigation }) => {
                       {currentPage === pageImages.length - 1 ? "🎉 Finish" : "Next ➡️"}
                     </Text>
                   </TouchableOpacity>
-                </View>
+                </Animated.View>
               </>
             ) : (
               <View style={styles.centered}>
@@ -593,6 +613,8 @@ const ReadStory = ({ route, navigation }) => {
             
           </View>
           
+            </View>
+          </TouchableWithoutFeedback>
         </SafeAreaView>
         
       </GestureHandlerRootView>
@@ -635,6 +657,11 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 5,
     marginTop: 100,
+    position: 'absolute',
+    top: 0,
+    left: 20,
+    right: 20,
+    zIndex: 10,
   },
   storyTitle: {
     fontSize: 22,
@@ -774,8 +801,8 @@ const styles = StyleSheet.create({
   bottomLeft: { bottom: 160, left: 25 },
   bottomRight: { bottom: 180, right: 20 },
   pageImageContainer: {
-    width: width * 0.9,
-    height: height * 0.55,
+    width: width * 1,
+    height: height * 1,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 20,
@@ -794,8 +821,8 @@ const styles = StyleSheet.create({
     width:'100%',
   },
   pageImage: { 
-    width: width * 0.8, 
-    height: height * 0.5,
+    width: width * 0.85, 
+    height: height * 0.6,
     borderRadius: 10,
   },
   listenButton: {
@@ -811,11 +838,16 @@ const styles = StyleSheet.create({
     elevation: 8,
     borderWidth: 3,
     borderColor: 'white',
+    position: 'absolute',
+    bottom: 70,
+    alignSelf: 'center',
+    zIndex: 10,
   },
   listenButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    
   },
   listenButtonEmoji: {
     fontSize: 18,
@@ -832,6 +864,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     width: "95%",
     marginBottom: 15,
+    position: 'absolute',
+    bottom: 10,
+    left: 10,
+    right: 10,
+    zIndex: 10,
   },
   navButton: {
     backgroundColor: '#4ECDC4',

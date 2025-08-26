@@ -12,7 +12,7 @@ const storage = admin.storage();
 
 // Configuration
 const IMAGE_FORMAT = "png"; // Supported: "png", "jpeg", "tiff", "ppm" (check Poppler docs for pdftoppm)
-const IMAGE_RESOLUTION = 150; // DPI for the output images
+const IMAGE_RESOLUTION = 300; // DPI for the output images
 
 /**
  * Firebase Cloud Function (HTTPS Callable) to split a PDF into images.
