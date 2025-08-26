@@ -1,0 +1,1517 @@
+@import '~bootstrap/scss/bootstrap.scss';
+@import './mixins';
+@import './variables';
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+
+$sidebar-width: 280px;
+$navbar-height: 60px;
+$primary-color: #007bff;
+$dark-text: #333;
+$light-gray: #f8f9fa;
+$border-color: #dee2e6;
+$sidebar-transition-duration: 0.3s;
+
+* {
+  font-family: 'Poppins';
+  margin: 0;
+  padding: 0;
+}
+
+.mx-sm-6 {
+  margin-right: 6rem !important;
+  margin-left: 6rem !important;
+}
+
+.mt-6 {
+  margin-top: 6rem !important;
+}
+
+.display-7 {
+  font-weight: 500;
+  line-height: 1.2;
+  font-size: calc(3rem + 1.5vw);
+}
+
+.bg-custom-pink {
+  background-color: #F2EDF3 !important;
+}
+
+.btn-outline-custom-pink {
+  --bs-btn-color: #FF549A !important;
+  --bs-btn-border-color: #FF549A !important;
+  --bs-btn-hover-color: #fff !important;
+  --bs-btn-hover-bg: #FF549A !important;
+  --bs-btn-hover-border-color: #FF549A !important;
+  --bs-btn-bg: transparent !important;
+  width: 50%;
+  --bs-btn-focus-shadow-rgb: 255, 84, 154 !important;
+
+  --bs-btn-active-color: #fff !important;
+  --bs-btn-active-bg: #FF549A !important;
+  --bs-btn-active-border-color: #FF549A !important;
+
+  --bs-btn-disabled-color: #FF549A !important;
+  --bs-btn-disabled-bg: transparent !important;
+  --bs-btn-disabled-border-color: #FF549A !important;
+}
+
+.btn-outline-custom-pink:focus {
+  box-shadow: 0 0 0 0.25rem rgba(255, 84, 154, 0.5);
+}
+
+.btn-custom-pink-solid {
+  --bs-btn-color: #fff !important;
+  --bs-btn-bg: #FF549A !important;
+  --bs-btn-border-color: #FF549A !important;
+
+  --bs-btn-hover-color: #fff !important;
+  --bs-btn-hover-bg: #E04888 !important;
+  --bs-btn-hover-border-color: #D1407E !important;
+
+  --bs-btn-active-color: #fff !important;
+  --bs-btn-active-bg: #CC407F !important;
+  --bs-btn-active-border-color: #BF3B75 !important;
+  width: 50%;
+  --bs-btn-disabled-color: #fff !important;
+  --bs-btn-disabled-bg: #FF8BBA !important;
+  --bs-btn-disabled-border-color: #FF8BBA !important;
+
+  --bs-btn-focus-shadow-rgb: 255, 84, 154 !important;
+}
+
+
+.btn-custom-pink-solid:focus {
+  box-shadow: 0 0 0 0.25rem rgba(255, 84, 154, 0.5);
+}
+
+.poppins-thin {
+  font-family: "Poppins", sans-serif;
+  font-weight: 100;
+  font-style: normal;
+}
+
+.poppins-extralight {
+  font-family: "Poppins", sans-serif;
+  font-weight: 200;
+  font-style: normal;
+}
+
+.poppins-light {
+  font-family: "Poppins", sans-serif;
+  font-weight: 300;
+  font-style: normal;
+}
+
+.poppins-regular {
+  font-family: "Poppins", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.poppins-medium {
+  font-family: "Poppins", sans-serif;
+  font-weight: 500;
+  font-style: normal;
+}
+
+.poppins-semibold {
+  font-family: "Poppins", sans-serif;
+  font-weight: 600;
+  font-style: normal;
+}
+
+.poppins-bold {
+  font-family: "Poppins", sans-serif;
+  font-weight: 700;
+  font-style: normal;
+}
+
+.poppins-extrabold {
+  font-family: "Poppins", sans-serif;
+  font-weight: 800;
+  font-style: normal;
+}
+
+.poppins-black {
+  font-family: "Poppins", sans-serif;
+  font-weight: 900;
+  font-style: normal;
+}
+
+.poppins-thin-italic {
+  font-family: "Poppins", sans-serif;
+  font-weight: 100;
+  font-style: italic;
+}
+
+.poppins-extralight-italic {
+  font-family: "Poppins", sans-serif;
+  font-weight: 200;
+  font-style: italic;
+}
+
+.poppins-light-italic {
+  font-family: "Poppins", sans-serif;
+  font-weight: 300;
+  font-style: italic;
+}
+
+.poppins-regular-italic {
+  font-family: "Poppins", sans-serif;
+  font-weight: 400;
+  font-style: italic;
+}
+
+.poppins-medium-italic {
+  font-family: "Poppins", sans-serif;
+  font-weight: 500;
+  font-style: italic;
+}
+
+.poppins-semibold-italic {
+  font-family: "Poppins", sans-serif;
+  font-weight: 600;
+  font-style: italic;
+}
+
+.poppins-bold-italic {
+  font-family: "Poppins", sans-serif;
+  font-weight: 700;
+  font-style: italic;
+}
+
+.poppins-extrabold-italic {
+  font-family: "Poppins", sans-serif;
+  font-weight: 800;
+  font-style: italic;
+}
+
+.poppins-black-italic {
+  font-family: "Poppins", sans-serif;
+  font-weight: 900;
+  font-style: italic;
+}
+
+.kwentura-footer {
+  background-color: #FFCCE1;
+  padding: 20px 0;
+
+  .logo-container {
+    display: flex;
+    align-items: center;
+
+    .logo {
+      height: 30px;
+      margin-right: 10px;
+    }
+
+    .logo-text {
+      font-weight: bold;
+      font-size: 1.2rem;
+    }
+  }
+
+  .copyright {
+    font-size: 0.8rem;
+    color: #333;
+    margin-top: 10px;
+  }
+
+  .footer-title {
+    color: #333;
+    margin-bottom: 10px;
+    font-size: 1rem;
+  }
+
+  .footer-links {
+    ul {
+      padding: 0;
+      margin: 0;
+      list-style: none;
+
+      li {
+        margin-bottom: 5px;
+
+        a {
+          color: #555;
+          text-decoration: none;
+
+          &:hover {
+            color: #007bff;
+          }
+        }
+      }
+    }
+  }
+}
+
+.sidebar {
+  width: 260px;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  background-color: #f8f9fa;
+  border-right: 1px solid #e9ecef;
+  overflow-y: auto;
+  padding-bottom: 20px;
+
+  .navbar-brand {
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+
+    .hamburger-icon {
+      width: 28px;
+      height: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      cursor: pointer;
+
+      .line {
+        width: 100%;
+        height: 2px;
+        background-color: #aaa;
+        transition: all 0.2s ease-in-out;
+      }
+    }
+
+    .user-info {
+      margin-left: 1rem;
+
+      img {
+        width: 35px;
+        height: 35px;
+        object-fit: cover;
+        border-radius: 50%;
+        margin-right: 0.75rem;
+      }
+
+      span {
+        font-weight: 500;
+        color: #333;
+      }
+    }
+  }
+
+  hr {
+    border-top: 1px solid #e9ecef;
+    margin: 0.75rem 1.5rem;
+  }
+
+  .sidebar-section {
+    padding: 1rem 0;
+
+    .sidebar-heading {
+      padding: 0.5rem 1.5rem;
+      font-size: 0.85rem;
+      font-weight: bold;
+      color: #6c757d;
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+  }
+
+  .nav-item {
+    .sidebar-link {
+      padding: 0.8rem 1.75rem;
+      color: #495057;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      transition: background-color 0.15s ease-in-out;
+
+      &:hover {
+        background-color: #e9ecef;
+        color: #007bff;
+      }
+
+      i {
+        font-size: 1rem;
+        margin-right: 1rem;
+        color: #6c757d;
+      }
+    }
+
+    &.mt-auto {
+      margin-top: auto !important;
+      padding: 1rem 0;
+    }
+
+    .logout-link {
+      color: #dc3545;
+
+      &:hover {
+        background-color: #fdecea;
+        color: darken(#dc3545, 10%);
+      }
+    }
+  }
+}
+
+.admin-dashboard-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+
+.top-navbar {
+  height: $navbar-height;
+  border-bottom: 1px solid $border-color;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  z-index: 1040;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  background-color: #fff;
+
+  .burger-menu {
+    cursor: pointer;
+    padding: 8px;
+    transition: all 0.3s;
+    z-index: 1050;
+
+    &:hover {
+      color: $primary-color;
+    }
+  }
+
+  .notification-icon {
+    cursor: pointer;
+
+    .notification-badge {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      background-color: red;
+      color: white;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      font-size: 0.7rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+
+  .admin-text {
+    font-weight: 500;
+  }
+
+  .admin-avatar {
+    img {
+      border: 2px solid white;
+      box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+    }
+  }
+}
+
+.content-container {
+  display: flex;
+  // transition: all 0.3s ease-in-out;
+  // margin-top: $navbar-height;
+  // min-height: calc(100vh - #{$navbar-height});
+  // position: relative;
+}
+
+.sidebar-container {
+  width: 250px;
+  transition: transform 0.3s ease;
+  transform: translateX(-100%);
+  position: fixed;
+  height: calc(100vh - 56px);
+  z-index: 1000;
+
+  &.show {
+    transform: translateX(0);
+  }
+
+
+  .sidebar {
+    width: $sidebar-width;
+    height: 100%;
+    background-color: #fff;
+    overflow-y: auto;
+
+    .sidebar-section {
+      padding: 0.5rem 1rem;
+
+      .sidebar-heading {
+        text-transform: uppercase;
+        color: #888;
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin: 0.5rem 0;
+      }
+
+      .sidebar-link {
+        padding: 0.6rem 0.5rem;
+        color: $dark-text;
+        border-radius: 4px;
+        margin: 2px 0;
+        display: flex;
+        align-items: center;
+
+        &:hover,
+        &.active {
+          background-color: rgba(0, 123, 255, 0.1);
+          color: $primary-color;
+        }
+      }
+    }
+
+    .logout-link {
+      margin-top: auto;
+      color: #dc3545;
+      font-weight: 500;
+
+      &:hover {
+        background-color: rgba(220, 53, 69, 0.1);
+      }
+    }
+  }
+}
+
+.main-content {
+  flex: 1;
+  padding: 1rem;
+  transition: margin-left 0.3s ease;
+  margin-left: 0;
+  width: 100%;
+
+  &.shifted {
+    margin-left: 250px;
+    transition: margin-left 0.3s ease;
+  }
+}
+
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+
+  &.show {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+.settings-sidebar {
+  background: #FAF6FA;
+  min-height: 100vh;
+}
+
+.settings-title {
+  font-weight: 700;
+  font-size: 2rem;
+}
+
+.settings-nav .nav-link {
+  color: #222;
+  font-weight: 500;
+  border: none;
+  background: transparent;
+  margin-bottom: 0.5rem;
+  border-radius: 8px;
+  transition: color 0.2s;
+}
+
+.settings-nav .nav-link.active,
+.settings-nav .nav-link.text-danger,
+.settings-nav .nav-link:focus {
+  color: #FF5CA8 !important;
+  background: #fff;
+  font-weight: 600;
+}
+
+.settings-btn-primary {
+  background: #FF5CA8;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  padding: 0.6rem 2rem;
+}
+
+.settings-btn-outline {
+  border: 2px solid #FF5CA8;
+  color: #FF5CA8;
+  background: #fff;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.settings-btn-primary:hover,
+.settings-btn-outline:hover {
+  background: #ff7fc2;
+  color: #fff;
+  border-color: #ff7fc2;
+}
+
+.settings-input {
+  border-radius: 10px;
+  border: 2px solid #222;
+  box-shadow: 0 2px 6px #0001;
+  font-size: 1.1rem;
+  padding: 0.7rem 1rem;
+}
+
+.settings-tab .nav-link.active {
+  color: #FF5CA8 !important;
+  border-bottom: 3px solid #FF5CA8 !important;
+  background: transparent !important;
+  font-weight: 700;
+}
+
+.settings-profile-pic {
+  background: #fff;
+  border: 2px solid #FF5CA8;
+  color: #FF5CA8;
+}
+
+.settings-logout {
+  color: #222;
+  font-weight: 500;
+  font-size: 1.1rem;
+  position: absolute;
+  bottom: 2rem;
+  left: 1.5rem;
+}
+
+.settingsadmin-container {
+  min-height: 100vh !important;
+  background: #FAF6FA !important;
+}
+
+.settingsadmin-sidebar {
+  background: #FAF6FA !important;
+  padding: 24px !important;
+  width: 320px !important;
+}
+
+.settingsadmin-back-btn {
+  color: #FF5CA8 !important;
+  font-weight: 700 !important;
+  font-size: 1.2rem !important;
+  text-decoration: none !important;
+  border: none !important;
+  background: none !important;
+  display: flex !important;
+  align-items: center !important;
+  margin-bottom: 24px !important;
+}
+
+.settingsadmin-title {
+  font-size: 1.5rem !important;
+  font-weight: bold !important;
+  color: #333 !important;
+  margin-bottom: 24px !important;
+}
+
+.settingsadmin-navlink {
+  display: block !important;
+  padding: 8px 12px !important;
+  color: #666 !important;
+  text-decoration: none !important;
+  border-radius: 8px !important;
+  margin-bottom: 4px !important;
+  transition: all 0.2s !important;
+  background: none !important;
+  font-weight: 400 !important;
+}
+
+.settingsadmin-navlink.active {
+  color: #FF5CA8 !important;
+  background: white !important;
+  font-weight: 500 !important;
+}
+
+.settingsadmin-logout-btn {
+  color: #666 !important;
+  text-decoration: none !important;
+  border: none !important;
+  background: none !important;
+  font-weight: 500 !important;
+}
+
+.settingsadmin-maincontent {
+  background: white !important;
+  border-radius: 24px !important;
+  padding: 24px !important;
+  margin: 16px !important;
+}
+
+.settingsadmin-header-right {
+  display: flex !important;
+  align-items: center !important;
+  gap: 16px !important;
+}
+
+.settingsadmin-profilepic {
+  width: 32px !important;
+  height: 32px !important;
+  background: #FFC107 !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: 2px solid #FF5CA8 !important;
+}
+
+.settingsadmin-tabs {
+  border-bottom: 1px solid #eee !important;
+  margin-bottom: 24px !important;
+}
+
+.settingsadmin-tab-btn {
+  padding: 12px 24px !important;
+  background: none !important;
+  border: none !important;
+  border-bottom: 2px solid transparent !important;
+  color: #666 !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
+}
+
+.settingsadmin-tab-btn.active {
+  border-bottom: 2px solid #FF5CA8 !important;
+  color: #FF5CA8 !important;
+}
+
+.settingsadmin-profilepic-section {
+  width: 64px !important;
+  height: 64px !important;
+  background: #f0f0f0 !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-right: 16px !important;
+}
+
+.settingsadmin-primary-btn {
+  background: #FF5CA8 !important;
+  border: none !important;
+  color: white !important;
+  padding: 8px 16px !important;
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+  margin-right: 12px !important;
+  cursor: pointer !important;
+}
+
+.settingsadmin-outline-btn {
+  background: none !important;
+  border: 1px solid #FF5CA8 !important;
+  color: #FF5CA8 !important;
+  padding: 8px 16px !important;
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+}
+
+.settingsadmin-formgroup {
+  margin-bottom: 24px !important;
+}
+
+.settingsadmin-label {
+  display: block !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  color: #333 !important;
+  margin-bottom: 8px !important;
+}
+
+.settingsadmin-input {
+  width: 100% !important;
+  padding: 12px 16px !important;
+  border: 1px solid #ddd !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  outline: none !important;
+  transition: border-color 0.2s !important;
+}
+
+.settingsadmin-row {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 24px !important;
+  margin-bottom: 24px !important;
+}
+
+.settingsadmin-update-btn {
+  background: #FF5CA8 !important;
+  border: none !important;
+  color: white !important;
+  padding: 12px 24px !important;
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+  margin-top: 12px !important;
+  cursor: pointer !important;
+}
+
+/* SettingsAdmin.css */
+
+.settings-container {
+  min-height: 100vh;
+  background: #FAF6FA;
+}
+
+.settings-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.settings-sidebar {
+  width: 320px;
+  background: #FAF6FA;
+  padding: 24px;
+}
+
+.back-button {
+  color: #FF5CA8;
+  font-weight: 700;
+  font-size: 1.2rem;
+  text-decoration: none;
+  border: none;
+  background: none;
+  display: flex;
+  align-items: center;
+  margin-bottom: 24px;
+  cursor: pointer;
+}
+
+.back-button-icon {
+  margin-right: 8px;
+}
+
+.settings-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 24px;
+}
+
+.nav-section {
+  margin-bottom: 48px;
+}
+
+.nav-link {
+  display: block;
+  padding: 8px 12px;
+  color: #666;
+  text-decoration: none;
+  border-radius: 8px;
+  margin-bottom: 4px;
+  transition: all 0.2s;
+}
+
+.nav-link:hover {
+  background: rgba(255, 92, 168, 0.1);
+}
+
+.nav-link.active {
+  color: #FF5CA8;
+  background: white;
+  font-weight: 500;
+}
+
+.logout-button {
+  color: #666;
+  text-decoration: none;
+  border: none;
+  background: none;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.main-content-wrapper {
+  flex: 1;
+}
+
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 16px;
+  margin-bottom: 24px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.notification-icon {
+  color: #999;
+}
+
+.user-greeting {
+  color: #666;
+}
+
+.user-greeting strong {
+  font-weight: bold;
+}
+
+.profile-pic {
+  width: 32px;
+  height: 32px;
+  background: #FFC107;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #FF5CA8;
+}
+
+.profile-pic-text {
+  color: white;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.tabs-container {
+  border-bottom: 1px solid #eee;
+  margin-bottom: 24px;
+}
+
+.tab-button {
+  padding: 12px 24px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #666;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tab-button:hover {
+  color: #FF5CA8;
+}
+
+.tab-button.active {
+  border-bottom: 2px solid #FF5CA8;
+  color: #FF5CA8;
+}
+
+.profile-section-title {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 16px;
+}
+
+.profile-picture-section {
+  display: flex;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.profile-pic-large {
+  width: 64px;
+  height: 64px;
+  background: #f0f0f0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 16px;
+}
+
+.profile-pic-icon {
+  color: #999;
+}
+
+.button-primary {
+  background: #FF5CA8;
+  border: none;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 500;
+  margin-right: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.button-primary:hover {
+  background: #e6529a;
+}
+
+.button-outline {
+  background: none;
+  border: 1px solid #FF5CA8;
+  color: #FF5CA8;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.button-outline:hover {
+  background: #FF5CA8;
+  color: white;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.form-group {
+  margin-bottom: 24px;
+}
+
+.form-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.form-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.form-input:focus {
+  border-color: #FF5CA8;
+}
+
+.update-button {
+  background: #FF5CA8;
+  border: none;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 500;
+  margin-top: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.update-button:hover {
+  background: #e6529a;
+}
+
+.password-section {
+  max-width: 500px;
+}
+
+@media (max-width: 768px) {
+  .sidebar-container {
+    width: $sidebar-width;
+
+    &.show {
+      left: 0;
+    }
+  }
+
+  .content-container.sidebar-show .main-content {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
+@media (min-width: 992px) {
+  .sidebar-container {
+    left: 0;
+  }
+
+  .main-content {
+    margin-left: $sidebar-width;
+    width: calc(100% - #{$sidebar-width});
+  }
+
+  .sidebar-container.hide {
+    left: -$sidebar-width;
+  }
+
+  .sidebar-container.hide+.main-content {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
+
+.flipbook-container {
+  margin: auto;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 800px; // Match with new width
+  width: 100%;
+
+  .demo-book {
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25); // Enhanced shadow for more depth
+    border-radius: 8px; // Softer rounded corners
+  }
+
+  // Define a list of pastel colors for page backgrounds
+  $pastel-colors: #ffd1dc, #ffecb3, #c8e6c9, #bbdefb, #e1bee7, #d1c4e9;
+
+  .flipbook-page {
+
+    // Cycle through pastel colors for page backgrounds
+    // This is a simple way; for true cycling per page, JS interaction might be needed
+    // or more complex nth-child selectors if you know the max number of pages.
+    // For now, let's make it a bit more dynamic than a single color.
+    // We can apply a different background to even/odd pages for a start.
+    &:nth-child(odd) {
+      background-color: lighten(nth($pastel-colors, 1), 10%); // Light Pinkish
+    }
+
+    &:nth-child(even) {
+      background-color: lighten(nth($pastel-colors, 2), 10%); // Light Yellowish
+    }
+
+    // Add a subtle border, perhaps with a slight color - REMOVED
+    // border: 2px solid darken(nth($pastel-colors, 3), 10%); 
+    border-radius: 5px; // Slightly rounded inner page corners
+
+    display: block; // Changed from flex for simple image display
+    // flex-direction: column;
+    // justify-content: flex-start;
+    // align-items: flex-start;
+    overflow: hidden;
+    position: relative;
+    padding: 0; // Remove padding if image is meant to fill the page
+
+    p {
+      font-family: 'Poppins', sans-serif;
+      color: #4A4A4A;
+      margin: 0;
+      font-size: 1rem;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      text-align: left;
+      height: calc(100% - 40px);
+      overflow-y: auto; // Allow scrolling for long paragraphs
+
+    }
+
+    .page-number {
+      position: absolute;
+      bottom: 10px;
+      right: 15px;
+      font-size: 0.75em;
+      color: #757575; // Slightly darker page number
+      font-family: Arial, sans-serif;
+    }
+  }
+
+  .flipbook-controls {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+
+    button {
+      @extend .btn-custom-pink-solid;
+      width: auto;
+      padding: 0.6rem 1.8rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border-radius: 25px;
+      color: white;
+      transition: background-color 0.2s ease, border-color 0.2s ease;
+
+      &:hover {
+        transform: translateY(-2px);
+      }
+    }
+  }
+}
+
+.main-content.d-flex.flex-column {
+  align-items: center;
+}
+
+// ... (your existing SCSS code) ...
+
+// Add these new styles at the end or in an appropriate section
+
+.flipbook-fullscreen-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center; // This will center the book if space is available around it
+  width: 100%;
+  height: 100%; // Make it take full height of its parent (.main-content)
+  padding: 10px; // Add some padding around the entire area
+  box-sizing: border-box;
+
+  .flipbook-nav-button {
+    // Inherit solid pink button styles
+    @extend .btn-custom-pink-solid; // Use your existing solid pink button style
+    // Override/add specific styles for nav buttons if needed
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem; // Keep or adjust as needed
+    font-weight: bold; // Keep or adjust as needed
+    color: #fff; // Ensure text is white for pink background
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+    cursor: pointer;
+    z-index: 10; // Ensure buttons are above the book's shadow if overlapping
+    transition: background-color 0.2s ease, transform 0.2s ease;
+
+    @media (max-width: 767px) {
+      // Small devices
+      width: 30px;
+      height: 30px;
+      font-size: 1.2rem;
+      margin: 0 5px; // Reduce margin for buttons on small screens
+    }
+
+    @media (max-width: 480px) {
+      // Extra small devices
+      width: 25px;
+      height: 25px;
+      font-size: 1rem;
+      margin: 0 3px;
+    }
+
+    &:hover {
+      // Hover effect from .btn-custom-pink-solid will apply
+      // You can add more specific hover effects if needed
+      transform: scale(1.1);
+    }
+
+    &.prev {
+      // margin-right: 10px; // Space between button and book
+    }
+
+    &.next {
+      // margin-left: 10px; // Space between button and book
+    }
+  }
+
+  .flipbook-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-grow: 1; // Allow the book container to take available space between buttons
+    max-width: 90vw; // Max width for the open book area
+    max-height: 85vh; // Max height for the open book area
+    margin: 0 10px; // Spacing from nav buttons
+
+    // The .demo-book (HTMLFlipBook) will try to fill this container
+    // due to size="stretch" and width/height 100% in its own styles.
+    // The base dimensions (350x500 per page) from JS determine render quality.
+
+    @media (max-width: 767px) {
+      margin: 0 5px; // Reduce margin on smaller screens
+      max-width: 95vw;
+      max-height: 90vh;
+    }
+  }
+}
+
+
+// Styles for the flipbook pages (mostly unchanged but ensure they are present)
+.flipbook-container {
+
+  // This class is now for the direct parent of HTMLFlipBook
+  .demo-book {
+    // HTMLFlipBook component will have width: (JS_prop_width * 2), height: JS_prop_height
+    // We want it to scale to fit its parent (.flipbook-container)
+    width: 100%; // Tells the .demo-book to try and fill the .flipbook-container
+    height: 100%; // Tells the .demo-book to try and fill the .flipbook-container
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15); // Slightly softer shadow
+    border-radius: 8px;
+  }
+
+  $pastel-colors: #ffd1dc, #ffecb3, #c8e6c9, #bbdefb, #e1bee7, #d1c4e9;
+
+  .flipbook-page {
+    &:nth-child(odd) {
+      background-color: lighten(nth($pastel-colors, 1), 15%); // Lighter Pinkish
+    }
+
+    &:nth-child(even) {
+      background-color: lighten(nth($pastel-colors, 2), 15%); // Lighter Yellowish
+    }
+
+    // border: 1px solid darken(nth($pastel-colors, 3), 20%); // Removed colored border
+    border-radius: 3px; // Keep slight rounding for page edges if desired
+    display: block;
+    overflow: hidden;
+    position: relative;
+    padding: 0; // Image will fill this
+
+    img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .page-number {
+      position: absolute;
+      bottom: 10px;
+      right: 15px;
+      font-size: 0.75em;
+      color: #555; // Darker for better contrast on light pastels
+      font-family: Arial, sans-serif;
+      background-color: rgba(255, 255, 255, 0.7);
+      padding: 2px 5px;
+      border-radius: 3px;
+    }
+  }
+}
+
+// Ensure the main content area allows the flipbook wrapper to expand
+.main-content.d-flex.flex-column {
+  align-items: stretch; // Allow children like flipbook-fullscreen-wrapper to stretch horizontally
+  // justify-content: center; // If you want to vertically center the whole block
+}
+
+// Styles for the fullscreen modal and its content
+.fullscreen-modal-dialog {
+  .modal-content {
+    background-color: #f0f0f0; // A slightly off-white or light gray background for the modal
+    border: none;
+    border-radius: 0; // No rounded corners for fullscreen
+  }
+
+  // Style for the modal header in flipbook view
+  .flipbook-modal-header {
+    background-color: #e9e9e9; // A slightly darker header
+    border-bottom: 1px solid #ccc;
+
+    .modal-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .btn-close {
+      // Style Bootstrap's close button
+      filter: none; // Remove default filter if any
+      opacity: 0.7;
+
+      &:hover {
+        opacity: 1;
+      }
+
+      &:focus {
+        box-shadow: 0 0 0 0.25rem rgba(255, 92, 168, 0.3); // Match pink focus
+      }
+    }
+  }
+
+  .flipbook-modal-body {
+    // Target the modal body specifically for flipbook
+    display: flex; // Allow flipbook-fullscreen-wrapper to use flex-grow
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0 !important; // Remove default modal padding if flipbook handles its own
+    overflow: hidden; // Prevent scrollbars on the modal body itself
+  }
+}
+
+.flipbook-fullscreen-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 15px; // Increased padding slightly for modal view
+  box-sizing: border-box;
+  overflow: hidden; // Add this to prevent scrollbars if inner content tries to overflow
+
+  .flipbook-nav-button {
+    @extend .btn-custom-pink-solid;
+    border-radius: 50%;
+    width: 45px; // Slightly larger for easier clicking in fullscreen
+    height: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem; // Larger icon
+    font-weight: bold;
+    color: #fff; // Ensure text is white for pink background
+    box-shadow: 0 3px 7px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    z-index: 10; // Ensure buttons are above the book's shadow if overlapping
+    transition: background-color 0.2s ease, transform 0.2s ease;
+    flex-shrink: 0; // Prevent buttons from shrinking
+
+    // Remove specific margins, rely on flipbook-container margin
+    // &.prev { margin-right: 15px; } 
+    // &.next { margin-left: 15px; }
+
+    @media (max-width: 767px) {
+      width: 35px;
+      height: 35px;
+      font-size: 1.2rem;
+    }
+
+    @media (max-width: 480px) {
+      width: 25px;
+      height: 25px;
+      font-size: 1rem;
+      margin: 0 3px;
+    }
+
+    &:hover {
+      transform: scale(1.1);
+    }
+  }
+
+  .flipbook-container {
+    // ... (your existing .flipbook-container styles from previous response)
+    // This container holds the HTMLFlipBook component
+    display: flex; // Added to help center the .demo-book if it's smaller than container
+    justify-content: center;
+    align-items: center;
+    flex-grow: 1;
+    // Max width/height relative to the viewport, adjusted for padding in wrapper
+    max-width: calc(100% - 110px); // Account for nav buttons and their potential margins
+    max-height: calc(100% - 30px); // Account for padding
+    margin: 0 15px; // Space between nav buttons and the book itself
+
+    .demo-book {
+      // Target HTMLFlipBook component
+      width: 100%;
+      height: 100%;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2); // Slightly more pronounced shadow
+      border-radius: 8px;
+    }
+
+    @media (max-width: 767px) {
+      margin: 0 10px;
+      max-width: calc(100% - 90px);
+    }
+
+    @media (max-width: 480px) {
+      margin: 0 5px;
+      max-width: calc(100% - 70px);
+    }
+  }
+}
+
+// This .flipbook-container targets the one directly wrapping HTMLFlipBook in the JS
+// The one inside .flipbook-fullscreen-wrapper is for layout.
+.flipbook-container {
+  .flipbook-page {
+
+    // This is the individual page div rendered by HTMLFlipBook
+    &:nth-child(odd) {
+      background-color: lighten(#ffd1dc, 18%);
+    }
+
+    // Even lighter pastels
+    &:nth-child(even) {
+      background-color: lighten(#ffecb3, 18%);
+    }
+
+    border-radius: 3px;
+    display: block;
+    overflow: hidden;
+    position: relative;
+    padding: 0;
+
+    img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .page-number {
+      position: absolute;
+      bottom: 8px; // Adjusted slightly
+      right: 12px; // Adjusted slightly
+      font-size: 0.7em; // Smaller page number
+      color: #444;
+      font-family: Arial, sans-serif;
+      background-color: rgba(255, 255, 255, 0.75);
+      padding: 1px 4px;
+      border-radius: 2px;
+    }
+  }
+}
+
+// Add to your existing CSS
+.page-container {
+  width: 100%;
+  height: 100%;
+}
+
+.page {
+  background-color: white;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.page-image-content {
+  position: relative;
+  background: #fff;
+}
+
+.page-text-content {
+  font-family: Arial, sans-serif;
+  color: #333;
+}
+
+.page-text-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.page-text-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.page-text-content::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.page-text-content::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+.page-text-content span {
+  display: inline-block;
+  transition: background-color 0.2s ease;
+}
+
+.page-text-content span.highlighted {
+  background-color: #fff3f8;
+  border-radius: 2px;
+}
