@@ -1,4 +1,15 @@
 import React, { useState, useEffect, useCallback } from "react";
+import {
+  Container,
+  Form,
+  Button,
+  Row,
+  Col,
+  Spinner,
+  Table,
+  Alert,
+  Modal,
+} from "react-bootstrap";
 import SideMenuAdmin from "./SidebarMenuAdmin";
 import TopNavbar from "./TopNavbar";
 import { useNavigate } from "react-router-dom";
@@ -14,16 +25,6 @@ import {
   deleteDoc,
 } from "firebase/firestore";
 import {
-  Table,
-  Button,
-  Container,
-  Row,
-  Col,
-  Alert,
-  Spinner,
-  Modal,
-} from "react-bootstrap";
-import {
   CheckCircleFill,
   XCircleFill,
   ArrowLeftCircleFill,
@@ -36,6 +37,8 @@ import { getFunctions, httpsCallable } from "firebase/functions"; // Import Fire
 
 const functions = getFunctions(app);
 const logAdminUiActionCallable = httpsCallable(functions, 'logAdminUiAction');
+const approveTeacherCallable = httpsCallable(functions, 'approveTeacher');
+const rejectTeacherCallable = httpsCallable(functions, 'rejectTeacher');
 
 const COLORS = {
   primary: "#FF69B4",
@@ -85,8 +88,8 @@ const ApproveTeacherAccount = () => {
   const fetchPendingTeachers = useCallback(async () => {
     setLoading(true);
     try {
-      const teachersRef = collection(db, "teachers");
-      const q = query(teachersRef, where("status", "==", "pending_approval"));
+      const pendingTeachersRef = collection(db, "pendingTeachers"); // Changed collection name
+      const q = query(pendingTeachersRef); // No status filter needed if all in this collection are pending
       const querySnapshot = await getDocs(q);
       const teachersList = querySnapshot.docs.map((doc) => ({
         id: doc.id,
@@ -175,21 +178,19 @@ const ApproveTeacherAccount = () => {
   const executeApprove = async (teacherId, teacherUid) => {
     setLoading(true);
     try {
-      const teacherRef = doc(db, "teachers", teacherId);
-      await updateDoc(teacherRef, {
-        status: "approved",
-        approvedBy: authInstance.currentUser.uid,
-        approvedAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-      showAlert("Teacher account approved successfully.", "success");
+      const result = await approveTeacherCallable({ teacherId, teacherUid });
+      if (result.data.status === "success") {
+        showAlert("Teacher account approved successfully.", "success");
+      } else {
+        throw new Error(result.data.message || "Unknown error during approval.");
+      }
 
       const approvedTeacher = pendingTeachers.find(t => t.id === teacherId);
       const teacherFullName = approvedTeacher ? `${approvedTeacher.firstName || ""} ${approvedTeacher.lastName || ""}`.trim() : "";
 
       logAdminUiActionCallable({
         actionType: 'teacher_account_approved',
-        collectionName: 'teachers',
+        collectionName: 'teachers', // This should ideally be 'pendingTeachers' for the source, but 'teachers' for the target
         documentId: teacherId,
         targetUserId: teacherUid,
         targetUserFullName: teacherFullName,
@@ -206,16 +207,19 @@ const ApproveTeacherAccount = () => {
   const executeReject = async (teacherId, teacherUid) => {
     setLoading(true);
     try {
-      const teacherRef = doc(db, "teachers", teacherId);
-      await deleteDoc(teacherRef);
-      showAlert("Teacher account rejected and deleted.", "warning");
+      const result = await rejectTeacherCallable({ teacherId, teacherUid });
+      if (result.data.status === "success") {
+        showAlert("Teacher account rejected and deleted.", "warning");
+      } else {
+        throw new Error(result.data.message || "Unknown error during rejection.");
+      }
 
       const rejectedTeacher = pendingTeachers.find(t => t.id === teacherId);
       const teacherFullName = rejectedTeacher ? `${rejectedTeacher.firstName || ""} ${rejectedTeacher.lastName || ""}`.trim() : "";
 
       logAdminUiActionCallable({
         actionType: 'teacher_account_rejected',
-        collectionName: 'teachers',
+        collectionName: 'pendingTeachers',
         documentId: teacherId,
         targetUserId: teacherUid,
         targetUserFullName: teacherFullName,

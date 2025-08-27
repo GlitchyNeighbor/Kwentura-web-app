@@ -5,7 +5,7 @@ import { Container, Button, Row, Col, Alert } from "react-bootstrap";
 import "../scss/custom.scss";
 
 const SERVICE_ID = "service_mdyi9bl";
-const TEMPLATE_ID = "template_gfdh4qn";
+const TEMPLATE_ID = "template_3g6gr9v";
 const PUBLIC_KEY = "f-8NnHoqoAVbarJGE";
 
 const HomeNavbar = () => {
@@ -283,7 +283,6 @@ const Contact = () => {
           setSending(false);
           formRef.current.reset();
           
-          // Auto-hide success message after 5 seconds
           setTimeout(() => {
             setAlert({ show: false, variant: "", message: "" });
           }, 5000);
@@ -669,7 +668,7 @@ const Contact = () => {
                       type="text"
                       className="form-control"
                       id="fullName"
-                      name="full_name"
+                      name="fullName"
                       required
                       style={{ 
                         borderWidth: '2px',

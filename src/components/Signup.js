@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Container,
   Form,
@@ -8,7 +8,21 @@ import {
   Alert,
   Modal,
 } from "react-bootstrap";
+import { auth, db } from '../config/FirebaseConfig';
+import { createUserWithEmailAndPassword, sendEmailVerification, signOut } from "firebase/auth";
+import { collection, query, where, getDocs, doc, setDoc } from "firebase/firestore";
 import { Eye, EyeOff, Mail, RefreshCw, Check, X } from "lucide-react";
+import { useNavigate } from 'react-router-dom';
+
+// Debounce utility function
+const debounce = (func, delay) => {
+  let timeout;
+  return function(...args) {
+    const context = this;
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(context, args), delay);
+  };
+};
 
 const HomeNavbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -258,6 +272,11 @@ const Signup = () => {
   const [success, setSuccess] = useState("");
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const navigate = useNavigate();
+  const [verificationSent, setVerificationSent] = useState(false);
+  const [tempUser, setTempUser] = useState(null);
+  const [verificationLoading, setVerificationLoading] = useState(false);
+  const [schoolIdStatus, setSchoolIdStatus] = useState('idle'); // 'idle', 'checking', 'available', 'taken'
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -293,23 +312,233 @@ const Signup = () => {
     return requirements;
   };
 
+  const checkSchoolIdExists = useCallback(
+    debounce(async (schoolId) => {
+      if (!schoolId) {
+        setSchoolIdStatus('idle');
+        return;
+      }
+
+      setSchoolIdStatus('checking');
+      console.log("Checking School ID:", schoolId); // Log the input
+      try {
+        // Check in 'teachers' collection
+        const teachersQuery = query(collection(db, "teachers"), where("schoolId", "==", schoolId));
+        const teachersSnapshot = await getDocs(teachersQuery);
+
+        // Check in 'admins' collection
+        const adminsQuery = query(collection(db, "admins"), where("schoolId", "==", schoolId));
+        const adminsSnapshot = await getDocs(adminsQuery);
+
+        // Check in 'students' collection
+        const studentsQuery = query(collection(db, "students"), where("schoolId", "==", schoolId));
+        const studentsSnapshot = await getDocs(studentsQuery);
+
+        const isTaken = !teachersSnapshot.empty || !adminsSnapshot.empty || !studentsSnapshot.empty;
+        console.log("Query Snapshot Empty (teachers):", teachersSnapshot.empty);
+        console.log("Query Snapshot Empty (admins):", adminsSnapshot.empty);
+        console.log("Query Snapshot Empty (students):", studentsSnapshot.empty);
+        console.log("Is School ID Taken:", isTaken);
+        setSchoolIdStatus(isTaken ? 'taken' : 'available');
+      } catch (error) {
+        console.error("Error checking school ID:", error);
+        setError("Error checking school ID availability: " + error.message);
+        setSchoolIdStatus('idle'); // Revert to idle on error
+      }
+    }, 500), // Debounce for 500ms
+    []
+  );
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
     if (name === "password") {
       validatePassword(value);
     }
+    if (name === "schoolId") {
+      if (value) {
+        setSchoolIdStatus('checking');
+      } else {
+        setSchoolIdStatus('idle');
+      }
+      checkSchoolIdExists(value);
+    }
     if (error) setError("");
   };
 
-  const handleSubmit = (e) => {
+  const handleSendVerification = async () => {
+    if (!formData.email) {
+      setError("Please enter an email address first");
+      return;
+    }
+
+    if (formData.password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    // Check password requirements
+    const passwordReqs = validatePassword(formData.password);
+    const allRequirementsMet = Object.values(passwordReqs).every(req => req);
+    
+    if (!allRequirementsMet) {
+      setError("Please meet all password requirements");
+      return;
+    }
+
+    setVerificationLoading(true);
+    setError("");
+
+    try {
+      // Create user account
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        formData.email,
+        formData.password
+      );
+      
+      const user = userCredential.user;
+      setTempUser(user);
+
+      // Send verification email
+      await sendEmailVerification(user);
+      
+      setVerificationSent(true);
+      setShowVerificationModal(true);
+      setSuccess("Verification email sent! Please check your inbox and click the verification link.");
+      
+      // Sign out the user so they can't access the app until verified
+      await signOut(auth);
+      
+    } catch (error) {
+      console.error("Error sending verification email:", error);
+      let errorMessage = "Failed to send verification email.";
+      
+      switch (error.code) {
+        case 'auth/email-already-in-use':
+          errorMessage = "This email address is already registered. Please try logging in instead.";
+          break;
+        case 'auth/invalid-email':
+          errorMessage = "Please enter a valid email address.";
+          break;
+        case 'auth/weak-password':
+          errorMessage = "Password is too weak. Please choose a stronger password.";
+          break;
+        default:
+          errorMessage = error.message;
+      }
+      
+      setError(errorMessage);
+    } finally {
+      setVerificationLoading(false);
+    }
+  };
+
+  const checkEmailVerification = async () => {
+    if (!tempUser) return;
+
+    setVerificationLoading(true);
+    try {
+      // Reload the user to get updated emailVerified status
+      await tempUser.reload();
+      
+      if (tempUser.emailVerified) {
+        setIsEmailVerified(true);
+        setShowVerificationModal(false);
+        setSuccess("Email verified successfully! You can now complete your registration.");
+        // Sign out again to keep user logged out until full registration is complete
+        await signOut(auth);
+      } else {
+        setError("Email not verified yet. Please check your inbox and click the verification link.");
+      }
+    } catch (error) {
+      console.error("Error checking email verification:", error);
+      setError("Error checking verification status. Please try again.");
+    } finally {
+      setVerificationLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!isEmailVerified) {
+      setError("Please verify your email address first");
+      return;
+    }
+
+    if (formData.password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    // Check if school ID is taken
+    if (schoolIdStatus === 'taken') {
+      setError("The School ID is already taken. Please use a different one.");
+      return;
+    }
+
     setLoading(true);
-    // Simulate form submission
-    setTimeout(() => {
+    setError("");
+
+    try {
+      // Add user data to a "pendingTeachers" collection
+      // The Firebase user (email/password) is created during email verification (handleSendVerification)
+      // We just need to save the additional profile information here.
+      // The uid is already stored in tempUser from handleSendVerification.
+      if (!tempUser || !tempUser.uid) {
+        throw new Error("User not found or UID missing after email verification.");
+      }
+
+      await setDoc(doc(db, "pendingTeachers", tempUser.uid), {
+        uid: tempUser.uid,
+        activeSessionId: null,
+        contactNumber: formData.contactNumber,
+        createdAt: new Date(),
+        email: formData.email,
+        firstName: formData.firstName,
+        instructionalLevel: formData.level,
+        isArchived: false,
+        lastName: formData.lastName,
+        level: formData.level,
+        profileImageUrl: "",
+        role: "teacher",
+        schoolId: formData.schoolId,
+        section: formData.section,
+        status: "pending",
+        updatedAt: new Date(),
+      });
+
+      setSuccess("Account created successfully! Your account is pending approval. You will be redirected to the login page.");
+
+      // Reset form
+      setFormData({
+        firstName: "",
+        lastName: "",
+        contactNumber: "",
+        email: "",
+        schoolId: "",
+        level: "",
+        section: "",
+        password: "",
+      });
+      setConfirmPassword("");
+      setAgreeToTerms(false);
+      setIsEmailVerified(false);
+      setVerificationSent(false);
+      setTempUser(null);
+      
+      // Redirect to login page after a short delay
+      setTimeout(() => {
+        navigate('/login');
+      }, 5000); // 5 seconds delay
+      
+    } catch (error) {
+      console.error("Error creating account:", error);
+      setError("Failed to create account. Please try again: " + error.message);
+    } finally {
       setLoading(false);
-      setSuccess("Account created successfully!");
-    }, 2000);
+    }
   };
 
   const PasswordRequirement = ({ met, text }) => (
@@ -338,6 +567,65 @@ const Signup = () => {
       <div className="animated-bg-circle circle1"></div>
       <div className="animated-bg-circle circle2"></div>
       <div className="animated-bg-circle circle3"></div>
+
+      {/* Email Verification Modal */}
+      <Modal show={showVerificationModal} onHide={() => setShowVerificationModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title style={{color: '#FF549A'}}>
+            <Mail className="me-2" size={24} />
+            Verify Your Email
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="text-center">
+            <div 
+              style={{
+                width: '80px',
+                height: '80px',
+                background: 'linear-gradient(135deg, #FF549A, #FF8CC8)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 1rem',
+                color: 'white'
+              }}
+            >
+              <Mail size={40} />
+            </div>
+            <h5 style={{color: '#333', marginBottom: '1rem'}}>Check Your Email</h5>
+            <p style={{color: '#666', lineHeight: '1.6'}}>
+              We've sent a verification link to <strong>{formData.email}</strong>. 
+              Please click the link in the email to verify your account.
+            </p>
+            <div style={{background: '#f8f9fa', padding: '1rem', borderRadius: '8px', marginTop: '1rem'}}>
+              <small style={{color: '#666'}}>
+                <strong>Note:</strong> Check your spam folder if you don't see the email in your inbox.
+              </small>
+            </div>
+          </div>
+        </Modal.Body>
+        <Modal.Footer className="justify-content-center">
+          <Button
+            variant="outline-primary"
+            onClick={checkEmailVerification}
+            disabled={verificationLoading}
+            style={{borderColor: '#FF549A', color: '#FF549A'}}
+          >
+            {verificationLoading ? (
+              <>
+                <RefreshCw className="me-2" size={16} style={{animation: 'spin 1s linear infinite'}} />
+                Checking...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="me-2" size={16} />
+                I've Verified My Email
+              </>
+            )}
+          </Button>
+        </Modal.Footer>
+      </Modal>
 
       {/* Main Content - Single Section */}
       <div 
@@ -563,28 +851,48 @@ const Signup = () => {
                           value={formData.email}
                           onChange={handleInputChange}
                           required
-                          disabled={isEmailVerified}
+                          disabled={verificationSent || isEmailVerified}
                           style={{
                             borderRadius: '8px',
                             padding: '0.6rem',
                             fontSize: '0.9rem',
-                            borderColor: '#e9ecef',
+                            borderColor: isEmailVerified ? '#28a745' : '#e9ecef',
                             borderWidth: '1px',
-                            backgroundColor: isEmailVerified ? "#f8f9fa" : "white",
+                            backgroundColor: (verificationSent || isEmailVerified) ? "#f8f9fa" : "white",
                           }}
                         />
                         <Button
                           variant={isEmailVerified ? "success" : "outline-primary"}
                           size="sm"
+                          onClick={handleSendVerification}
+                          disabled={verificationLoading || verificationSent || isEmailVerified}
                           style={{ 
-                            minWidth: "70px",
+                            minWidth: "80px",
                             fontSize: '0.8rem',
-                            borderRadius: '6px'
+                            borderRadius: '6px',
+                            borderColor: '#FF549A',
+                            color: isEmailVerified ? 'white' : '#FF549A'
                           }}
                         >
-                          {isEmailVerified ? "✓" : "Verify"}
+                          {verificationLoading ? (
+                            <RefreshCw size={12} style={{animation: 'spin 1s linear infinite'}} />
+                          ) : isEmailVerified ? (
+                            <>
+                              <Check size={12} className="me-1" />
+                              Verified
+                            </>
+                          ) : verificationSent ? (
+                            "Sent"
+                          ) : (
+                            "Verify"
+                          )}
                         </Button>
                       </div>
+                      {verificationSent && !isEmailVerified && (
+                        <small className="text-muted mt-1 d-block">
+                          Check your email and click the verification link
+                        </small>
+                      )}
                     </Col>
                   </Row>
 
@@ -604,10 +912,19 @@ const Signup = () => {
                         borderRadius: '8px',
                         padding: '0.6rem',
                         fontSize: '0.9rem',
-                        borderColor: '#e9ecef',
+                        borderColor: schoolIdStatus === 'taken' ? '#dc3545' : '#e9ecef',
                         borderWidth: '1px'
                       }}
                     />
+                    {schoolIdStatus === 'checking' && (
+                      <small className="text-muted">Checking availability...</small>
+                    )}
+                    {schoolIdStatus === 'taken' && (
+                      <small className="text-danger">This School ID is already taken.</small>
+                    )}
+                    {schoolIdStatus === 'available' && (
+                      <small className="text-success">School ID is available.</small>
+                    )}
                   </Form.Group>
 
                   {/* Level and Section */}
@@ -679,7 +996,8 @@ const Signup = () => {
                             padding: '0.6rem',
                             fontSize: '0.9rem',
                             borderColor: '#e9ecef',
-                            borderWidth: '1px'
+                            borderWidth: '1px',
+                            backgroundColor: (!verificationSent && !isEmailVerified) ? "#f8f9fa" : "white"
                           }}
                         />
                         <Button
@@ -721,7 +1039,8 @@ const Signup = () => {
                             padding: '0.6rem',
                             fontSize: '0.9rem',
                             borderColor: '#e9ecef',
-                            borderWidth: '1px'
+                            borderWidth: '1px',
+                            backgroundColor: (!verificationSent && !isEmailVerified) ? "#f8f9fa" : "white"
                           }}
                         />
                         <Button
@@ -786,6 +1105,16 @@ const Signup = () => {
                     </div>
                   )}
 
+                  {/* Password Match Indicator */}
+                  {confirmPassword && (
+                    <div className="mb-3">
+                      <small className={formData.password === confirmPassword ? "text-success" : "text-danger"}>
+                        <i className={`fas ${formData.password === confirmPassword ? 'fa-check-circle' : 'fa-times-circle'} me-1`}></i>
+                        {formData.password === confirmPassword ? "Passwords match" : "Passwords do not match"}
+                      </small>
+                    </div>
+                  )}
+
                   {/* Terms Checkbox */}
                   <Form.Group className="mb-3">
                     <Form.Check
@@ -810,6 +1139,31 @@ const Signup = () => {
                     />
                   </Form.Group>
 
+                  {/* Email Verification Notice */}
+                  {!isEmailVerified && (
+                    <div 
+                      className="mb-3 p-3 border rounded"
+                      style={{
+                        backgroundColor: '#fff3cd',
+                        borderColor: '#ffeaa7',
+                        borderRadius: '8px'
+                      }}
+                    >
+                      <div className="d-flex align-items-center">
+                        <Mail size={18} className="text-warning me-2" />
+                        <div>
+                          <small style={{fontWeight: '600', color: '#856404'}}>
+                            Email Verification Required
+                          </small>
+                          <br />
+                          <small style={{color: '#856404'}}>
+                            Please verify your email address before completing registration
+                          </small>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Buttons */}
                   <div className="d-flex gap-2">
                     <Button
@@ -820,16 +1174,17 @@ const Signup = () => {
                         fontWeight: '600',
                         fontSize: '0.9rem'
                       }}
+                      onClick={() => window.location.href = '/login'}
                     >
-                      Cancel
+                      Back to Login
                     </Button>
                     <Button
                       variant="primary"
                       type="submit"
-                      disabled={loading || !isEmailVerified}
+                      disabled={loading || !isEmailVerified || !agreeToTerms || schoolIdStatus === 'taken'}
                       style={{
                         flex: 1,
-                        background: loading || !isEmailVerified ? '#ccc' : 'linear-gradient(135deg, #FF549A, #FF8CC8)',
+                        background: (loading || !isEmailVerified || !agreeToTerms) ? '#ccc' : 'linear-gradient(135deg, #FF549A, #FF8CC8)',
                         border: 'none',
                         borderRadius: '8px',
                         fontWeight: '600',
@@ -839,10 +1194,10 @@ const Signup = () => {
                       {loading ? (
                         <>
                           <i className="fas fa-spinner fa-spin me-1"></i>
-                          Creating...
+                          Creating Account...
                         </>
                       ) : (
-                        "Create Account"
+                        "Complete Registration"
                       )}
                     </Button>
                   </div>
@@ -906,6 +1261,11 @@ const Signup = () => {
           0%, 100% { transform: translateY(0px) scale(1) rotate(0deg); }
           40% { transform: translateY(-18px) scale(1.08) rotate(15deg); }
           60% { transform: translateY(12px) scale(0.97) rotate(-10deg);}
+        }
+
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
         }
 
         .form-control:focus,

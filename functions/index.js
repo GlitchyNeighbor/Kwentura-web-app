@@ -633,6 +633,134 @@ exports.splitPdfToImages = onCall(async (request) => {
   "not supported in this environment."};
 });
 
+exports.approveTeacher = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError(
+        "unauthenticated",
+        "You must be authenticated to approve teachers.",
+    );
+  }
+
+  const adminUid = request.auth.uid;
+  const adminDoc = await getFirestore().collection("admins").
+      doc(adminUid).get();
+
+  if (!adminDoc.exists) {
+    throw new HttpsError(
+        "permission-denied",
+        "Admin profile not found.",
+    );
+  }
+
+  const adminData = adminDoc.data();
+  if (!adminData || (adminData.role !== "admin" && adminData.role !==
+    "superAdmin" && adminData.role !== "superadmin")) {
+    throw new HttpsError(
+        "permission-denied",
+        "Only authenticated admins can approve teachers.",
+    );
+  }
+
+  const {teacherId, teacherUid} = request.data;
+
+  if (!teacherUid || !teacherId) {
+    throw new HttpsError(
+        "invalid-argument",
+        "The function must be called with a teacherUid and teacherId.",
+    );
+  }
+
+  try {
+    const pendingTeacherRef = getFirestore().
+        collection("pendingTeachers").doc(teacherId);
+    const pendingTeacherDoc = await pendingTeacherRef.get();
+
+    if (!pendingTeacherDoc.exists) {
+      throw new HttpsError("not-found", "Pending teacher document not found.");
+    }
+
+    const teacherData = pendingTeacherDoc.data();
+
+    // Set custom user claim for role
+    await getAuth().setCustomUserClaims(teacherUid, {role: "teacher"});
+    console.log(`Custom claim 'teacher' set for user ${teacherUid}`);
+
+    // Move data from pendingTeachers to teachers collection
+    await getFirestore().collection("teachers").
+        doc(teacherUid).set(teacherData);
+    console.log(`Teacher data moved to 'teachers'
+        collection for user ${teacherUid}`);
+
+    // Delete from pendingTeachers collection
+    await pendingTeacherRef.delete();
+    console.log(`Pending teacher document deleted for user ${teacherId}`);
+
+    return {status: "success", message: "Teacher approved successfully"};
+  } catch (error) {
+    console.error("Error approving teacher:", error);
+    throw new HttpsError("internal", "Unable to approve teacher.",
+        error.message);
+  }
+});
+
+exports.rejectTeacher = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError(
+        "unauthenticated",
+        "You must be authenticated to reject teachers.",
+    );
+  }
+
+  const adminUid = request.auth.uid;
+  const adminDoc = await getFirestore().collection("admins").
+      doc(adminUid).get();
+
+  if (!adminDoc.exists) {
+    throw new HttpsError(
+        "permission-denied",
+        "Admin profile not found.",
+    );
+  }
+
+  const adminData = adminDoc.data();
+  if (!adminData || (adminData.role !== "admin" && adminData.role !==
+    "superAdmin" && adminData.role !== "superadmin")) {
+    throw new HttpsError(
+        "permission-denied",
+        "Only authenticated admins can reject teachers.",
+    );
+  }
+
+  const {teacherId, teacherUid} = request.data;
+
+  if (!teacherUid || !teacherId) {
+    throw new HttpsError(
+        "invalid-argument",
+        "The function must be called with a teacherUid and teacherId.",
+    );
+  }
+
+  try {
+    // Delete Firebase Auth user
+    await getAuth().deleteUser(teacherUid);
+    console.log(`Firebase Auth user ${teacherUid} deleted.`);
+
+    // Delete document from pendingTeachers collection
+    await getFirestore().collection("pendingTeachers")
+        .doc(teacherId).delete();
+    console.log(`Pending teacher document ${teacherId} deleted.`);
+
+    return {
+      status: "success",
+      message: "Teacher rejected and user deleted successfully.",
+    };
+  } catch (error) {
+    console.error("Error rejecting teacher:", error);
+    throw new HttpsError("internal", "Unable to reject teacher.",
+        error.message);
+  }
+});
+
 exports.generateComprehensionQuestionsFromText = onCall(
     async (request) => {
       if (!genAI || !model) {
