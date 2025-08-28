@@ -109,20 +109,17 @@ const StoryAssessment = () => {
 
       try {
         setLoading(true);
-        console.log("Fetching story with ID:", id); // Debug log
         
         const docRef = doc(db, "stories", id);
         const docSnap = await getDoc(docRef);
         
         if (docSnap.exists()) {
           const storyData = docSnap.data();
-          console.log("Story data:", storyData); // Debug log
           
           setStory(storyData);
           
           // Build questions array
           const questionsList = buildQuestions(storyData);
-          console.log("Questions built:", questionsList); // Debug log
           
           setQuestions(questionsList);
           setTotalQuestions(questionsList.length);
@@ -261,10 +258,6 @@ const StoryAssessment = () => {
     setAssessmentComplete(false);
     setScore(0);
   };
-
-  // Debug render
-  console.log("Render state:", { loading, error, story: !!story, questionsLength: questions.length });
-
   if (loading) {
     return (
       <div

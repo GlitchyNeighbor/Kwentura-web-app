@@ -198,13 +198,6 @@ const useAdminAuth = () => {
           loading: false,
           error: null
         });
-
-        console.log("SidebarMenuAdmin: User data loaded successfully:", {
-          role: userRole,
-          email: userData.email,
-          fullName: fullName,
-          profileImageUrl: userData.profileImageUrl
-        });
       } else {
         // Fallback to Firebase user data if not found in Firestore
         const displayName = currentUser.displayName || "";
@@ -218,8 +211,6 @@ const useAdminAuth = () => {
           loading: false,
           error: null
         });
-
-        console.log("SidebarMenuAdmin: No Firestore data found, using Firebase user data");
       }
     } catch (error) {
       console.error("SidebarMenuAdmin: Error fetching user data from Firestore:", error);

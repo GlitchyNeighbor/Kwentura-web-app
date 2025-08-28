@@ -112,7 +112,6 @@ const ManageAdmins = () => {
           ...doc.data(),
         }));
         setAdmins(adminsList);
-        console.log("Admins fetched successfully:", adminsList);
       } catch (error) {
         console.error("Error fetching admins: ", error);
         showAlert(`Failed to fetch admins: ${error.message}`);
@@ -122,6 +121,7 @@ const ManageAdmins = () => {
 
     fetchAdmins();
   }, []);
+
 
   const toggleSidebar = () => {
     setShowSidebar(!showSidebar);
@@ -347,16 +347,6 @@ const ManageAdmins = () => {
         
         const adminRef = doc(db, "admins", selectedAdmin.id);
         await updateDoc(adminRef, adminData);
-
-        
-        if (selectedAdmin.email !== formData.email) {
-          console.log("Email update required for user:", selectedAdmin.uid);
-          
-          
-          
-        }
-
-        
         if (formData.password && formData.password.length >= 6) {
           try {
             await updateAdminPassword(selectedAdmin.uid, formData.password);
@@ -473,27 +463,12 @@ const ManageAdmins = () => {
     if (!selectedAdmin) return;
     setLoading(true);
     try {
-      
-      console.log(
-        "Admin document deleted from Firestore with ID (Auth UID):",
-        selectedAdmin.id
-      ); 
-
-      
       const adminRef = doc(db, "admins", selectedAdmin.id);
       await updateDoc(adminRef, {
         isArchived: true,
         archivedAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
-      console.log(
-        "Admin archived in Firestore. Auth user UID:",
-        selectedAdmin.id
-      );
-      console.warn(
-        "Note: Firebase Auth user is NOT deleted during archiving. Permanent deletion with Auth cleanup should be handled separately if needed (e.g., from AccountList for already archived users)."
-      );
-
       setAdmins(admins.filter((admin) => admin.id !== selectedAdmin.id)); 
 
       showAlert("Admin archived successfully!", "success");

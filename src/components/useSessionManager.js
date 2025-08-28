@@ -21,8 +21,6 @@ const useSessionManager = (user) => {
         if (docSnap.exists()) {
           unsubscribe = onSnapshot(userDocRef, (doc) => {
             const userData = doc.data();
-            console.log('Session listener triggered for user:', user.uid, 'in collection:', collectionName, 'with session ID:', sessionId);
-            console.log('User data from snapshot:', userData);
             if (userData.activeSessionId && userData.activeSessionId !== sessionId) {
               const auth = getAuth();
               signOut(auth).then(() => {

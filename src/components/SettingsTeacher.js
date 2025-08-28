@@ -141,24 +141,15 @@ const SettingsTeacher = () => {
           userRole !== "superAdmin" &&
           userRole !== "superadmin"
         ) {
-          console.log("User does not have teacher access, redirecting...");
           await signOut(auth);
           navigate("/login");
           return;
         }
-
-        console.log("User data loaded successfully:", {
-          role: userRole,
-          docId: docId,
-          email: userData.email,
-        });
       } else {
-        console.log("No user data found in Firestore for:", currentUser.email);
         await signOut(auth);
         navigate("/login");
       }
     } catch (error) {
-      console.error("Error fetching user data from Firestore:", error);
       await signOut(auth);
       navigate("/login");
     } finally {
@@ -201,7 +192,6 @@ const SettingsTeacher = () => {
   const handleSendVerificationEmail = async () => {
     const user = auth.currentUser;
     if (user) {
-      console.log("Current user object:", user);
       try {
         await sendEmailVerification(user);
         setUpdateStatus({
@@ -350,20 +340,13 @@ const SettingsTeacher = () => {
         return;
       }
 
-      console.log("Starting password update process...");
-
       const credential = EmailAuthProvider.credential(
         user.email,
         userDetails.currentPassword
       );
 
-      console.log("Re-authenticating user...");
       await reauthenticateWithCredential(user, credential);
-      console.log("Re-authentication successful");
-
-      console.log("Updating password...");
       await updatePassword(user, userDetails.newPassword);
-      console.log("Password update successful");
 
       setPasswordUpdateStatus({
         show: true,

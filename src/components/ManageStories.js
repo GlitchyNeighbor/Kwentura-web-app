@@ -488,11 +488,7 @@ const handleSubmit = async () => {
           pageTexts
         };
         await updateDoc(doc(db, "stories", randomStoryId), storyUpdate);
-
         showAlert("PDF split into pages and texts extracted.", "success");
-        console.log("Updated story doc with imageURLs and text content:", { pageImages: imageUrls, pageTexts });
-        console.log("Trying to generate TTS audio for pages...");
-
         try {
           const synthesizeSpeech = httpsCallable(functions, "synthesizeSpeechGoogle");
           const audioPromises = [];

@@ -30,7 +30,6 @@ async function createSuperAdmin() {
     uid: userRecord.uid,
   });
 
-  console.log("SuperAdmin created:", userRecord.uid);
 }
 
 createSuperAdmin().catch(console.error);

@@ -320,7 +320,6 @@ const Signup = () => {
       }
 
       setSchoolIdStatus('checking');
-      console.log("Checking School ID:", schoolId); // Log the input
       try {
         // Check in 'teachers' collection
         const teachersQuery = query(collection(db, "teachers"), where("schoolId", "==", schoolId));
@@ -335,10 +334,6 @@ const Signup = () => {
         const studentsSnapshot = await getDocs(studentsQuery);
 
         const isTaken = !teachersSnapshot.empty || !adminsSnapshot.empty || !studentsSnapshot.empty;
-        console.log("Query Snapshot Empty (teachers):", teachersSnapshot.empty);
-        console.log("Query Snapshot Empty (admins):", adminsSnapshot.empty);
-        console.log("Query Snapshot Empty (students):", studentsSnapshot.empty);
-        console.log("Is School ID Taken:", isTaken);
         setSchoolIdStatus(isTaken ? 'taken' : 'available');
       } catch (error) {
         console.error("Error checking school ID:", error);

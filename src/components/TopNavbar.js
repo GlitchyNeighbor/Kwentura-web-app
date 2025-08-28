@@ -151,13 +151,6 @@ const TopNavbar = ({ toggleSidebar, isSidebarOpen = false }) => {
           loading: false,
           error: null
         });
-
-        console.log("TopNavbar: User data loaded successfully:", {
-          role: userRole,
-          email: userData.email,
-          fullName: fullName,
-          profileImageUrl: userData.profileImageUrl
-        });
       } else {
         // Fallback to Firebase user data if not found in Firestore
         const displayName = currentUser.displayName || "";
@@ -173,7 +166,6 @@ const TopNavbar = ({ toggleSidebar, isSidebarOpen = false }) => {
           error: null
         });
 
-        console.log("TopNavbar: No Firestore data found, using Firebase user data");
       }
     } catch (error) {
       console.error("TopNavbar: Error fetching user data from Firestore:", error);
@@ -490,10 +482,8 @@ const TopNavbar = ({ toggleSidebar, isSidebarOpen = false }) => {
                         alt={`${displayName} profile`}
                         className="profile-image"
                         onError={(e) => {
-                          console.log('TopNavbar: Image failed to load, using fallback');
                           e.target.src = require("../assets/images/profile.png");
                         }}
-                        onLoad={() => console.log('TopNavbar: Image loaded successfully:', profileImageSrc)}
                         loading="lazy"
                       />
                     </div>

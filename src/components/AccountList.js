@@ -918,7 +918,7 @@ const AccountList = () => {
                           paddingRight: '24px'
                         }}
                       >
-                        {/* Actions */}
+                        Actions
                       </th>
                     </tr>
                   </thead>
@@ -1046,7 +1046,7 @@ const AccountList = () => {
                               </span>
                             </div>
                           </td>
-                          {/* <td className="py-4 align-middle text-center" style={{ paddingRight: '24px' }}>
+                          <td className="py-4 align-middle text-center" style={{ paddingRight: '24px' }}>
                             {account.isArchived ? (
                               <div className="d-flex justify-content-center gap-2">
                                 <Button
@@ -1101,7 +1101,7 @@ const AccountList = () => {
                                 No actions
                               </Badge>
                             )}
-                          </td> */}
+                          </td>
                         </tr>
                       );
                     })}

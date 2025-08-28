@@ -99,7 +99,6 @@ const useTeacherAuth = () => {
 
   const fetchTeacherData = useCallback(async (email) => {
     try {
-      console.log("Fetching teacher data for:", email);
       
       const q = query(collection(db, "teachers"), where("email", "==", email));
       const querySnapshot = await getDocs(q);
