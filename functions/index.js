@@ -3,8 +3,6 @@ const {GoogleGenerativeAI} = require("@google/generative-ai");
 const pdfParser = require("pdf-parse");
 const {onCall, HttpsError} = require("firebase-functions/v2/https");
 const {onDocumentWritten} = require("firebase-functions/v2/firestore");
-const textToSpeech = require("@google-cloud/text-to-speech");
-const {Translate} = require("@google-cloud/translate").v2;
 const {getFirestore} = require("firebase-admin/firestore");
 const {getAuth} = require("firebase-admin/auth");
 const {onSchedule} = require("firebase-functions/v2/scheduler");
@@ -30,25 +28,16 @@ exports.updateAdminPassword = onCall(async (request) => {
   }
 });
 
-const ttsClient = new textToSpeech.TextToSpeechClient();
-exports.synthesizeSpeechGoogle = onCall({timeoutSeconds: 3600},
+const synthesizeSpeechGoogle = onCall({timeoutSeconds: 3600},
     async (request) => {
       if (!request.auth) {
         throw new HttpsError("unauthenticated", "Authentication required.");
       }
       const textToSynthesize = request.data.text;
-      if (!textToSynthesize ||
-          typeof textToSynthesize !== "string" ||
-          textToSynthesize.trim() === "") {
+      if (!textToSynthesize || typeof textToSynthesize!== "string" ||
+      textToSynthesize.trim() === "") {
         throw new HttpsError("invalid-argument",
             "Missing or invalid 'text' parameter.");
-      }
-      const MAX_TEXT_LENGTH = 4800;
-      if (textToSynthesize.length > MAX_TEXT_LENGTH) {
-        console.warn(
-            `Text truncated from ${textToSynthesize.length} to ` +
-            `${MAX_TEXT_LENGTH} characters for TTS.`,
-        );
       }
 
       const ttsRequest = {
@@ -56,12 +45,16 @@ exports.synthesizeSpeechGoogle = onCall({timeoutSeconds: 3600},
         voice: {
           languageCode: request.data.languageCode || "en-US",
           name: request.data.languageCode === "fil-PH" ?
-            "fil-PH-Standard-A" :
-            "en-US-Chirp-HD-F",
+      "fil-PH-Standard-A" : "en-US-Chirp-HD-F",
         },
         audioConfig: {audioEncoding: "MP3"},
+        // Add timepoints to get word timings.
+        enableTimepointing: ["SSML_MARK"],
       };
+
       try {
+        const textToSpeech = require("@google-cloud/text-to-speech");
+        const ttsClient = new textToSpeech.TextToSpeechClient();
         const [response] = await ttsClient.synthesizeSpeech(ttsRequest);
         return {
           audioData: Buffer.from(response.audioContent).toString("base64"),
@@ -70,18 +63,15 @@ exports.synthesizeSpeechGoogle = onCall({timeoutSeconds: 3600},
         };
       } catch (error) {
         console.error("Google Cloud TTS API Error:", error);
-        throw new HttpsError(
-            "internal",
+        throw new HttpsError("internal",
             "Failed to synthesize speech with Google Cloud TTS.",
-            error.message,
-        );
+            error.message);
       }
     });
 
-exports.translatePageTexts = onCall(async (request) => {
-  // Initialize the Translate client inside the function
-  const translate = new Translate();
+exports.synthesizeSpeechGoogle = synthesizeSpeechGoogle;
 
+exports.translatePageTexts = onCall(async (request) => {
   const {texts, targetLanguage} = request.data;
 
   if (!request.auth) {
@@ -97,9 +87,31 @@ exports.translatePageTexts = onCall(async (request) => {
   }
 
   try {
-    // The translate API can handle an array of strings directly.
-    const [translations] = await translate.translate(texts, targetLanguage);
-    return {translatedTexts: translations};
+    if (!genAI || !model) {
+      throw new HttpsError(
+          "failed-precondition",
+          "The Gemini API Key is not configured for the function.",
+      );
+    }
+
+    const languageMap = {
+      "en": "English",
+      "tl": "Tagalog",
+    };
+    const targetLanguageName = languageMap[targetLanguage];
+
+    const translationPromises = texts.map(async (text) => {
+      if (!text.trim()) return "";
+      const prompt = `Translate the following text to ${targetLanguageName}. ` +
+          `Do not add any explanation. Just provide the translated text.
+            Text to translate: "${text}"`;
+      const result = await model.generateContent(prompt);
+      const response = result.response;
+      return response.text();
+    });
+
+    const translatedTexts = await Promise.all(translationPromises);
+    return {translatedTexts};
   } catch (error) {
     console.error("Translation API error:", error);
     throw new HttpsError("internal", "Failed to translate text.", error);
@@ -681,7 +693,8 @@ exports.approveTeacher = onCall(async (request) => {
   }
 
   const adminData = adminDoc.data();
-  if (!adminData || (adminData.role !== "admin" && adminData.role !== "superAdmin")) {
+  if (!adminData || (adminData.role !== "admin" &&
+    adminData.role !== "superAdmin")) {
     throw new HttpsError(
         "permission-denied",
         "Only authenticated admins can approve teachers.",
@@ -750,7 +763,8 @@ exports.rejectTeacher = onCall(async (request) => {
   }
 
   const adminData = adminDoc.data();
-  if (!adminData || (adminData.role !== "admin" && adminData.role !== "superAdmin")) {
+  if (!adminData || (adminData.role !== "admin" &&
+    adminData.role !== "superAdmin")) {
     throw new HttpsError(
         "permission-denied",
         "Only authenticated admins can reject teachers.",
