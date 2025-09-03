@@ -16,20 +16,8 @@ import {
   ChevronRight
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { getAuth, signOut, onAuthStateChanged } from "firebase/auth";
-import { 
-  getFirestore,
-  collection, 
-  query, 
-  where, 
-  getDocs, 
-  doc, 
-  updateDoc 
-} from "firebase/firestore";
-import { db, app } from "../config/FirebaseConfig.js";
 import LogoutConfirmation from "./LogoutConfirmation";
-
-const firestoreDb = getFirestore(app);
+import { useAuth } from "../context/AuthContext.js";
 
 // Constants - Updated to match your pink theme
 const COLORS = {
@@ -50,7 +38,7 @@ const COLORS = {
 };
 
 const USER_ROLES = {
-  SUPERADMIN: "superadmin",
+  SUPERADMIN: "superAdmin",
   ADMIN: "admin",
   TEACHER: "teacher",
   STUDENT: "student",
@@ -59,10 +47,10 @@ const USER_ROLES = {
 
 const ROLE_DISPLAY_NAMES = {
   [USER_ROLES.SUPERADMIN]: "Super Admin",
-  [USER_ROLES.ADMIN]: "Admin",
-  [USER_ROLES.TEACHER]: "Teacher",
-  [USER_ROLES.STUDENT]: "Student",
-  [USER_ROLES.USER]: "User"
+  admin: "Admin",
+  teacher: "Teacher",
+  student: "Student",
+  user: "User"
 };
 
 const NAVIGATION_ITEMS = {
@@ -80,7 +68,7 @@ const NAVIGATION_ITEMS = {
       icon: Users,
       description: 'Manage users and accounts',
       subItems: [
-        { path: '/admin/manage/admins', label: 'Admins', icon: Shield, roleRequired: ['Super Admin', 'superAdmin'] },
+        { path: '/admin/manage/admins', label: 'Admins', icon: Shield, roleRequired: ['superAdmin'] },
         { path: '/admin/manage/teachers', label: 'Teachers', icon: Laptop },
         { path: '/admin/manage/students', label: 'Students', icon: GraduationCap },
         { path: '/admin/account-list', label: 'All Accounts', icon: User },
@@ -92,7 +80,7 @@ const NAVIGATION_ITEMS = {
       label: 'Approve Teachers', 
       icon: UserCheck,
       description: 'Approve pending teacher registrations',
-      roleRequired: ['Super Admin', 'superadmin', 'admin']
+      roleRequired: ['superAdmin', 'admin']
     },
     { 
       id: 'analytics',
@@ -114,161 +102,12 @@ const NAVIGATION_ITEMS = {
 };
 
 // Custom hooks - Updated with TopNavbar logic
-const useAdminAuth = () => {
-  const [state, setState] = useState({
-    userName: "",
-    userRole: null,
-    adminData: null,
-    profileImageUrl: "",
-    loading: true,
-    error: null
-  });
-  const navigate = useNavigate();
-  const auth = useMemo(() => getAuth(), []);
-
-  const updateUserState = useCallback((updates) => {
-    setState(prev => ({ ...prev, ...updates }));
-  }, []);
-
-  // Using TopNavbar's comprehensive user data fetching logic
-  const fetchUserDataFromFirestore = useCallback(async (currentUser) => {
-    try {
-      updateUserState({ loading: true, error: null });
-
-      if (!currentUser?.email) {
-        updateUserState({
-          userName: "Admin User",
-          userRole: USER_ROLES.USER,
-          adminData: null,
-          profileImageUrl: "",
-          loading: false
-        });
-        return;
-      }
-
-      const collectionsToSearch = [
-        { name: "admins", defaultRole: "admin" },
-        { name: "teachers", defaultRole: "teacher" },
-        { name: "students", defaultRole: "student" },
-      ];
-
-      let userData = null;
-      let userRole = null;
-
-      for (const { name: collectionName, defaultRole } of collectionsToSearch) {
-        // First try to find by email
-        const emailQuery = query(
-          collection(firestoreDb, collectionName),
-          where("email", "==", currentUser.email)
-        );
-        const emailSnapshot = await getDocs(emailQuery);
-
-        if (!emailSnapshot.empty) {
-          const docSnap = emailSnapshot.docs[0];
-          userData = { id: docSnap.id, ...docSnap.data() };
-          userRole = userData.role || defaultRole;
-          break;
-        }
-
-        // If not found by email and we have a UID, try by UID
-        if (currentUser.uid) {
-          const uidQuery = query(
-            collection(firestoreDb, collectionName),
-            where("uid", "==", currentUser.uid)
-          );
-          const uidSnapshot = await getDocs(uidQuery);
-
-          if (!uidSnapshot.empty) {
-            const docSnap = uidSnapshot.docs[0];
-            userData = { id: docSnap.id, ...docSnap.data() };
-            userRole = userData.role || defaultRole;
-            break;
-          }
-        }
-      }
-
-      if (userData) {
-        const fullName = `${userData.firstName || ""} ${userData.lastName || ""}`.trim();
-        
-        updateUserState({
-          userName: fullName || "Admin User",
-          userRole: userRole?.toLowerCase() || "admin",
-          adminData: userData,
-          profileImageUrl: userData.profileImageUrl || "",
-          loading: false,
-          error: null
-        });
-      } else {
-        // Fallback to Firebase user data if not found in Firestore
-        const displayName = currentUser.displayName || "";
-        const nameParts = displayName.split(" ");
-
-        updateUserState({
-          userName: displayName || "Admin User",
-          userRole: USER_ROLES.USER,
-          adminData: null,
-          profileImageUrl: currentUser.photoURL || "",
-          loading: false,
-          error: null
-        });
-      }
-    } catch (error) {
-      console.error("SidebarMenuAdmin: Error fetching user data from Firestore:", error);
-      
-      updateUserState({
-        userName: "Admin User",
-        userRole: USER_ROLES.USER,
-        adminData: null,
-        profileImageUrl: "",
-        loading: false,
-        error: "Failed to load user data"
-      });
-    }
-  }, [updateUserState]);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        await fetchUserDataFromFirestore(user);
-      } else {
-        navigate("/login", { replace: true });
-      }
-    });
-
-    return () => unsubscribe();
-  }, [navigate, fetchUserDataFromFirestore, auth]);
-
-  // Listen for profile updates
-  useEffect(() => {
-    const handleProfileUpdate = async () => {
-      const user = auth.currentUser;
-      if (user) {
-        try {
-          await fetchUserDataFromFirestore(user);
-        } catch (error) {
-          console.error("SidebarMenuAdmin: Error updating profile:", error);
-        }
-      }
-    };
-
-    window.addEventListener("profileImageUpdated", handleProfileUpdate);
-    window.addEventListener("profileUpdated", handleProfileUpdate);
-    
-    return () => {
-      window.removeEventListener("profileImageUpdated", handleProfileUpdate);
-      window.removeEventListener("profileUpdated", handleProfileUpdate);
-    };
-  }, [fetchUserDataFromFirestore, auth]);
-
-  return state;
-};
 
 // UI Components
 const UserProfile = React.memo(({ userName, profileImageUrl, userRole, loading }) => {
   const displayRole = useMemo(() => {
     if (!userRole) return "User";
-    const normalizedRole = userRole.toLowerCase().replace(/\s+/g, "");
-    return ROLE_DISPLAY_NAMES[normalizedRole] || userRole.replace(/([A-Z])/g, ' $1').trim();
+    return ROLE_DISPLAY_NAMES[userRole] || userRole.replace(/([A-Z])/g, ' $1').trim();
   }, [userRole]);
 
   const profileTooltip = (
@@ -350,7 +189,7 @@ const UserProfile = React.memo(({ userName, profileImageUrl, userRole, loading }
               <Badge 
                 className="text-center" 
                 style={{ 
-                  backgroundColor: userRole === 'superadmin' || userRole === 'Super Admin' ? COLORS.warning : COLORS.primary,
+                  backgroundColor: userRole === USER_ROLES.SUPERADMIN ? COLORS.warning : COLORS.primary,
                   color: COLORS.white,
                   fontSize: "0.75rem",
                   padding: "6px 12px",
@@ -537,10 +376,9 @@ const SidebarMenuAdmin = ({ isOpen, toggleSidebar }) => {
   const [expandedItems, setExpandedItems] = useState(new Set(['users']));
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const { userName, userRole, adminData, profileImageUrl, loading, error } = useAdminAuth();
+  const { userData, loading, error, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const auth = useMemo(() => getAuth(), []);
 
   const getAllNavigationItems = useCallback(() => {
     const allItems = [];
@@ -565,9 +403,9 @@ const SidebarMenuAdmin = ({ isOpen, toggleSidebar }) => {
 
   const checkRolePermission = useCallback((roleRequired) => {
     if (!roleRequired) return true;
-    if (!userRole) return false;
-    return roleRequired.some((role) => role.toLowerCase() === userRole.toLowerCase());
-  }, [userRole]);
+    if (!userData?.role) return false;
+    return roleRequired.some((role) => role.toLowerCase() === userData.role.toLowerCase());
+  }, [userData]);
 
   const handleToggleExpand = useCallback((itemId) => {
     setExpandedItems(prev => {
@@ -597,34 +435,7 @@ const SidebarMenuAdmin = ({ isOpen, toggleSidebar }) => {
   const handleLogoutConfirm = useCallback(async () => {
     setIsLoggingOut(true);
     try {
-      const user = auth.currentUser;
-
-      if (user && userRole) {
-        let collectionName = null;
-        const normalizedRole = userRole.toLowerCase();
-        
-        if (normalizedRole === USER_ROLES.TEACHER) {
-          collectionName = "teachers";
-        } else if (normalizedRole === USER_ROLES.ADMIN || normalizedRole === USER_ROLES.SUPERADMIN) {
-          collectionName = "admins";
-        } else if (normalizedRole === USER_ROLES.STUDENT) {
-          collectionName = "students";
-        }
-
-        if (collectionName) {
-          try {
-            const userDocRef = doc(firestoreDb, collectionName, user.uid);
-            await updateDoc(userDocRef, { activeSessionId: null });
-          } catch (dbError) {
-            console.warn(`SidebarMenuAdmin: Could not clear active session for user in ${collectionName}:`, dbError);
-          }
-        }
-      }
-
-      await signOut(auth);
-      sessionStorage.clear();
-      localStorage.removeItem("user");
-      
+      await logout();
       setTimeout(() => {
         navigate("/login", { replace: true });
       }, 500);
@@ -632,7 +443,7 @@ const SidebarMenuAdmin = ({ isOpen, toggleSidebar }) => {
       console.error("SidebarMenuAdmin: Error signing out:", error);
       setIsLoggingOut(false);
     }
-  }, [navigate, auth, userRole]);
+  }, [navigate, logout]);
 
   if (error) {
     return (
@@ -680,9 +491,9 @@ const SidebarMenuAdmin = ({ isOpen, toggleSidebar }) => {
         >
           {isOpen ? (
             <UserProfile
-              userName={userName || 'Admin User'}
-              profileImageUrl={profileImageUrl}
-              userRole={userRole}
+              userName={userData?.fullName || 'Admin User'}
+              profileImageUrl={userData?.profileImageUrl}
+              userRole={userData?.role}
               loading={loading}
             />
           ) : (
@@ -692,11 +503,9 @@ const SidebarMenuAdmin = ({ isOpen, toggleSidebar }) => {
                 overlay={
                   <Tooltip id="collapsed-profile-tooltip">
                     <div className="text-start p-2">
-                      <div className="fw-semibold mb-1">{userName || 'Admin User'}</div>
-                      {userRole && (
-                        <div className="text-light small">
-                          <strong>Role:</strong> {ROLE_DISPLAY_NAMES[userRole.toLowerCase().replace(/\s+/g, "")] || userRole.replace(/([A-Z])/g, ' $1').trim()}
-                        </div>
+                      <div className="fw-semibold mb-1">{userData?.fullName || 'Admin User'}</div>
+                      {userData?.role && (
+                        <div className="text-light small"><strong>Role:</strong> {ROLE_DISPLAY_NAMES[userData.role] || userData.role.replace(/([A-Z])/g, ' $1').trim()}</div>
                       )}
                     </div>
                   </Tooltip>
@@ -713,9 +522,9 @@ const SidebarMenuAdmin = ({ isOpen, toggleSidebar }) => {
                     cursor: 'pointer'
                   }}
                 >
-                  {profileImageUrl ? (
+                  {userData?.profileImageUrl ? (
                     <img
-                      src={profileImageUrl}
+                      src={userData.profileImageUrl}
                       alt="Profile"
                       className="rounded-circle"
                       style={{
@@ -729,7 +538,7 @@ const SidebarMenuAdmin = ({ isOpen, toggleSidebar }) => {
                     />
                   ) : (
                     <span className="text-white fw-bold" style={{ fontSize: '1rem' }}>
-                      {userName ? userName.charAt(0).toUpperCase() : 'U'}
+                      {(userData?.fullName || 'A').charAt(0).toUpperCase()}
                     </span>
                   )}
                 </div>
@@ -774,7 +583,7 @@ const SidebarMenuAdmin = ({ isOpen, toggleSidebar }) => {
                           isExpanded={expandedItems.has(item.id)}
                           onToggleExpand={handleToggleExpand}
                           onNavigate={handleNavigate}
-                          userRole={userRole}
+                          userRole={userData?.role}
                           isVisible={checkRolePermission(item.roleRequired)}
                           checkRolePermission={checkRolePermission}
                         />
@@ -813,7 +622,7 @@ const SidebarMenuAdmin = ({ isOpen, toggleSidebar }) => {
                           isExpanded={expandedItems.has(item.id)}
                           onToggleExpand={handleToggleExpand}
                           onNavigate={handleNavigate}
-                          userRole={userRole}
+                        userRole={userData?.role}
                           isVisible={checkRolePermission(item.roleRequired)}
                         />
                       </div>
@@ -1072,7 +881,7 @@ const SidebarMenuAdmin = ({ isOpen, toggleSidebar }) => {
         show={showLogoutModal}
         onHide={handleLogoutCancel}
         onConfirm={handleLogoutConfirm}
-        userName={userName}
+        userName={userData?.fullName || 'Admin'}
         userType="admin"
         isLoggingOut={isLoggingOut}
       />

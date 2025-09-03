@@ -102,6 +102,7 @@ const functions = getFunctions(firebaseApp);
 const generateMoralLessonAI = httpsCallable(functions, 'generateMoralLessonFromText');
 const generateStorySynopsis = httpsCallable(functions, 'generateStorySynopsisFromPdf');
 const generateQuestions = httpsCallable(functions, 'generateComprehensionQuestionsFromText');
+const translatePageTexts = httpsCallable(functions, 'translatePageTexts');
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `${process.env.PUBLIC_URL}/pdf.worker.min.js`;
 
@@ -156,7 +157,10 @@ const ManageStories = () => {
     moralQuestion: "",
     moralOptions: ["", "", ""],
     moralCorrectOptionIndex: null,
-    languageCode: "en-US",
+    moralImageFile: null,
+    moralImagePreviewUrl: "", // For moral lesson image
+    comprehensionQuestions: [], // To hold comprehension questions
+    language: "en-US", // Changed from languageCode
   });
 
   const [formErrors, setFormErrors] = useState({});
@@ -244,7 +248,10 @@ const ManageStories = () => {
       moralQuestion: "",
       moralOptions: ["", "", ""],
       moralCorrectOptionIndex: null,
-      languageCode: "en-US",
+      moralImageFile: null,
+      moralImagePreviewUrl: "", // For moral lesson image
+      comprehensionQuestions: [], // To hold comprehension questions
+      language: "en-US", // Changed from languageCode
     });
     setFormErrors({});
     setIsEditing(false);
@@ -264,7 +271,9 @@ const ManageStories = () => {
       moralQuestion: "",
       moralOptions: ["", "", ""],
       moralCorrectOptionIndex: null,
-      languageCode: "en-US",
+      moralImageFile: null,
+      moralImagePreviewUrl: "",
+      language: "en-US",
     });
     setFormErrors({});
     setIsEditing(false);
@@ -307,6 +316,31 @@ const ManageStories = () => {
     }
   };
 
+  const handleAssessmentImageUpload = (e, questionType, index = null) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) { // 2MB limit
+        showAlert("Image size should not exceed 2MB.", "danger");
+        return;
+    }
+
+    if (questionType === 'moralLesson') {
+        setFormData(prev => ({
+            ...prev,
+            moralImageFile: file,
+            moralImagePreviewUrl: URL.createObjectURL(file)
+        }));
+    } else if (questionType === 'comprehensionQuestions' && index !== null) {
+        const updatedQuestions = [...formData.comprehensionQuestions];
+        if (updatedQuestions[index]) {
+            updatedQuestions[index].imageFile = file;
+            updatedQuestions[index].imagePreviewUrl = URL.createObjectURL(file);
+        }
+        setFormData(prev => ({ ...prev, comprehensionQuestions: updatedQuestions }));
+    }
+  };
+
   const handlePdfUpload = async (e) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -314,7 +348,7 @@ const ManageStories = () => {
         showAlert("Please select a PDF file.", "danger");
         return;
       }
-      if (file.size > 50 * 1024 * 1024) { // Increased to 50MB
+      if (file.size > 50 * 1024 * 1024) {
         showAlert("PDF size should be less than 50MB", "danger");
         return;
       }
@@ -398,6 +432,77 @@ const ManageStories = () => {
     }
   };
 
+/**
+ * Generates TTS audio for a given set of page texts and language.
+ * @param {string[]} texts - Array of texts for each page.
+ * @param {string} languageCode - The language code for TTS (e.g., 'en-US').
+ * @param {string} storyId - The ID of the story to associate the audio with.
+ * @returns {Promise<{audioData: object[], failedPages: number[]}>}
+ */
+const generateTtsForLanguage = async (texts, languageCode, storyId) => {
+  const synthesizeSpeech = httpsCallable(functions, "synthesizeSpeechGoogle");
+  const audioPromises = [];
+  const failedPages = [];
+
+  for (let i = 0; i < texts.length; i++) {
+    const textToSpeak = texts[i];
+    const pageNumber = i + 1;
+
+    if (!textToSpeak || !textToSpeak.trim()) {
+      failedPages.push(pageNumber);
+      continue;
+    }
+
+    const ttsChunks = splitTextForTTS(textToSpeak);
+    ttsChunks.forEach((chunk, chunkIdx) => {
+      const promise = synthesizeSpeech({ text: chunk, languageCode })
+        .then(async (result) => {
+          if (!result.data || !result.data.audioData || typeof result.data.audioData !== "string") {
+            console.warn(`Invalid audio data for page ${pageNumber} (lang: ${languageCode}), skipping.`);
+            failedPages.push(pageNumber);
+            return null;
+          }
+          const byteCharacters = atob(result.data.audioData);
+          const byteNumbers = Array.from(byteCharacters, (char) => char.charCodeAt(0));
+          const byteArray = new Uint8Array(byteNumbers);
+          const audioBlob = new Blob([byteArray], { type: "audio/mp3" });
+          const audioRef = ref(storage, `story_tts/${storyId}/page_${pageNumber}_chunk${chunkIdx + 1}_${languageCode}.mp3`);
+          await uploadBytes(audioRef, audioBlob);
+          const audioUrl = await getDownloadURL(audioRef);
+          return { audioUrl, timepoints: result.data.timepoints || [], pageNumber };
+        })
+        .catch((err) => {
+          console.error(`Error generating TTS for page ${pageNumber} (lang: ${languageCode}):`, err);
+          failedPages.push(pageNumber);
+          return null;
+        });
+      audioPromises.push(promise);
+    });
+  }
+
+  const audioDataResults = await Promise.all(audioPromises);
+  return {
+    audioData: audioDataResults.filter(Boolean),
+    failedPages: [...new Set(failedPages)],
+  };
+};
+
+/**
+ * Uploads an image for an assessment question to Firebase Storage.
+ * @param {File} file The image file to upload.
+ * @param {string} storyId The ID of the story.
+ * @param {string} type The type of question ('moral' or 'comprehension').
+ * @param {number} index The index of the question.
+ * @returns {Promise<string|null>} The download URL of the uploaded image.
+ */
+const uploadAssessmentImage = async (file, storyId, type, index) => {
+    if (!file) return null;
+    const filePath = `assessment_images/${storyId}/${type}_${index}_${Date.now()}_${file.name}`;
+    const imageRef = ref(storage, filePath);
+    await uploadBytes(imageRef, file);
+    return getDownloadURL(imageRef);
+};
+
 const handleSubmit = async () => {
   if (!validateForm()) {
     showAlert("Please fill in all required fields", "danger");
@@ -409,7 +514,9 @@ const handleSubmit = async () => {
   let finalImageUrl = isEditing && selectedStory ? selectedStory.image || "" : "";
 
   try {
-    let storyId = isEditing && selectedStory ? selectedStory.id : null;
+    const storyId = isEditing && selectedStory 
+      ? selectedStory.id 
+      : doc(collection(db, "stories")).id; // Generate a new ID upfront
 
     const uploadTasks = [];
     if (formData.imageFile) {
@@ -428,12 +535,12 @@ const handleSubmit = async () => {
     finalPdfUrl = uploadedPdfUrl;
 
     const storyDataPayload = {
-      storyId,
       title: formData.title,
       author: formData.author, 
       category: formData.category,
       pdfUrl: finalPdfUrl,
       image: finalImageUrl,
+      language: formData.language, // Use the new language field
       comprehensionQuestions: Array.isArray(formData.comprehensionQuestions) && formData.comprehensionQuestions.length === 3
         ? formData.comprehensionQuestions
         : [],
@@ -454,24 +561,53 @@ const handleSubmit = async () => {
         storyDataPayload.moralLesson = null;
     }
 
+    // Handle assessment image uploads
+    if (formData.moralImageFile) {
+      const url = await uploadAssessmentImage(formData.moralImageFile, storyId, 'moral', 0);
+      if (url && storyDataPayload.moralLesson) {
+        storyDataPayload.moralLesson.imageUrl = url;
+      }
+    } else if (isEditing && selectedStory.moralLesson?.imageUrl) {
+      if (storyDataPayload.moralLesson) {
+        storyDataPayload.moralLesson.imageUrl = selectedStory.moralLesson.imageUrl;
+      }
+    }
+
+    if (Array.isArray(formData.comprehensionQuestions) && formData.comprehensionQuestions.length > 0) {
+        const processedQuestions = await Promise.all(
+            formData.comprehensionQuestions.map(async (q, index) => {
+                let finalImageUrl = q.imageUrl || null; // Keep existing URL by default
+                if (q.imageFile) { // If a new file is uploaded
+                    const newUrl = await uploadAssessmentImage(q.imageFile, storyId, 'comprehension', index);
+                    if (newUrl) finalImageUrl = newUrl;
+                }
+                return {
+                    question: q.question,
+                    options: q.options,
+                    correctOptionIndex: q.correctOptionIndex,
+                    imageUrl: finalImageUrl,
+                };
+            })
+        );
+        storyDataPayload.comprehensionQuestions = processedQuestions;
+    }
+
     let randomStoryId, storyRef;
     if (isEditing && selectedStory) {
       storyRef = doc(db, "stories", selectedStory.id);
       storyDataPayload.dateModified = serverTimestamp(); // Use server timestamp for modification
       await updateDoc(storyRef, storyDataPayload);
       randomStoryId = selectedStory.id;
-      showAlert("Story updated successfully!", "success");
     } else {
       // For new stories
       storyDataPayload.createdAt = serverTimestamp(); // Use server timestamp for creation
       storyDataPayload.dateModified = serverTimestamp(); // Initial modification date same as creation
 
-      randomStoryId = Math.floor(10000 + Math.random() * 90000).toString();
-      storyRef = doc(db, "stories", randomStoryId);
-      storyDataPayload.storyId = randomStoryId;
+      randomStoryId = storyId;
+      storyRef = doc(db, "stories", storyId);
+      storyDataPayload.storyId = storyId;
 
       await setDoc(storyRef, storyDataPayload);
-      showAlert("Story created successfully!", "success");
     }
 
     // PDF-to-image and text extraction in parallel (if PDF present)
@@ -482,73 +618,59 @@ const handleSubmit = async () => {
           convertAndUploadPdfPages(formData.pdfFile, randomStoryId, storage),
           extractPdfPageTexts(formData.pdfFile),
         ]);
+
+        // ---- START: Translation Logic ----
+        showAlert("Translating page content...", "info");
+        const sourceLang = formData.language;
+        const targetLang = sourceLang === 'en-US' ? 'tl' : 'en'; // Target for Google Translate API
+        const targetLangCode = sourceLang === 'en-US' ? 'fil-PH' : 'en-US'; // Target for saving in Firestore
+        let translatedTexts = [];
+        try {
+          const translationResult = await translatePageTexts({
+            texts: pageTexts,
+            targetLanguage: targetLang
+          });
+          translatedTexts = translationResult.data.translatedTexts;
+          
+          await updateDoc(doc(db, "stories", randomStoryId), {
+            translations: { [targetLangCode]: translatedTexts }
+          });
+          showAlert("Page content translated successfully!", "success");
+        } catch (translationError) {
+          console.error("Translation failed:", translationError);
+          showAlert(`Translation failed: ${translationError.message}`, "danger");
+          // Continue without translation if it fails
+        }
+        // ---- END: Translation Logic ----
+        
+        // ---- START: Bilingual TTS Generation ----
+        showAlert("Generating audio for all languages...", "info");
+        const ttsPayload = {};
+        
+        // Generate for source language using the single 'language' field
+        const sourceTtsResult = await generateTtsForLanguage(pageTexts, sourceLang, randomStoryId);
+        ttsPayload[sourceLang] = sourceTtsResult.audioData;
+        if (sourceTtsResult.failedPages.length > 0) {
+          showAlert(`TTS failed for some pages in ${sourceLang}: ${sourceTtsResult.failedPages.join(", ")}`, "warning");
+        }
+
+        // Generate for target language if translation was successful
+        if (translatedTexts.length > 0) {
+          // Use targetLangCode for TTS voice selection (e.g., 'fil-PH')
+          const targetTtsResult = await generateTtsForLanguage(translatedTexts, targetLangCode, randomStoryId);
+          ttsPayload[targetLangCode] = targetTtsResult.audioData;
+          if (targetTtsResult.failedPages.length > 0) {
+            showAlert(`TTS failed for some pages in ${targetLangCode}: ${targetTtsResult.failedPages.join(", ")}`, "warning");
+          }
+        }
         
         const storyUpdate = {
           pageImages: imageUrls,
-          pageTexts
+          pageTexts,
+          ttsAudio: ttsPayload,
         };
         await updateDoc(doc(db, "stories", randomStoryId), storyUpdate);
-        showAlert("PDF split into pages and texts extracted.", "success");
-        try {
-          const synthesizeSpeech = httpsCallable(functions, "synthesizeSpeechGoogle");
-          const audioPromises = [];
-          const failedPages = [];
-
-          for (let i = 0; i < pageTexts.length; i++) {
-            const textToSpeak = pageTexts[i];
-            const pageNumber = i + 1;
-
-            if (!textToSpeak.trim()) {
-              failedPages.push(pageNumber);
-              continue;
-            }
-
-            const ttsChunks = splitTextForTTS(textToSpeak);
-            ttsChunks.forEach((chunk, chunkIdx) => {
-              const promise = synthesizeSpeech({
-                text: chunk,
-                languageCode: formData.languageCode || "en-US",
-              })
-                .then(async (result) => {
-                  if (!result.data || !result.data.audioData || typeof result.data.audioData !== "string") {
-                    console.warn(`Invalid audio data for page ${pageNumber} chunk ${chunkIdx + 1}, skipping upload.`);
-                    failedPages.push(pageNumber);
-                    return null;
-                  }
-                  const byteCharacters = atob(result.data.audioData);
-                  const byteNumbers = Array.from(byteCharacters, (char) => char.charCodeAt(0));
-                  const byteArray = new Uint8Array(byteNumbers);
-                  const audioBlob = new Blob([byteArray], { type: "audio/mp3" });
-                  const audioRef = ref(storage, `story_tts/${randomStoryId}/page_${pageNumber}_chunk${chunkIdx + 1}_${formData.languageCode || "en-US"}.mp3`);
-                  await uploadBytes(audioRef, audioBlob);
-                  const audioUrl = await getDownloadURL(audioRef);
-                  return { audioUrl, timepoints: result.data.timepoints, pageNumber: pageNumber };
-                })
-                .catch((err) => {
-                  console.error(`Error generating TTS for page ${pageNumber} chunk ${chunkIdx + 1}:`, err);
-                  failedPages.push(pageNumber);
-                  return null;
-                });
-              audioPromises.push(promise);
-            });
-          }
-
-          const audioDataResults = await Promise.all(audioPromises);
-          const flatAudioData = audioDataResults.filter(Boolean);
-
-          if (failedPages.length > 0) {
-            showAlert(`Some TTS audio generation failed for pages: ${[...new Set(failedPages)].join(", ")}`, "warning");
-          }
-
-          await updateDoc(doc(db, "stories", randomStoryId), {
-            ttsAudioData: flatAudioData,
-            languageCode: formData.languageCode || "en-US",
-          });
-          showAlert("TTS audio generated and saved.", "success");
-        } catch (err) {
-          showAlert("Failed to generate TTS audio: " + err.message, "danger");
-          console.error("Error generating TTS audio:", err);
-        }
+        showAlert("PDF processed and all audio generated.", "success");
       } catch (err) {
         showAlert("Failed to split PDF into pages: " + err.message, "danger");
       }
@@ -568,7 +690,7 @@ const handleSubmit = async () => {
     }
 
     fetchStoriesFromFirestore();
-    resetFormAndCloseModal();
+    resetFormAndCloseModal(); // Use the new reset function
   } catch (error) {
     showAlert("Error saving story: " + error.message, "danger");
     console.error("Error saving story:", error);
@@ -593,26 +715,27 @@ const handleSubmit = async () => {
 
   const handleEditStory = (story) => {
     setSelectedStory(story);
-    setFormData({
+    setFormData(prev => ({
+      ...prev,
       title: story.title,
       author: story.author,
       category: story.category,
       imagePreviewUrl: story.image || "",
       pdfPreviewName: story.pdfUrl || "",
       moralQuestion: story.moralLesson?.question || "",
-      moralOptions: (story.moralLesson?.options && story.moralLesson.options.length === 3) 
-        ? story.moralLesson.options 
+      moralOptions: (story.moralLesson?.options && story.moralLesson.options.length === 3)
+        ? story.moralLesson.options
         : ["", "", ""],
-      moralCorrectOptionIndex: story.moralLesson?.correctOptionIndex !== undefined 
-        ? story.moralLesson.correctOptionIndex 
-        : null,
+      moralImagePreviewUrl: story.moralLesson?.imageUrl || "", // Populate image preview
+      moralCorrectOptionIndex: story.moralLesson?.correctOptionIndex !== undefined ? story.moralLesson.correctOptionIndex : null,
       comprehensionQuestions: story.comprehensionQuestions || [],
-      languageCode: "en-US",
-    });
+      language: story.language || "en-US",
+    }));
     setFormErrors({});
     setIsEditing(true);
     setShowModal(true);
   };
+
 
   const handleDeleteClick = (story) => {
     setSelectedStory(story);
@@ -911,12 +1034,6 @@ const handleSubmit = async () => {
                               <div className="fw-bold text-dark mb-1" style={{ fontSize: '0.95rem' }}>
                                 {story.title}
                               </div>
-                              <small 
-                                className="text-muted" 
-                                style={{ fontSize: '0.8rem' }}
-                              >
-                                ID: {story.storyId || story.id}
-                              </small>
                             </div>
                           </div>
                         </td>
@@ -1217,8 +1334,8 @@ const handleSubmit = async () => {
                 Story Language *
               </Form.Label>
               <Form.Select
-                name="languageCode"
-                value={formData.languageCode || "en-US"}
+                name="language"
+                value={formData.language || "en-US"}
                 onChange={handleInputChange}
                 required
                 className="border-0 shadow-sm"
@@ -1407,6 +1524,22 @@ const handleSubmit = async () => {
             {formErrors.moralLesson}
           </Form.Text>
         )}
+
+        {/* Moral Lesson Image Upload */}
+        <Form.Group className="mt-3">
+          <Form.Label className="fw-medium">Question Image (Optional)</Form.Label>
+          <Form.Control type="file" size="sm" accept="image/*" onChange={(e) => handleAssessmentImageUpload(e, 'moralLesson')} />
+          {formData.moralImagePreviewUrl && (
+            <div className="mt-2">
+              <img 
+                src={formData.moralImagePreviewUrl} 
+                alt="Moral lesson preview" 
+                style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px' }} 
+              />
+            </div>
+          )}
+        </Form.Group>
+
       </Card.Body>
     </Card>
 
@@ -1432,7 +1565,23 @@ const handleSubmit = async () => {
         {Array.isArray(formData.comprehensionQuestions) && formData.comprehensionQuestions.length > 0 ? (
           <div className="w-100">
             {formData.comprehensionQuestions.map((q, idx) => (
-              <div key={`cq-${idx}`} className="mb-4 p-4 border-0 shadow-sm" style={{ borderRadius: "12px", backgroundColor: '#f8f9fa' }}>
+              <div key={`cq-${idx}`} className="mb-4 p-4 border-0 shadow-sm" style={{ borderRadius: "12px", backgroundColor: '#fdf7fd' }}>
+                
+                {/* Comprehension Question Image Upload */}
+                <Form.Group className="mb-3">
+                  <Form.Label className="fw-medium small">Image for Question {idx + 1} (Optional)</Form.Label>
+                  <Form.Control type="file" size="sm" accept="image/*" onChange={(e) => handleAssessmentImageUpload(e, 'comprehensionQuestions', idx)} />
+                  {(q.imagePreviewUrl || q.imageUrl) && (
+                    <div className="mt-2">
+                      <img 
+                        src={q.imagePreviewUrl || q.imageUrl} 
+                        alt={`Preview for question ${idx + 1}`} 
+                        style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px' }} 
+                      />
+                    </div>
+                  )}
+                </Form.Group>
+
                 {/* Question Field - Full Width */}
                 <Form.Group className="mb-4">
                   <Form.Label className="fw-semibold">Question {idx + 1}</Form.Label>

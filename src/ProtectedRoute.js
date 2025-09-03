@@ -59,7 +59,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     // Redirect based on role if not authorized for the current route
     if (userRole === "teacher") {
       return <Navigate to="/teacher/dashboard" replace />;
-    } else if (userRole === "admin") {
+    } else if (userRole === "admin" || userRole === "superAdmin") {
       return <Navigate to="/admin/dashboard" replace />;
     } else {
       // For students or unassigned roles trying to access protected routes

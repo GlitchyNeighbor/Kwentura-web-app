@@ -14,10 +14,8 @@ import {
   ChevronRight
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { getAuth, signOut, onAuthStateChanged } from "firebase/auth";
-import { collection, query, where, getDocs, doc, updateDoc } from "firebase/firestore"; 
-import { db } from "../config/FirebaseConfig.js";
 import LogoutConfirmation from "./LogoutConfirmation.js";
+import { useAuth } from "../context/AuthContext.js";
 
 // Constants - Updated to match pink theme like admin sidebar
 const COLORS = {
@@ -86,101 +84,6 @@ const NAVIGATION_ITEMS = {
 };
 
 // Custom hooks
-const useTeacherAuth = () => {
-  const [state, setState] = useState({
-    userName: "",
-    userRole: null,
-    teacherData: null,
-    profileImageUrl: "",
-    loading: true,
-    error: null
-  });
-  const navigate = useNavigate();
-
-  const fetchTeacherData = useCallback(async (email) => {
-    try {
-      
-      const q = query(collection(db, "teachers"), where("email", "==", email));
-      const querySnapshot = await getDocs(q);
-
-      if (!querySnapshot.empty) {
-        const docSnap = querySnapshot.docs[0];
-        const teacherData = docSnap.data();
-
-        const fullName = [teacherData.firstName, teacherData.lastName]
-          .filter(Boolean)
-          .join(' ') || 'Teacher';
-
-        return {
-          id: docSnap.id,
-          ...teacherData,
-          fullName,
-          role: teacherData.role || "teacher",
-          profileImageUrl: teacherData.profileImageUrl || "",
-        };
-      }
-      return null;
-    } catch (error) {
-      console.error("Error fetching teacher data:", error);
-      throw error;
-    }
-  }, []);
-
-  const updateTeacherState = useCallback((teacherInfo) => {
-    setState(prev => ({
-      ...prev,
-      userName: teacherInfo?.fullName || "Teacher",
-      userRole: teacherInfo?.role || "teacher",
-      teacherData: teacherInfo,
-      profileImageUrl: teacherInfo?.profileImageUrl || "",
-      loading: false,
-      error: null
-    }));
-  }, []);
-
-  useEffect(() => {
-    const auth = getAuth();
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        try {
-          const teacherInfo = await fetchTeacherData(user.email);
-          updateTeacherState(teacherInfo);
-        } catch (error) {
-          setState(prev => ({
-            ...prev,
-            loading: false,
-            error: "Failed to load teacher data"
-          }));
-        }
-      } else {
-        navigate("/login", { replace: true });
-      }
-    });
-
-    return () => unsubscribe();
-  }, [navigate, fetchTeacherData, updateTeacherState]);
-
-  // Listen for profile updates
-  useEffect(() => {
-    const handleProfileUpdate = async () => {
-      const auth = getAuth();
-      const user = auth.currentUser;
-      if (user) {
-        try {
-          const teacherInfo = await fetchTeacherData(user.email);
-          updateTeacherState(teacherInfo);
-        } catch (error) {
-          console.error("Error updating profile:", error);
-        }
-      }
-    };
-
-    window.addEventListener("profileImageUpdated", handleProfileUpdate);
-    return () => window.removeEventListener("profileImageUpdated", handleProfileUpdate);
-  }, [fetchTeacherData, updateTeacherState]);
-
-  return state;
-};
 
 // UI Components
 const UserProfile = React.memo(({ userName, profileImageUrl, teacherData, loading }) => {
@@ -459,7 +362,7 @@ const SideMenuTeacher = ({ isOpen, toggleSidebar }) => {
   const [expandedItems, setExpandedItems] = useState(new Set(['stories', 'students']));
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const { userName, userRole, teacherData, profileImageUrl, loading, error } = useTeacherAuth();
+  const { userData, loading, error, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -519,18 +422,7 @@ const SideMenuTeacher = ({ isOpen, toggleSidebar }) => {
   const handleLogoutConfirm = useCallback(async () => {
     setIsLoggingOut(true);
     try {
-      const auth = getAuth();
-      const user = auth.currentUser;
-      
-      if (user) {
-        const userDocRef = doc(db, "teachers", user.uid);
-        await updateDoc(userDocRef, { activeSessionId: null });
-      }
-      
-      await signOut(auth);
-      sessionStorage.clear();
-      localStorage.removeItem("user");
-      
+      await logout();
       setTimeout(() => {
         navigate("/login", { replace: true });
       }, 500);
@@ -538,7 +430,7 @@ const SideMenuTeacher = ({ isOpen, toggleSidebar }) => {
       console.error("Error signing out:", error);
       setIsLoggingOut(false);
     }
-  }, [navigate]);
+  }, [navigate, logout]);
 
   if (error) {
     return (
@@ -586,9 +478,9 @@ const SideMenuTeacher = ({ isOpen, toggleSidebar }) => {
         >
           {isOpen ? (
             <UserProfile
-              userName={userName}
-              profileImageUrl={profileImageUrl}
-              teacherData={teacherData}
+              userName={userData?.fullName || 'Teacher'}
+              profileImageUrl={userData?.profileImageUrl}
+              teacherData={userData}
               loading={loading}
             />
           ) : (
@@ -599,20 +491,20 @@ const SideMenuTeacher = ({ isOpen, toggleSidebar }) => {
                 overlay={
                   <Tooltip id="collapsed-profile-tooltip">
                     <div className="text-start p-2">
-                      <div className="fw-semibold mb-1">{userName}</div>
-                      {teacherData?.section && (
+                      <div className="fw-semibold mb-1">{userData?.fullName || 'Teacher'}</div>
+                      {userData?.section && (
                         <div className="text-light small mb-1">
-                          <strong>Section:</strong> {teacherData.section}
+                          <strong>Section:</strong> {userData.section}
                         </div>
                       )}
-                      {teacherData?.email && (
+                      {userData?.email && (
                         <div className="text-light small mb-1">
-                          <strong>Email:</strong> {teacherData.email}
+                          <strong>Email:</strong> {userData.email}
                         </div>
                       )}
-                      {teacherData?.role && (
+                      {userData?.role && (
                         <div className="text-light small">
-                          <strong>Role:</strong> {teacherData.role.charAt(0).toUpperCase() + teacherData.role.slice(1)}
+                          <strong>Role:</strong> {userData.role.charAt(0).toUpperCase() + userData.role.slice(1)}
                         </div>
                       )}
                     </div>
@@ -630,9 +522,9 @@ const SideMenuTeacher = ({ isOpen, toggleSidebar }) => {
                     cursor: 'pointer'
                   }}
                 >
-                  {profileImageUrl ? (
+                  {userData?.profileImageUrl ? (
                     <img
-                      src={profileImageUrl}
+                      src={userData.profileImageUrl}
                       alt="Profile"
                       className="rounded-circle"
                       style={{
@@ -643,7 +535,7 @@ const SideMenuTeacher = ({ isOpen, toggleSidebar }) => {
                     />
                   ) : (
                     <span className="text-white fw-bold" style={{ fontSize: '1rem' }}>
-                      {userName.charAt(0).toUpperCase()}
+                      {(userData?.fullName || 'T').charAt(0).toUpperCase()}
                     </span>
                   )}
                 </div>
@@ -984,7 +876,7 @@ const SideMenuTeacher = ({ isOpen, toggleSidebar }) => {
         show={showLogoutModal}
         onHide={handleLogoutCancel}
         onConfirm={handleLogoutConfirm}
-        userName={userName}
+        userName={userData?.fullName || 'Teacher'}
         userType="teacher"
         isLoggingOut={isLoggingOut}
       />

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { Nav, Navbar, Badge, Tooltip, OverlayTrigger } from "react-bootstrap";
 import { Settings, Shield, Info, Mail, LogOut } from "lucide-react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
@@ -21,6 +21,22 @@ const COLORS = {
   white: "#FFFFFF",
   muted: "#6C757D",
   border: "#E9ECEF"
+};
+
+const USER_ROLES = {
+  SUPERADMIN: "superAdmin",
+  ADMIN: "admin",
+  TEACHER: "teacher",
+  STUDENT: "student",
+  USER: "user"
+};
+
+const ROLE_DISPLAY_NAMES = {
+  [USER_ROLES.SUPERADMIN]: "Super Admin",
+  [USER_ROLES.ADMIN]: "Admin",
+  [USER_ROLES.TEACHER]: "Teacher",
+  [USER_ROLES.STUDENT]: "Student",
+  [USER_ROLES.USER]: "User"
 };
 
 // Navigation items for settings
@@ -60,13 +76,18 @@ const SETTINGS_NAVIGATION = [
 
 // User Profile Component
 const UserProfile = React.memo(({ userName, profileImageUrl, userRole, loading }) => {
+  const displayRole = useMemo(() => {
+    if (!userRole) return "User";
+    return ROLE_DISPLAY_NAMES[userRole] || userRole.replace(/([A-Z])/g, ' $1').trim();
+  }, [userRole]);
+
   const profileTooltip = (
     <Tooltip id="settings-profile-tooltip" className="custom-profile-tooltip">
       <div className="text-start p-2">
         <div className="fw-semibold mb-1" style={{ fontSize: '0.9rem' }}>{userName || 'Admin User'}</div>
         {userRole && (
           <div className="text-light small">
-            <strong>Role:</strong> {userRole === 'superAdmin' ? 'Super Admin' : userRole.replace(/([A-Z])/g, ' $1').trim()}
+            <strong>Role:</strong> {displayRole}
           </div>
         )}
       </div>
@@ -138,7 +159,7 @@ const UserProfile = React.memo(({ userName, profileImageUrl, userRole, loading }
               <Badge 
                 className="text-center" 
                 style={{ 
-                  backgroundColor: userRole === 'superAdmin' || userRole === 'Super Admin' ? COLORS.warning : COLORS.primary,
+                  backgroundColor: userRole === USER_ROLES.SUPERADMIN ? COLORS.warning : COLORS.primary,
                   color: COLORS.white,
                   fontSize: "0.75rem",
                   padding: "6px 12px",
@@ -146,7 +167,7 @@ const UserProfile = React.memo(({ userName, profileImageUrl, userRole, loading }
                   fontWeight: "500"
                 }}
               >
-                {userRole === 'superAdmin' ? 'Super Admin' : userRole.replace(/([A-Z])/g, ' $1').trim()}
+                {displayRole}
               </Badge>
             </div>
           )}
@@ -210,6 +231,11 @@ const SidebarSettingsAdmin = ({ isOpen, toggleSidebar, profileImageUrl, userName
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+
+  const displayRole = useMemo(() => {
+    if (!userRole) return "User";
+    return ROLE_DISPLAY_NAMES[userRole] || userRole.replace(/([A-Z])/g, ' $1').trim();
+  }, [userRole]);
 
   const handleNavigate = useCallback((e, path) => {
     e.preventDefault();
@@ -285,7 +311,7 @@ const SidebarSettingsAdmin = ({ isOpen, toggleSidebar, profileImageUrl, userName
                       <div className="fw-semibold mb-1">{userName || 'Admin User'}</div>
                       {userRole && (
                         <div className="text-light small">
-                          <strong>Role:</strong> {userRole === 'superAdmin' ? 'Super Admin' : userRole.replace(/([A-Z])/g, ' $1').trim()}
+                          <strong>Role:</strong> {displayRole}
                         </div>
                       )}
                     </div>

@@ -10,16 +10,11 @@ import {
   EmailAuthProvider,
   reauthenticateWithCredential,
   updatePassword,
-  onAuthStateChanged,
   sendEmailVerification,
 } from "firebase/auth";
 import {
   getFirestore,
   doc,
-  collection,
-  query,
-  where,
-  getDocs,
   updateDoc,
   serverTimestamp,
   deleteField,
@@ -33,24 +28,28 @@ import {
 } from "firebase/storage";
 import { app } from "../config/FirebaseConfig.js";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext.js";
 
 const db = getFirestore(app);
 
 const SettingsAdmin = () => {
+  const { userData, loading: authLoading, error: authError, refetchUserData } = useAuth();
   const [activeTab, setActiveTab] = useState("about");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [userDetails, setUserDetails] = useState({
-    fullName: "",
+  
+  // State for editable fields
+  const [editableDetails, setEditableDetails] = useState({
     schoolId: "",
     contactNumber: "",
     emailAddress: "",
+  });
+
+  const [passwordDetails, setPasswordDetails] = useState({
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
-  const [userDocId, setUserDocId] = useState(null);
-  const [userRole, setUserRole] = useState(null);
-  const [loading, setLoading] = useState(true);
+
   const [updateStatus, setUpdateStatus] = useState({
     show: false,
     message: "",
@@ -65,108 +64,31 @@ const SettingsAdmin = () => {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [profileImageUrl, setProfileImageUrl] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
   const [isEmailVerified, setIsEmailVerified] = useState(false);
 
   const auth = getAuth();
   const navigate = useNavigate();
 
-  const fetchUserDataFromFirestore = useCallback(async (currentUser) => {
-    setLoading(true);
-    try {
-      const collectionsToSearch = [
-        { name: "admins", defaultRole: "admin" },
-        { name: "teachers", defaultRole: "teacher" },
-        { name: "students", defaultRole: "student" },
-      ];
-
-      let userData = null;
-      let userRole = null;
-      let docId = null;
-
-      for (const { name: collectionName, defaultRole } of collectionsToSearch) {
-        const emailQuery = query(
-          collection(db, collectionName),
-          where("email", "==", currentUser.email)
-        );
-        const emailSnapshot = await getDocs(emailQuery);
-
-        if (!emailSnapshot.empty) {
-          const docSnap = emailSnapshot.docs[0];
-          userData = docSnap.data();
-          userRole = userData.role || defaultRole;
-          docId = docSnap.id;
-          break;
-        }
-
-        if (currentUser.uid) {
-          const uidQuery = query(
-            collection(db, collectionName),
-            where("uid", "==", currentUser.uid)
-          );
-          const uidSnapshot = await getDocs(uidQuery);
-
-          if (!uidSnapshot.empty) {
-            const docSnap = uidSnapshot.docs[0];
-            userData = docSnap.data();
-            userRole = userData.role || defaultRole;
-            docId = docSnap.id;
-            break;
-          }
-        }
-      }
-
-      if (userData && docId) {
-        setUserDetails({
-          fullName: `${userData.firstName || ""} ${
-            userData.lastName || ""
-          }`.trim(),
-          schoolId: userData.schoolId || "",
-          contactNumber: userData.contactNumber || "",
-          emailAddress: userData.email || currentUser.email,
-          currentPassword: "",
-          newPassword: "",
-          confirmPassword: "",
-        });
-        setUserDocId(docId);
-        setUserRole(userRole);
-        setProfileImageUrl(userData.profileImageUrl || "");
-
-        if (
-          userRole !== "admin" &&
-          userRole !== "superAdmin" &&
-          userRole !== "superadmin"
-        ) {
-          await signOut(auth);
-          navigate("/login");
-          return;
-        }
-      } else {
-        await signOut(auth);
-        navigate("/login");
-      }
-    } catch (error) {
-      console.error("Error fetching user data from Firestore:", error);
-      await signOut(auth);
-      navigate("/login");
-    } finally {
-      setLoading(false);
-    }
-  }, [auth, navigate, setUserDetails, setUserDocId, setUserRole, setProfileImageUrl, setLoading]);
-
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        await fetchUserDataFromFirestore(user);
-        setIsEmailVerified(user.emailVerified);
-      } else {
+    if (userData) {
+      setEditableDetails({
+        schoolId: userData.schoolId || "",
+        contactNumber: userData.contactNumber || "",
+        emailAddress: userData.email || "",
+      });
+      setIsEmailVerified(auth.currentUser?.emailVerified || false);
+
+      // Redirect if user is not an admin
+      if (userData.role !== "admin" && userData.role !== "superAdmin") {
+        console.warn("Redirecting non-admin user from admin settings.");
         navigate("/login");
       }
-    });
-
-    return () => unsubscribe();
-  }, [auth, navigate, uploadingImage, fetchUserDataFromFirestore]);
+    } else if (!authLoading && !userData) {
+      // If loading is finished and there's still no user, redirect
+      navigate("/login");
+    }
+  }, [userData, authLoading, navigate, auth.currentUser]);
 
   const handleSendVerificationEmail = async () => {
     const user = auth.currentUser;
@@ -209,7 +131,14 @@ const SettingsAdmin = () => {
   };
 
   const handleInputChange = (field, value) => {
-    setUserDetails((prev) => ({
+    setEditableDetails((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const handlePasswordInputChange = (field, value) => {
+    setPasswordDetails((prev) => ({
       ...prev,
       [field]: value,
     }));
@@ -218,27 +147,12 @@ const SettingsAdmin = () => {
   const handleUpdateProfile = async () => {
     setUpdateStatus({ show: false, message: "", type: "" });
 
-    if (!userDocId) {
-      setUpdateStatus({
-        show: true,
-        message: "User document ID not found. Please refresh and try again.",
-        type: "danger",
-      });
-      return;
-    }
+    if (!userData || !userData.id) return;
 
     try {
-      let collectionName = "admins";
-      if (userRole === "teacher") {
-        collectionName = "teachers";
-      } else if (userRole === "student") {
-        collectionName = "students";
-      }
-
-      const userRef = doc(db, collectionName, userDocId);
+      const userRef = doc(db, "admins", userData.id);
       await updateDoc(userRef, {
-        contactNumber: userDetails.contactNumber,
-        email: userDetails.emailAddress,
+        contactNumber: editableDetails.contactNumber,
         updatedAt: serverTimestamp(),
       });
 
@@ -247,6 +161,7 @@ const SettingsAdmin = () => {
         message: "Profile updated successfully! You may need to re-login if email was changed.",
         type: "success",
       });
+      refetchUserData(); // Re-fetch data in context
 
       setTimeout(() => {
         setUpdateStatus({ show: false, message: "", type: "" });
@@ -268,7 +183,7 @@ const SettingsAdmin = () => {
         message: errorMessage,
         type: "danger",
       });
-    }
+    } 
   };
 
   const handleUpdatePassword = async () => {
@@ -277,9 +192,9 @@ const SettingsAdmin = () => {
 
     try {
       if (
-        !userDetails.currentPassword ||
-        !userDetails.newPassword ||
-        !userDetails.confirmPassword
+        !passwordDetails.currentPassword ||
+        !passwordDetails.newPassword ||
+        !passwordDetails.confirmPassword
       ) {
         setPasswordUpdateStatus({
           show: true,
@@ -289,7 +204,7 @@ const SettingsAdmin = () => {
         return;
       }
 
-      if (userDetails.newPassword !== userDetails.confirmPassword) {
+      if (passwordDetails.newPassword !== passwordDetails.confirmPassword) {
         setPasswordUpdateStatus({
           show: true,
           message: "New password and confirm password do not match.",
@@ -298,7 +213,7 @@ const SettingsAdmin = () => {
         return;
       }
 
-      if (userDetails.newPassword.length < 6) {
+      if (passwordDetails.newPassword.length < 6) {
         setPasswordUpdateStatus({
           show: true,
           message: "New password must be at least 6 characters long.",
@@ -307,7 +222,7 @@ const SettingsAdmin = () => {
         return;
       }
 
-      if (userDetails.currentPassword === userDetails.newPassword) {
+      if (passwordDetails.currentPassword === passwordDetails.newPassword) {
         setPasswordUpdateStatus({
           show: true,
           message: "New password must be different from current password.",
@@ -337,11 +252,11 @@ const SettingsAdmin = () => {
 
       const credential = EmailAuthProvider.credential(
         user.email,
-        userDetails.currentPassword
+        passwordDetails.currentPassword
       );
 
       await reauthenticateWithCredential(user, credential);
-      await updatePassword(user, userDetails.newPassword);
+      await updatePassword(user, passwordDetails.newPassword);
 
       setPasswordUpdateStatus({
         show: true,
@@ -350,7 +265,7 @@ const SettingsAdmin = () => {
         type: "success",
       });
 
-      setUserDetails((prev) => ({
+      setPasswordDetails((prev) => ({
         ...prev,
         currentPassword: "",
         newPassword: "",
@@ -424,16 +339,11 @@ const SettingsAdmin = () => {
       const url = await getDownloadURL(storageRef);
 
       // Update Firestore
-      let collectionName = "admins";
-      if (userRole === "teacher") {
-        collectionName = "teachers";
-      } else if (userRole === "student") {
-        collectionName = "students";
-      }
-      const userRef = doc(db, collectionName, userDocId);
+      if (!userData || !userData.id) return;
+      const userRef = doc(db, "admins", userData.id);
       await updateDoc(userRef, { profileImageUrl: url, updatedAt: serverTimestamp() });
 
-      setProfileImageUrl(url);
+      refetchUserData();
       window.dispatchEvent(new Event("profileImageUpdated"));
     } catch (error) {
       setUpdateStatus({
@@ -446,7 +356,7 @@ const SettingsAdmin = () => {
   };
 
   const handleRemoveProfilePicture = async () => {
-    if (!profileImageUrl) {
+    if (!userData?.profileImageUrl) {
       setUpdateStatus({
         show: true,
         message: "No profile picture to remove.",
@@ -466,24 +376,18 @@ const SettingsAdmin = () => {
 
     try {
       const storage = getStorage();
-      const imageRef = ref(storage, profileImageUrl);
+      const imageRef = ref(storage, userData.profileImageUrl);
       await deleteObject(imageRef);
 
-      let collectionName = "admins";
-      if (userRole === "teacher") {
-        collectionName = "teachers";
-      } else if (userRole === "student") {
-        collectionName = "students";
-      }
-      const userRef = doc(db, collectionName, userDocId);
+      const userRef = doc(db, "admins", userData.id);
       await updateDoc(userRef, { profileImageUrl: deleteField() });
 
-      setProfileImageUrl("");
       setUpdateStatus({
         show: true,
         message: "Profile picture removed successfully!",
         type: "success",
       });
+      refetchUserData();
       window.dispatchEvent(new Event("profileImageUpdated"));
     } catch (error) {
       console.error("Error removing profile picture:", error);
@@ -495,7 +399,7 @@ const SettingsAdmin = () => {
     }
   };
 
-  if (loading) {
+  if (authLoading) {
     return (
       <div>
         {/* Sticky TopNavbar */}
@@ -625,9 +529,9 @@ const SettingsAdmin = () => {
             isOpen={sidebarOpen}
             toggleSidebar={() => setSidebarOpen(false)}
             handleLogout={handleLogout}
-            profileImageUrl={profileImageUrl}
-            userName={userDetails.fullName}
-            userRole={userRole}
+            profileImageUrl={userData?.profileImageUrl}
+            userName={userData?.fullName}
+            userRole={userData?.role}
           />
         </div>
 
@@ -793,8 +697,8 @@ const SettingsAdmin = () => {
                         width: "120px",
                         height: "120px",
                         borderRadius: "50%",
-                        background: profileImageUrl 
-                          ? `url(${profileImageUrl}) center/cover`
+                        background: userData?.profileImageUrl 
+                          ? `url(${userData.profileImageUrl}) center/cover`
                           : "linear-gradient(135deg, #FF549A, #c2185b)",
                         display: "flex",
                         alignItems: "center",
@@ -805,7 +709,7 @@ const SettingsAdmin = () => {
                         cursor: "pointer",
                       }}
                     >
-                      {!profileImageUrl && <User size={50} color="white" />}
+                      {!userData?.profileImageUrl && <User size={50} color="white" />}
                       <div
                         style={{
                           position: "absolute",
@@ -830,7 +734,7 @@ const SettingsAdmin = () => {
                   
                   <div className="d-flex flex-column gap-3">
                     <h5 style={{ color: "#2D2D2D", fontWeight: "600", marginBottom: "8px" }}>
-                      {userDetails.fullName || "No name set"}
+                      {userData?.fullName || "No name set"}
                     </h5>
                     <p style={{ color: "#2D2D2D", marginBottom: "16px" }}>
                       Update your profile picture to personalize your account
@@ -958,7 +862,7 @@ const SettingsAdmin = () => {
                         </Form.Label>
                         <Form.Control
                           type="text"
-                          value={userDetails.schoolId}
+                          value={editableDetails.schoolId}
                           disabled
                           style={{
                             borderRadius: "15px",
@@ -986,7 +890,7 @@ const SettingsAdmin = () => {
                         <div className="d-flex gap-2 align-items-center">
                           <Form.Control
                             type="email"
-                            value={userDetails.emailAddress}
+                            value={editableDetails.emailAddress}
                             disabled={true}
                             style={{
                               borderRadius: "15px",
@@ -1044,7 +948,7 @@ const SettingsAdmin = () => {
                         </Form.Label>
                         <Form.Control
                           type="tel"
-                          value={userDetails.contactNumber}
+                          value={editableDetails.contactNumber}
                           onChange={(e) =>
                             handleInputChange("contactNumber", e.target.value)
                           }
@@ -1163,9 +1067,9 @@ const SettingsAdmin = () => {
                       <div style={{ position: "relative" }}>
                         <Form.Control
                           type={showCurrentPassword ? "text" : "password"}
-                          value={userDetails.currentPassword}
+                          value={passwordDetails.currentPassword}
                           onChange={(e) =>
-                            handleInputChange("currentPassword", e.target.value)
+                            handlePasswordInputChange("currentPassword", e.target.value)
                           }
                           disabled={isUpdatingPassword}
                           placeholder="Enter your current password"
@@ -1228,9 +1132,9 @@ const SettingsAdmin = () => {
                       <div style={{ position: "relative" }}>
                         <Form.Control
                           type={showNewPassword ? "text" : "password"}
-                          value={userDetails.newPassword}
+                          value={passwordDetails.newPassword}
                           onChange={(e) =>
-                            handleInputChange("newPassword", e.target.value)
+                            handlePasswordInputChange("newPassword", e.target.value)
                           }
                           disabled={isUpdatingPassword}
                           placeholder="Enter your new password (minimum 6 characters)"
@@ -1293,9 +1197,9 @@ const SettingsAdmin = () => {
                       <div style={{ position: "relative" }}>
                         <Form.Control
                           type={showConfirmPassword ? "text" : "password"}
-                          value={userDetails.confirmPassword}
+                          value={passwordDetails.confirmPassword}
                           onChange={(e) =>
-                            handleInputChange("confirmPassword", e.target.value)
+                            handlePasswordInputChange("confirmPassword", e.target.value)
                           }
                           disabled={isUpdatingPassword}
                           placeholder="Confirm your new password"

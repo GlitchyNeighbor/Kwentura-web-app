@@ -2,26 +2,14 @@ import React, { useEffect, useState, useCallback, useMemo, useRef } from "react"
 import { Navbar, Dropdown, Container } from "react-bootstrap";
 import { Menu, X } from "lucide-react";
 import { User, LogOut } from "lucide-react";
-import { getAuth, onAuthStateChanged, signOut } from "firebase/auth";
-import { 
-  getFirestore,
-  collection, 
-  query, 
-  where, 
-  getDocs, 
-  doc, 
-  updateDoc 
-} from "firebase/firestore";
-import { app } from "../config/FirebaseConfig.js";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext.js";
 import LogoutConfirmation from "./LogoutConfirmation";
 import "../css/TopNavbar.css";
 import "../css/custom.css";
 
-const db = getFirestore(app);
-
 const USER_ROLES = {
-  SUPERADMIN: "superadmin",
+  SUPERADMIN: "superAdmin",
   ADMIN: "admin",
   TEACHER: "teacher",
   STUDENT: "student",
@@ -30,10 +18,10 @@ const USER_ROLES = {
 
 const ROLE_DISPLAY_NAMES = {
   [USER_ROLES.SUPERADMIN]: "Super Admin",
-  [USER_ROLES.ADMIN]: "Admin",
-  [USER_ROLES.TEACHER]: "Teacher",
-  [USER_ROLES.STUDENT]: "Student",
-  [USER_ROLES.USER]: "User"
+  admin: "Admin",
+  teacher: "Teacher",
+  student: "Student",
+  user: "User"
 };
 
 // Custom Toggle Component for Profile Dropdown
@@ -60,181 +48,24 @@ const ProfileToggle = React.forwardRef(({ children, onClick }, ref) => (
 ));
 
 const TopNavbar = ({ toggleSidebar, isSidebarOpen = false }) => {
-  const [userState, setUserState] = useState({
-    role: "",
-    firstName: "",
-    lastName: "",
-    fullName: "",
-    profileImageUrl: "",
-    loading: true,
-    error: null
-  });
-
+  const { userData, loading, error, logout } = useAuth();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
 
-  const auth = useMemo(() => getAuth(), []);
-
-  const updateUserState = useCallback((updates) => {
-    setUserState(prev => ({ ...prev, ...updates }));
-  }, []);
-
-  // Using the same logic as SettingsAdmin to fetch user data
-  const fetchUserDataFromFirestore = useCallback(async (currentUser) => {
-    try {
-      updateUserState({ loading: true, error: null });
-
-      if (!currentUser?.email) {
-        updateUserState({
-          role: USER_ROLES.USER,
-          firstName: "",
-          lastName: "",
-          fullName: "",
-          profileImageUrl: "",
-          loading: false
-        });
-        return;
-      }
-
-      const collectionsToSearch = [
-        { name: "admins", defaultRole: "admin" },
-        { name: "teachers", defaultRole: "teacher" },
-        { name: "students", defaultRole: "student" },
-      ];
-
-      let userData = null;
-      let userRole = null;
-
-      for (const { name: collectionName, defaultRole } of collectionsToSearch) {
-        // First try to find by email
-        const emailQuery = query(
-          collection(db, collectionName),
-          where("email", "==", currentUser.email)
-        );
-        const emailSnapshot = await getDocs(emailQuery);
-
-        if (!emailSnapshot.empty) {
-          const docSnap = emailSnapshot.docs[0];
-          userData = docSnap.data();
-          userRole = userData.role || defaultRole;
-          break;
-        }
-
-        // If not found by email and we have a UID, try by UID
-        if (currentUser.uid) {
-          const uidQuery = query(
-            collection(db, collectionName),
-            where("uid", "==", currentUser.uid)
-          );
-          const uidSnapshot = await getDocs(uidQuery);
-
-          if (!uidSnapshot.empty) {
-            const docSnap = uidSnapshot.docs[0];
-            userData = docSnap.data();
-            userRole = userData.role || defaultRole;
-            break;
-          }
-        }
-      }
-
-      if (userData) {
-        const fullName = `${userData.firstName || ""} ${userData.lastName || ""}`.trim();
-        
-        updateUserState({
-          role: userRole,
-          firstName: userData.firstName || "",
-          lastName: userData.lastName || "",
-          fullName: fullName,
-          profileImageUrl: userData.profileImageUrl || "",
-          loading: false,
-          error: null
-        });
-      } else {
-        // Fallback to Firebase user data if not found in Firestore
-        const displayName = currentUser.displayName || "";
-        const nameParts = displayName.split(" ");
-
-        updateUserState({
-          role: USER_ROLES.USER,
-          firstName: nameParts[0] || "",
-          lastName: nameParts.slice(1).join(" ") || "",
-          fullName: displayName,
-          profileImageUrl: currentUser.photoURL || "",
-          loading: false,
-          error: null
-        });
-
-      }
-    } catch (error) {
-      console.error("TopNavbar: Error fetching user data from Firestore:", error);
-      
-      updateUserState({
-        role: USER_ROLES.USER,
-        firstName: "",
-        lastName: "",
-        fullName: "",
-        profileImageUrl: "",
-        loading: false,
-        error: "Failed to load user data"
-      });
-    }
-  }, [updateUserState]);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        await fetchUserDataFromFirestore(user);
-      } else {
-        updateUserState({
-          role: USER_ROLES.USER,
-          firstName: "",
-          lastName: "",
-          fullName: "",
-          profileImageUrl: "",
-          loading: false,
-          error: null
-        });
-      }
-    });
-
-    const handleProfileUpdate = () => {
-      if (auth.currentUser) {
-        fetchUserDataFromFirestore(auth.currentUser);
-      }
-    };
-    
-    window.addEventListener("profileImageUpdated", handleProfileUpdate);
-    window.addEventListener("profileUpdated", handleProfileUpdate);
-
-    return () => {
-      unsubscribe();
-      window.removeEventListener("profileImageUpdated", handleProfileUpdate);
-      window.removeEventListener("profileUpdated", handleProfileUpdate);
-    };
-  }, [auth, fetchUserDataFromFirestore, updateUserState]);
-
   const displayName = useMemo(() => {
-    const { loading, fullName, firstName, role } = userState;
-
     if (loading) return "Loading...";
-
-    if (fullName?.trim()) {
-      return fullName;
-    }
-
-    if (firstName?.trim()) {
-      return firstName;
-    }
-
-    const normalizedRole = role.toLowerCase().replace(/\s+/g, "");
-    return ROLE_DISPLAY_NAMES[normalizedRole] || ROLE_DISPLAY_NAMES[USER_ROLES.USER];
-  }, [userState]);
+    if (!userData) return "User";
+    if (userData.fullName?.trim()) return userData.fullName;
+    if (userData.firstName?.trim()) return userData.firstName;
+    // Use the role directly without lowercasing it for lookup
+    return ROLE_DISPLAY_NAMES[userData.role] || ROLE_DISPLAY_NAMES[USER_ROLES.USER];
+  }, [userData, loading]);
 
   const profileImageSrc = useMemo(() => {
-    return userState.profileImageUrl || require("../assets/images/profile.png");
-  }, [userState.profileImageUrl]);
+    return userData?.profileImageUrl || require("../assets/images/profile.png");
+  }, [userData]);
 
   const handleToggleSidebar = useCallback((event) => {
     if (event.type === 'keydown' && event.key !== 'Enter' && event.key !== ' ') {
@@ -258,35 +89,7 @@ const TopNavbar = ({ toggleSidebar, isSidebarOpen = false }) => {
   const handleLogoutConfirm = useCallback(async () => {
     setIsLoggingOut(true);
     try {
-      const user = auth.currentUser;
-      const { role } = userState;
-
-      if (user) {
-        let collectionName = null;
-        const normalizedRole = role.toLowerCase();
-        
-        if (normalizedRole === USER_ROLES.TEACHER) {
-          collectionName = "teachers";
-        } else if (normalizedRole === USER_ROLES.ADMIN || normalizedRole === USER_ROLES.SUPERADMIN) {
-          collectionName = "admins";
-        } else if (normalizedRole === USER_ROLES.STUDENT) {
-          collectionName = "students";
-        }
-
-        if (collectionName) {
-          try {
-            const userDocRef = doc(db, collectionName, user.uid);
-            await updateDoc(userDocRef, { activeSessionId: null });
-          } catch (dbError) {
-            console.warn(`TopNavbar: Could not clear active session for user in ${collectionName}:`, dbError);
-          }
-        }
-      }
-
-      await signOut(auth);
-      sessionStorage.clear();
-      localStorage.removeItem("user");
-
+      await logout();
       setTimeout(() => {
         navigate("/login", { replace: true });
       }, 300);
@@ -294,7 +97,7 @@ const TopNavbar = ({ toggleSidebar, isSidebarOpen = false }) => {
       console.error("TopNavbar: Error during logout:", error);
       setIsLoggingOut(false);
     }
-  }, [auth, navigate, userState.role]);
+  }, [logout, navigate]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -456,19 +259,19 @@ const TopNavbar = ({ toggleSidebar, isSidebarOpen = false }) => {
 
             {/* Right Section - User info with dropdown */}
             <div className="d-flex align-items-center">
-              {userState.error && (
+              {error && (
                 <div className="alert alert-sm alert-danger me-3 mb-0 py-1 px-2">
                   <small>Error loading profile</small>
                 </div>
               )}
 
-              <div className="user-section d-flex align-items-center">
+              {!loading && userData && <div className="user-section d-flex align-items-center">
                 <div className="user-greeting me-3 text-end d-none d-md-block">
                   <div className="greeting-text fw-medium text-dark">
                     Hi, {displayName}
                   </div>
                   <div className="role-text text-muted small">
-                    {ROLE_DISPLAY_NAMES[userState.role.toLowerCase().replace(/\s+/g, "")] || "User"}
+                    {ROLE_DISPLAY_NAMES[userData.role] || "User"}
                   </div>
                 </div>
 
@@ -558,7 +361,7 @@ const TopNavbar = ({ toggleSidebar, isSidebarOpen = false }) => {
                     </div>
                   </Dropdown.Menu>
                 </Dropdown>
-              </div>
+              </div>}
             </div>
           </div>
         </Container>

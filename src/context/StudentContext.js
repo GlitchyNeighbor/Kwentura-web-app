@@ -23,7 +23,6 @@ export const StudentProvider = ({ children }) => {
         ...doc.data(),
       }));
       setStudents(studentsList);
-      console.log("Students fetched successfully from context:", studentsList);
     } catch (err) {
       console.error("Error fetching students in context: ", err);
       setError(err);

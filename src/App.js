@@ -1,5 +1,6 @@
 import "./App.css";
 import Home from "./components/Home";
+import { AuthProvider } from "./context/AuthContext";
 import { Route, Routes, BrowserRouter, Navigate } from "react-router-dom";
 import { StudentProvider } from "./context/StudentContext";
 import AboutUs from "./components/AboutUs";
@@ -35,172 +36,174 @@ import TeacherCharts from "./components/TeacherCharts";
 function App() {
   return (
     <BrowserRouter>
-      <StudentProvider>
-        <Routes>
-          <Route path="/" element={<Navigate replace to="/home" />} />
-          <Route path="/home" element={<Home />} />
-          <Route path="/about" element={<AboutUs />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/terms" element={<TermsAndConditions />} />
-          <Route path="/privacy" element={<PrivacyPolicy />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
+      <AuthProvider>
+        <StudentProvider>
+          <Routes>
+            <Route path="/" element={<Navigate replace to="/home" />} />
+            <Route path="/home" element={<Home />} />
+            <Route path="/about" element={<AboutUs />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/terms" element={<TermsAndConditions />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
 
-          <Route
-            path="/admin/dashboard"
-            element={
-              <ProtectedRoute allowedRoles={["admin","superAdmin"]}>
-                <AdminDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/manage/stories"
-            element={
-              <ProtectedRoute allowedRoles={["teacher"]}>
-                <ManageStories />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/manage/admins"
-            element={
-              <ProtectedRoute allowedRoles={["superAdmin"]}>
-                <ManageAdmins />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/manage/teachers"
-            element={
-              <ProtectedRoute allowedRoles={["admin","superAdmin"]}>
-                <ManageTeachers />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/manage/students"
-            element={
-              <ProtectedRoute allowedRoles={["admin","superAdmin"]}>
-                <ManageStudents />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/account-list"
-            element={
-              <ProtectedRoute allowedRoles={["admin","superAdmin"]}>
-                <AccountList />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/charts"
-            element={
-              <ProtectedRoute allowedRoles={["admin","superAdmin"]}>
-                <Charts />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/settings"
-            element={
-              <ProtectedRoute allowedRoles={["admin","superAdmin"]}>
-                <SettingsAdmin />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/approve-teachers"
-            element={
-              <ProtectedRoute allowedRoles={["admin","superAdmin"]}>
-                <ApproveTeacherAccount />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/teacher/dashboard"
-            element={
-              <ProtectedRoute allowedRoles={["teacher"]}>
-                <TeacherDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/teacher/student-list"
-            element={
-              <ProtectedRoute allowedRoles={["teacher"]}>
-                <StudentList />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/teacher/stories"
-            element={
-              <ProtectedRoute allowedRoles={["teacher"]}>
-                <Stories />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/teacher/story-synopsis/:id"
-            element={
-              <ProtectedRoute allowedRoles={["teacher"]}>
-                <StorySynopsis />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/teacher/approve-students"
-            element={
-              <ProtectedRoute allowedRoles={["teacher"]}>
-                <ApproveStudentAccounts />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/teacher/library"
-            element={
-              <ProtectedRoute allowedRoles={["teacher"]}>
-                <TeacherLibrary />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/teacher/settings"
-            element={
-              <ProtectedRoute allowedRoles={["teacher"]}>
-                <SettingsTeacher />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/teacher/read-story/:id"
-            element={
-              <ProtectedRoute allowedRoles={["teacher"]}>
-                <ReadStory />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/teacher/story-assessment/:id"
-            element={
-              <ProtectedRoute allowedRoles={["teacher"]}>
-                <StoryAssessment />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/teacher/charts"
-            element={
-              <ProtectedRoute allowedRoles={["teacher"]}>
-                <TeacherCharts />
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
-      </StudentProvider>
+            <Route
+              path="/admin/dashboard"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "superAdmin"]}>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/manage/stories"
+              element={
+                <ProtectedRoute allowedRoles={["teacher"]}>
+                  <ManageStories />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/manage/admins"
+              element={
+                <ProtectedRoute allowedRoles={["superAdmin"]}>
+                  <ManageAdmins />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/manage/teachers"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "superAdmin"]}>
+                  <ManageTeachers />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/manage/students"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "superAdmin"]}>
+                  <ManageStudents />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/account-list"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "superAdmin"]}>
+                  <AccountList />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/charts"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "superAdmin"]}>
+                  <Charts />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/settings"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "superAdmin"]}>
+                  <SettingsAdmin />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/approve-teachers"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "superAdmin"]}>
+                  <ApproveTeacherAccount />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/teacher/dashboard"
+              element={
+                <ProtectedRoute allowedRoles={["teacher"]}>
+                  <TeacherDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/teacher/student-list"
+              element={
+                <ProtectedRoute allowedRoles={["teacher"]}>
+                  <StudentList />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/teacher/stories"
+              element={
+                <ProtectedRoute allowedRoles={["teacher"]}>
+                  <Stories />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/teacher/story-synopsis/:id"
+              element={
+                <ProtectedRoute allowedRoles={["teacher"]}>
+                  <StorySynopsis />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/teacher/approve-students"
+              element={
+                <ProtectedRoute allowedRoles={["teacher"]}>
+                  <ApproveStudentAccounts />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/teacher/library"
+              element={
+                <ProtectedRoute allowedRoles={["teacher"]}>
+                  <TeacherLibrary />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/teacher/settings"
+              element={
+                <ProtectedRoute allowedRoles={["teacher"]}>
+                  <SettingsTeacher />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/teacher/read-story/:id"
+              element={
+                <ProtectedRoute allowedRoles={["teacher"]}>
+                  <ReadStory />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/teacher/story-assessment/:id"
+              element={
+                <ProtectedRoute allowedRoles={["teacher"]}>
+                  <StoryAssessment />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/teacher/charts"
+              element={
+                <ProtectedRoute allowedRoles={["teacher"]}>
+                  <TeacherCharts />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </StudentProvider>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

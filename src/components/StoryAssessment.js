@@ -51,53 +51,38 @@ const StoryAssessment = () => {
   const ttsAudioRef = useRef(null);
 
   // Build questions array function
-  const buildQuestions = (storyData) => {
-    const questionsList = [];
-    
-    if (storyData.moralLesson?.question && storyData.moralLesson?.options?.length === 3) {
+const buildQuestions = (storyData) => {
+  const questionsList = [];
+
+  // Moral lesson (single question)
+  if (storyData.moralLesson?.question && Array.isArray(storyData.moralLesson.options) && storyData.moralLesson.options.length === 3) {
+    questionsList.push({
+      id: "moral",
+      type: "Moral Lesson",
+      question: storyData.moralLesson.question,
+      options: storyData.moralLesson.options,
+      correctIndex: storyData.moralLesson.correctOptionIndex,
+      imageUrl: storyData.moralLesson.imageUrl || null,
+    });
+  }
+
+  // Comprehension questions (array of 3 questions)
+  if (Array.isArray(storyData.comprehensionQuestions) && storyData.comprehensionQuestions.length > 0) {
+    storyData.comprehensionQuestions.forEach((q, index) => {
       questionsList.push({
-        id: 'moral',
-        type: 'Moral Lesson',
-        question: storyData.moralLesson.question,
-        options: storyData.moralLesson.options,
-        correctIndex: storyData.moralLesson.correctOptionIndex
+        id: `comprehension${index}`,
+        type: `Comprehension Question ${index + 1}`,
+        question: q.question,
+        options: q.options,
+        correctIndex: q.correctOptionIndex,
+        imageUrl: q.imageUrl || null,
       });
-    }
-    
-    if (storyData.additionalQuestion1?.question && storyData.additionalQuestion1?.options?.length === 3) {
-      questionsList.push({
-        id: 'additional1',
-        type: 'Additional Question 1',
-        question: storyData.additionalQuestion1.question,
-        options: storyData.additionalQuestion1.options,
-        correctIndex: storyData.additionalQuestion1.correctOptionIndex
-      });
-    }
-    
-    if (storyData.additionalQuestion2?.question && storyData.additionalQuestion2?.options?.length === 3) {
-      questionsList.push({
-        id: 'additional2',
-        type: 'Additional Question 2',
-        question: storyData.additionalQuestion2.question,
-        options: storyData.additionalQuestion2.options,
-        correctIndex: storyData.additionalQuestion2.correctOptionIndex
-      });
-    }
-    
-    if (storyData.comprehensionQuestions?.length === 3) {
-      storyData.comprehensionQuestions.forEach((q, index) => {
-        questionsList.push({
-          id: `comprehension${index}`,
-          type: `Comprehension Question ${index + 1}`,
-          question: q.question,
-          options: q.options,
-          correctIndex: q.correctOptionIndex
-        });
-      });
-    }
-    
-    return questionsList;
-  };
+    });
+  }
+
+  return questionsList;
+};
+
 
   useEffect(() => {
     const fetchStory = async () => {
@@ -438,6 +423,21 @@ const StoryAssessment = () => {
                     </div>
                   </Card.Header>
                   <Card.Body className="p-4">
+                    {/* Image for the question */}
+                    {currentQuestion.imageUrl && (
+                      <div className="mb-4 text-center">
+                        <img 
+                          src={currentQuestion.imageUrl} 
+                          alt={`Question illustration`}
+                          style={{
+                            maxHeight: '250px',
+                            maxWidth: '100%',
+                            borderRadius: '12px',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                          }}
+                        />
+                      </div>
+                    )}
                     <div className="mb-4">
                       <h4 style={{ 
                         color: "#333", 

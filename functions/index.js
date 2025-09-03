@@ -4,6 +4,7 @@ const pdfParser = require("pdf-parse");
 const {onCall, HttpsError} = require("firebase-functions/v2/https");
 const {onDocumentWritten} = require("firebase-functions/v2/firestore");
 const textToSpeech = require("@google-cloud/text-to-speech");
+const {Translate} = require("@google-cloud/translate").v2;
 const {getFirestore} = require("firebase-admin/firestore");
 const {getAuth} = require("firebase-admin/auth");
 const {onSchedule} = require("firebase-functions/v2/scheduler");
@@ -76,6 +77,35 @@ exports.synthesizeSpeechGoogle = onCall({timeoutSeconds: 3600},
         );
       }
     });
+
+exports.translatePageTexts = onCall(async (request) => {
+  // Initialize the Translate client inside the function
+  const translate = new Translate();
+
+  const {texts, targetLanguage} = request.data;
+
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Authentication required.");
+  }
+
+  if (!texts || !Array.isArray(texts) || !targetLanguage) {
+    throw new HttpsError(
+        "invalid-argument",
+        "The function must be called with" +
+          " 'texts'(an array) and 'targetLanguage'.",
+    );
+  }
+
+  try {
+    // The translate API can handle an array of strings directly.
+    const [translations] = await translate.translate(texts, targetLanguage);
+    return {translatedTexts: translations};
+  } catch (error) {
+    console.error("Translation API error:", error);
+    throw new HttpsError("internal", "Failed to translate text.", error);
+  }
+});
+
 
 const db = getFirestore();
 const API_KEY = process.env.GEMINI_API_KEY;
@@ -351,9 +381,7 @@ exports.deleteUserAccount = onCall(async (request) => {
 
     const userRole = adminDoc.exists ? adminDoc.data().role : null;
     if (!userRole ||
-        (userRole !== "Admin" &&
-        userRole !== "superAdmin" &&
-        userRole !== "admin")) {
+        (userRole !== "admin" && userRole !== "superAdmin")) {
       throw new HttpsError(
           "permission-denied",
           "Only admins can delete accounts",
@@ -653,8 +681,7 @@ exports.approveTeacher = onCall(async (request) => {
   }
 
   const adminData = adminDoc.data();
-  if (!adminData || (adminData.role !== "admin" && adminData.role !==
-    "superAdmin" && adminData.role !== "superadmin")) {
+  if (!adminData || (adminData.role !== "admin" && adminData.role !== "superAdmin")) {
     throw new HttpsError(
         "permission-denied",
         "Only authenticated admins can approve teachers.",
@@ -723,8 +750,7 @@ exports.rejectTeacher = onCall(async (request) => {
   }
 
   const adminData = adminDoc.data();
-  if (!adminData || (adminData.role !== "admin" && adminData.role !==
-    "superAdmin" && adminData.role !== "superadmin")) {
+  if (!adminData || (adminData.role !== "admin" && adminData.role !== "superAdmin")) {
     throw new HttpsError(
         "permission-denied",
         "Only authenticated admins can reject teachers.",
