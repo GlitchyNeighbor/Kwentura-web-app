@@ -618,21 +618,38 @@ const Rewards = ({ navigation }) => {
     setFilteredStories(stories);
   };
 
-  // Function to render animal reward circles with images
-  const renderAnimalReward = (reward, index) => {
-    const isUnlocked = unlockedRewards.has(reward.id);
-    const canUnlock = userStars >= reward.starsRequired && !isUnlocked;
-    const isLocked = userStars < reward.starsRequired && !isUnlocked;
+  
+// Simple and clear renderAnimalReward function
+const renderAnimalReward = (reward, index) => {
+  const isUnlocked = unlockedRewards.has(reward.id);
+  const hasEnoughStars = userStars >= reward.starsRequired;
+  
+  // Simple logic:
+  // - If already unlocked: show as unlocked
+  // - If not unlocked BUT has enough stars: show as unlockable (can tap)
+  // - If not unlocked AND doesn't have enough stars: show as locked (cannot tap)
+  
+  const canUnlock = !isUnlocked && hasEnoughStars;
+  const isLocked = !isUnlocked && !hasEnoughStars;
 
-    return (
-      <TouchableOpacity
-        key={reward.id}
-        style={[
-          styles.animalRewardContainer,
-          isUnlocked && styles.animalRewardUnlocked,
-          canUnlock && styles.animalRewardCanUnlock,
-        ]}
-        onPress={() => {
+  return (
+    <TouchableOpacity
+      key={reward.id}
+      style={[
+        styles.animalRewardContainer,
+        isUnlocked && styles.animalRewardUnlocked,
+        canUnlock && styles.animalRewardCanUnlock,
+        isLocked && styles.animalRewardLocked,
+      ]}
+      onPress={() => {
+        if (isLocked) {
+          // Cannot unlock - show alert
+          Alert.alert(
+            "Not Enough Stars",
+            `You need ${reward.starsRequired} stars to unlock the ${reward.title}. You currently have ${userStars} stars.`
+          );
+        } else {
+          // Can view/unlock - show preview
           setPreviewReward({
             ...reward,
             isUnlocked,
@@ -640,86 +657,106 @@ const Rewards = ({ navigation }) => {
             isLocked,
           });
           setPreviewVisible(true);
-        }}
-        activeOpacity={0.8}
-      >
+        }
+      }}
+      activeOpacity={0.8}
+    >
+      <View style={[
+        styles.animalCircle,
+        { 
+          backgroundColor: isUnlocked 
+            ? reward.bgColor 
+            : canUnlock
+            ? '#FFF8E1'  // Yellow for unlockable
+            : '#F0F0F0'  // Gray for locked
+        }
+      ]}>
+        <LinearGradient
+          colors={
+            isUnlocked
+              ? [reward.color, `${reward.color}DD`]
+              : canUnlock
+              ? ["#FFD700", "#FFA000"]  // Gold for unlockable
+              : ["#CCCCCC", "#999999"]  // Gray for locked
+          }
+          style={styles.animalCircleInner}
+        >
+          {isUnlocked ? (
+            // Already unlocked - show crown
+            <View style={styles.unlockedAnimalContainer}>
+              <Image 
+                source={reward.image}
+                style={styles.animalImage}
+                resizeMode="contain"
+              />
+              <View style={styles.crownContainer}>
+                <Text style={styles.crownEmoji}>👑</Text>
+              </View>
+            </View>
+          ) : canUnlock ? (
+            // Can unlock - show TAP with star
+            <View style={styles.canUnlockAnimalContainer}>
+              <Image 
+                source={reward.image}
+                style={styles.animalImage}
+                resizeMode="contain"
+              />
+              <View style={styles.unlockPulse}>
+                <Text style={styles.unlockStarIcon}>⭐</Text>
+              </View>
+              <Text style={styles.tapToUnlockText}>TAP</Text>
+            </View>
+          ) : (
+            // Locked - show lock icon
+            <View style={styles.lockedAnimalContainer}>
+              <Image 
+                source={reward.image}
+                style={[styles.animalImage, styles.animalImageLocked]}
+                resizeMode="contain"
+              />
+              <View style={styles.lockOverlay}>
+                <Ionicons name="lock-closed" size={16} color="#666" />
+              </View>
+            </View>
+          )}
+        </LinearGradient>
+      </View>
+      
+      <Text style={[
+        styles.animalRewardTitle,
+        isUnlocked && styles.animalRewardTitleUnlocked,
+        canUnlock && styles.animalRewardTitleCanUnlock,
+        isLocked && styles.animalRewardTitleLocked,
+      ]}>
+        {reward.title}
+      </Text>
+      
+      <Text style={[
+        styles.animalRewardDescription,
+        isUnlocked && styles.animalRewardDescriptionUnlocked,
+        isLocked && styles.animalRewardDescriptionLocked,
+      ]}>
+        {reward.description}
+      </Text>
+      
+      {!isUnlocked && (
         <View style={[
-          styles.animalCircle,
-          { backgroundColor: isUnlocked ? reward.bgColor : isLocked ? '#F5F5F5' : '#FFF8E1' }
+          styles.starsRequiredContainer,
+          canUnlock && styles.starsRequiredContainerCanUnlock,
+          isLocked && styles.starsRequiredContainerLocked,
         ]}>
-          <LinearGradient
-            colors={
-              isUnlocked
-                ? [reward.color, `${reward.color}DD`]
-                : canUnlock
-                ? ["#FFD700", "#FFA000"]
-                : ["#E0E0E0", "#BDBDBD"]
-            }
-            style={styles.animalCircleInner}
-          >
-            {isUnlocked ? (
-              <View style={styles.unlockedAnimalContainer}>
-                <Image 
-                  source={reward.image}
-                  style={styles.animalImage}
-                  resizeMode="contain"
-                />
-                <View style={styles.crownContainer}>
-                  <Text style={styles.crownEmoji}>👑</Text>
-                </View>
-              </View>
-            ) : canUnlock ? (
-              <View style={styles.canUnlockAnimalContainer}>
-                <Image 
-                  source={reward.image}
-                  style={[styles.animalImage, styles.animalImageShadow]}
-                  resizeMode="contain"
-                />
-                <View style={styles.unlockPulse}>
-                  <Text style={styles.unlockStarIcon}>⭐</Text>
-                </View>
-                <Text style={styles.tapToUnlockText}>TAP</Text>
-              </View>
-            ) : (
-              <View style={styles.lockedAnimalContainer}>
-                <Image 
-                  source={reward.image}
-                  style={[styles.animalImage, styles.animalImageLocked]}
-                  resizeMode="contain"
-                />
-                <View style={styles.lockOverlay}>
-                  <Ionicons name="lock-closed" size={16} color="#999" />
-                </View>
-              </View>
-            )}
-          </LinearGradient>
+          <Text style={[
+            styles.starsNeededText,
+            canUnlock && styles.starsNeededTextCanUnlock,
+            isLocked && styles.starsNeededTextLocked,
+          ]}>
+            {reward.starsRequired} ⭐
+          </Text>
         </View>
-        
-        <Text style={[
-          styles.animalRewardTitle,
-          isUnlocked && styles.animalRewardTitleUnlocked,
-          canUnlock && styles.animalRewardTitleCanUnlock,
-        ]}>
-          {reward.title}
-        </Text>
-        
-        <Text style={[
-          styles.animalRewardDescription,
-          isUnlocked && styles.animalRewardDescriptionUnlocked,
-        ]}>
-          {reward.description}
-        </Text>
-        
-        {!isUnlocked && (
-          <View style={styles.starsRequiredContainer}>
-            <Text style={styles.starsNeededText}>
-              {reward.starsRequired} ⭐
-            </Text>
-          </View>
-        )}
-      </TouchableOpacity>
-    );
-  };
+      )}
+    </TouchableOpacity>
+  );
+};
 
   const renderRewardsGrid = () => {
     if (userRewardsLoading) {
@@ -776,11 +813,12 @@ const Rewards = ({ navigation }) => {
           style={styles.scrollView}
           contentContainerStyle={styles.scrollViewContent}
         >
-          <AppHeader
-            navigation={navigation}
-            leftIconType="drawer"
-            showSearch={true}
-          />
+        <AppHeader
+          navigation={navigation}
+          leftIconType="drawer"
+          showSearch={true}
+          hideStars={true}  // This will hide only the decorative stars
+        />
 
           {/* Removed starsEarned display as stars are now added in ComQuestions.js */}
           {/* {starsEarned > 0 && (
@@ -1788,6 +1826,7 @@ const styles = StyleSheet.create({
   suggestionArrow: {
     transform: [{ rotate: "45deg" }],
   },
+  
 });
 
 export default Rewards;

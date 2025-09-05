@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useEffect } from "react";
 import {
   TextInput,
   View,
@@ -13,6 +13,7 @@ import {
   Alert,
   ActivityIndicator,
   Keyboard,
+  KeyboardAvoidingView,
 } from "react-native";
 import { auth } from "../FirebaseConfig";
 import { signInWithEmailAndPassword } from "firebase/auth";
@@ -65,6 +66,7 @@ const Login = ({ navigation }) => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   // Memoized title letters to prevent unnecessary re-renders
   const titleLetters = useMemo(() => 
@@ -73,6 +75,21 @@ const Login = ({ navigation }) => {
       color: TITLE_COLORS[index]
     })), []
   );
+
+  // Keyboard visibility detection
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
+      setIsKeyboardVisible(true);
+    });
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      setIsKeyboardVisible(false);
+    });
+
+    return () => {
+      keyboardDidShowListener?.remove();
+      keyboardDidHideListener?.remove();
+    };
+  }, []);
 
   const togglePasswordVisibility = useCallback(() => {
     setShowPassword(prev => !prev);
@@ -227,7 +244,7 @@ const Login = ({ navigation }) => {
 
   return (
     <ImageBackground
-      source={require('../images/Background.png')}
+      source={require('../images/LoginBg.png')}
       style={styles.background}
       resizeMode="cover"
     >
@@ -257,110 +274,126 @@ const Login = ({ navigation }) => {
 
       <Image source={require('../images/Rainbow.png')} style={styles.rainbow} />
 
-      {/* Title */}
-      <View style={styles.contentContainer}>
-        <View style={styles.titleContainer}>
-          {titleLetters.map(({ letter, color }, index) => (
-            <Text key={index} style={[styles.titleLetter, { color }]}>
-              {letter}
-            </Text>
-          ))}
-        </View>
+      {/* Title - Fixed position, won't move with keyboard */}
+      <View style={styles.titleContainer}>
+        {titleLetters.map(({ letter, color }, index) => (
+          <Text key={index} style={[styles.titleLetter, { color }]}>
+            {letter}
+          </Text>
+        ))}
       </View>
 
-      <SafeAreaView style={styles.safeArea}>
-        <ScrollView
-          contentContainerStyle={styles.formContainer}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <Text style={styles.welcome}>Welcome, Monlimarians!</Text>
-          
-          {/* School ID Input */}
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder="School ID"
-              value={schoolId}
-              onChangeText={setSchoolId}
-              keyboardType="default"
-              autoCapitalize="none"
-              autoCorrect={false}
-              placeholderTextColor={COLORS.gray}
-              editable={!isLoading}
-              maxLength={20}
-              accessibilityLabel="School ID input"
-              accessibilityHint="Enter your school identification number"
-            />
-          </View>
-
-          {/* Password Input */}
-          <View style={styles.passwordContainer}>
-            <TextInput
-              style={styles.passwordInput}
-              placeholder="Password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              placeholderTextColor={COLORS.gray}
-              editable={!isLoading}
-              autoCorrect={false}
-              accessibilityLabel="Password input"
-              accessibilityHint="Enter your password"
-            />
-            <TouchableOpacity 
-              onPress={togglePasswordVisibility}
-              style={styles.eyeButton}
-              disabled={isLoading}
-              accessibilityLabel={showPassword ? "Hide password" : "Show password"}
-            >
-              <Ionicons
-                name={showPassword ? "eye-off" : "eye"}
-                size={24}
-                color={COLORS.gray}
-              />
-            </TouchableOpacity>
-          </View>
-
-          {/* Login Button */}
-          <TouchableOpacity 
-            style={[styles.button, isLoading && styles.buttonDisabled]} 
-            onPress={signIn}
-            disabled={isLoading}
-            accessibilityLabel="Login button"
-            accessibilityHint="Tap to sign in to your account"
+      {/* Form Container - Separate KeyboardAvoidingView */}
+      <KeyboardAvoidingView
+        style={styles.formKeyboardContainer}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <SafeAreaView style={styles.formSafeArea}>
+          <ScrollView
+            contentContainerStyle={styles.formContainer}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
           >
-            {isLoading ? (
-              <ActivityIndicator color={COLORS.white} size="small" />
-            ) : (
-              <Text style={styles.buttonText}>Login</Text>
+            {/* Welcome text - only show when keyboard is hidden */}
+            {!isKeyboardVisible && (
+              <Text style={styles.welcome}>Welcome, Monlimarians!</Text>
             )}
-          </TouchableOpacity>
+            
+            {/* School ID Input */}
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.input}
+                placeholder="School ID"
+                value={schoolId}
+                onChangeText={setSchoolId}
+                keyboardType="default"
+                autoCapitalize="none"
+                autoCorrect={false}
+                placeholderTextColor={COLORS.gray}
+                editable={!isLoading}
+                maxLength={20}
+                accessibilityLabel="School ID input"
+                accessibilityHint="Enter your school identification number"
+              />
+            </View>
 
-          {/* Links */}
-          <View style={styles.linkRow}>
-            <Text style={styles.linkText}>Forgot your password? </Text>
-            <TouchableOpacity 
-              onPress={navigateToForgotPassword}
-              disabled={isLoading}
-              accessibilityLabel="Forgot password link"
-            >
-              <Text style={styles.linkAction}>Click here</Text>
-            </TouchableOpacity>
-          </View>
+            {/* Password Input */}
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="Password"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                placeholderTextColor={COLORS.gray}
+                editable={!isLoading}
+                autoCorrect={false}
+                autoComplete="off"
+                spellCheck={false}
+                autoCapitalize="none"
+                accessibilityLabel="Password input"
+                accessibilityHint="Enter your password"
+              />
+              <TouchableOpacity 
+                onPress={togglePasswordVisibility}
+                style={styles.eyeButton}
+                disabled={isLoading}
+                accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+              >
+                <Ionicons
+                  name={showPassword ? "eye-off" : "eye"}
+                  size={24}
+                  color={COLORS.gray}
+                />
+              </TouchableOpacity>
+            </View>
 
-          <View style={styles.linkRow}>
-            <Text style={styles.linkText}>Don't have an account? </Text>
+            {/* Login Button */}
             <TouchableOpacity 
-              onPress={navigateToRegister}
+              style={[styles.button, isLoading && styles.buttonDisabled]} 
+              onPress={signIn}
               disabled={isLoading}
-              accessibilityLabel="Sign up link"
+              accessibilityLabel="Login button"
+              accessibilityHint="Tap to sign in to your account"
             >
-              <Text style={styles.linkAction}>Sign up here</Text>
+              {isLoading ? (
+                <ActivityIndicator color={COLORS.white} size="small" />
+              ) : (
+                <Text style={styles.buttonText}>Login</Text>
+              )}
             </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </SafeAreaView>
+
+            {/* Links - only show when keyboard is hidden */}
+            {!isKeyboardVisible && (
+              <View style={styles.linkContainer}>
+                <View style={styles.linkRow}>
+                  <Text style={styles.linkText}>Forgot your password? </Text>
+                  <TouchableOpacity 
+                    onPress={navigateToForgotPassword}
+                    disabled={isLoading}
+                    accessibilityLabel="Forgot password link"
+                  >
+                    <Text style={styles.linkAction}>Click here</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.linkRow}>
+                  <Text style={styles.linkText}>Don't have an account? </Text>
+                  <TouchableOpacity 
+                    onPress={navigateToRegister}
+                    disabled={isLoading}
+                    accessibilityLabel="Sign up link"
+                  >
+                    <Text style={styles.linkAction}>Sign up here</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+          </ScrollView>
+        </SafeAreaView>
+      </KeyboardAvoidingView>
     </ImageBackground>
   );
 };
@@ -369,24 +402,49 @@ const styles = StyleSheet.create({
   background: {
     flex: 1,
   },
-  safeArea: {
+  
+  // Title stays fixed between trees
+  titleContainer: {
+    position: 'absolute',
+    top: '28%', // Position between trees
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    zIndex: 10, // Above other elements
+  },
+  
+  // Form container takes bottom portion
+  formKeyboardContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '55%', // Takes bottom 55% of screen
+  },
+  
+  formSafeArea: {
     flex: 1,
   },
+  
   formContainer: {
     width: "100%",
     alignItems: "center",
-    justifyContent: "flex-end",
+    justifyContent: "flex-start", // Start from top of container
     paddingHorizontal: 24,
-    paddingBottom: 40,
-    minHeight: '50%',
+    paddingTop: 10, // Small top padding
+    marginBottom:90,
   },
+
   welcome: {
     fontFamily: 'Fredoka-SemiBold',
     fontSize: 22,
     color: COLORS.white,
     textAlign: "center",
     marginBottom: 20,
-    marginTop: 50,
+    marginTop: 20,
     textShadowColor: 'rgba(0, 0, 0, 0.3)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
@@ -459,6 +517,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
   },
+  linkContainer: {
+  },
   linkRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -476,25 +536,14 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: COLORS.yellowBright,
     textDecorationLine: "underline",
-  },
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: '20%',
+    marginBottom: 2,
   },
   titleLetter: {
     fontFamily: 'Fredoka-SemiBold',
-    fontSize: 40,
+    fontSize: 50,
     textShadowColor: 'rgba(0, 0, 0, 0.3)',
     textShadowOffset: { width: 3, height: 4 },
     textShadowRadius: 6,
-  },
-  contentContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: '100%',
   },
   rainbow: {
     position: 'absolute',

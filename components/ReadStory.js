@@ -29,6 +29,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Audio } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getCachedUri } from "../services/preloadService";
+import * as ScreenOrientation from 'expo-screen-orientation';
 
 import AppHeader from "./HeaderReadStory";
 
@@ -36,23 +37,29 @@ const { width, height } = Dimensions.get("window");
 
 const ReadStory = ({ route, navigation }) => {
   const storyId = route.params?.storyId;
+  const initialPage = route.params?.initialPage || 0; // Get initial page from route params
   const [pageImages, setPageImages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currentPage, setCurrentPage] = useState(0);
+  const [currentPage, setCurrentPage] = useState(initialPage); // Set initial page
   const [imagesReady, setImagesReady] = useState(false);
   const [pageTexts, setPageTexts] = useState([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [storyTitle, setStoryTitle] = useState("");
   const [storyAuthor, setStoryAuthor] = useState("");
+  const [storyData, setStoryData] = useState(null); // Store complete story data
   const [showCompletion, setShowCompletion] = useState(false);
   const [audioData, setAudioData] = useState([]);
   const [currentAudio, setCurrentAudio] = useState(null);
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
-  const [showUI, setShowUI] = useState(true); // State to control UI visibility
-  const uiOpacity = useSharedValue(1); // For animating UI visibility
+  const [showUI, setShowUI] = useState(true);
+  const [isLandscape, setIsLandscape] = useState(false);
+  const uiOpacity = useSharedValue(1);
   
   const flatListRef = useRef(null);
+  const isScrollingRef = useRef(false);
+  const orientationChangeRef = useRef(false);
+  const hasScrolledToInitialPage = useRef(false);
 
   // Animation values
   const speakerScale = useSharedValue(1);
@@ -60,6 +67,76 @@ const ReadStory = ({ route, navigation }) => {
   const sparkleOpacity = useSharedValue(0);
   const completionScale = useSharedValue(0);
   const celebrationBounce = useSharedValue(1);
+
+  // Save progress function
+  const saveProgress = async (pageIndex) => {
+    const auth = getAuth();
+    if (!auth.currentUser || !storyData || pageIndex < 0) return;
+
+    try {
+      const userId = auth.currentUser.uid;
+      const progressRef = doc(db, "users", userId, "progress", storyId);
+      
+      const progressData = {
+        id: storyId,
+        title: storyData.title || "Untitled Story",
+        author: storyData.author || "",
+        imageUrl: storyData.coverImage || "",
+        category: storyData.category || "",
+        currentPage: pageIndex,
+        totalPages: pageImages.length,
+        lastReadAt: new Date(),
+        synopsis: storyData.synopsis || ""
+      };
+
+      await setDoc(progressRef, progressData, { merge: true });
+      console.log(`Progress saved: Page ${pageIndex + 1}/${pageImages.length}`);
+    } catch (error) {
+      console.error("Error saving progress:", error);
+    }
+  };
+
+  // Handle orientation change with improved synchronization
+  const toggleOrientation = async () => {
+    try {
+      orientationChangeRef.current = true;
+      const targetPage = currentPage;
+      
+      if (isLandscape) {
+        await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+        setIsLandscape(false);
+      } else {
+        await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+        setIsLandscape(true);
+      }
+      
+      // Wait longer for orientation change to complete and force scroll to correct page
+      setTimeout(() => {
+        if (flatListRef.current && pageImages.length > 0) {
+          flatListRef.current.scrollToIndex({ 
+            animated: false, 
+            index: targetPage 
+          });
+          // Double check after a short delay
+          setTimeout(() => {
+            if (flatListRef.current) {
+              flatListRef.current.scrollToIndex({ 
+                animated: false, 
+                index: targetPage 
+              });
+            }
+            orientationChangeRef.current = false;
+          }, 100);
+        } else {
+          orientationChangeRef.current = false;
+        }
+      }, 200);
+      
+    } catch (error) {
+      console.error('Error changing orientation:', error);
+      orientationChangeRef.current = false;
+    }
+  };
 
   // Start sparkle animation on load
   useEffect(() => {
@@ -114,11 +191,10 @@ const ReadStory = ({ route, navigation }) => {
         try {
           const userReadSnap = await getDoc(userReadRef);
           if (!userReadSnap.exists()) {
-            // User hasn't read this story before, increment count and mark as read
             await updateDoc(storyRef, {
               usersRead: increment(1)
             });
-            await setDoc(userReadRef, { readAt: new Date() }); // Mark as read
+            await setDoc(userReadRef, { readAt: new Date() });
             console.log(`Story ${storyId} read count incremented for user ${userId}`);
           } else {
             console.log(`User ${userId} already read story ${storyId}. Not incrementing.`);
@@ -143,11 +219,9 @@ const ReadStory = ({ route, navigation }) => {
       setImagesReady(false);
   
       try {
-        // Try to load from cache first
         const cachedStory = await AsyncStorage.getItem(`story_${storyId}`);
         if (cachedStory) {
           const { data, timestamp } = JSON.parse(cachedStory);
-          // Cache is valid for 1 hour
           if (new Date().getTime() - timestamp < 3600000) { 
             console.log("Loading story from cache");
             await processStoryData(data);
@@ -156,14 +230,12 @@ const ReadStory = ({ route, navigation }) => {
           }
         }
   
-        // If not in cache or cache is invalid, fetch from Firestore
         console.log("Fetching story from Firestore");
         const storyRef = doc(db, "stories", storyId);
         const docSnap = await getDoc(storyRef);
   
         if (docSnap.exists()) {
           const data = docSnap.data();
-          // Cache the fetched data with a timestamp
           await AsyncStorage.setItem(`story_${storyId}`, JSON.stringify({ data, timestamp: new Date().getTime() }));
           await processStoryData(data);
         } else {
@@ -184,6 +256,7 @@ const ReadStory = ({ route, navigation }) => {
   
       setStoryTitle(data.title || "");
       setStoryAuthor(data.author || "");
+      setStoryData(data); // Store complete story data
   
       if (Array.isArray(data.pageImages)) {
         images = data.pageImages;
@@ -227,6 +300,28 @@ const ReadStory = ({ route, navigation }) => {
     fetchPages();
   }, [storyId]);
 
+  // Scroll to initial page when images are ready
+  useEffect(() => {
+    if (imagesReady && pageImages.length > 0 && !hasScrolledToInitialPage.current) {
+      setTimeout(() => {
+        if (flatListRef.current && initialPage > 0) {
+          flatListRef.current.scrollToIndex({ 
+            animated: false, 
+            index: initialPage 
+          });
+        }
+        hasScrolledToInitialPage.current = true;
+      }, 100);
+    }
+  }, [imagesReady, pageImages.length, initialPage]);
+
+  // Save progress when page changes
+  useEffect(() => {
+    if (imagesReady && storyData && currentPage >= 0) {
+      saveProgress(currentPage);
+    }
+  }, [currentPage, imagesReady, storyData]);
+
   // Auto-play with visual feedback
   useEffect(() => {
     if (imagesReady && pageTexts[currentPage] && !showCompletion) {
@@ -255,15 +350,16 @@ const ReadStory = ({ route, navigation }) => {
     const unsubscribeBlur = navigation.addListener('blur', () => {
       if (currentAudio) {
         currentAudio.unloadAsync();
-        setCurrentAudio(null); // Clear the audio object
+        setCurrentAudio(null);
       }
     });
 
-    const unsubscribeBeforeRemove = navigation.addListener('beforeRemove', () => {
+    const unsubscribeBeforeRemove = navigation.addListener('beforeRemove', async () => {
       if (currentAudio) {
         currentAudio.unloadAsync();
         setCurrentAudio(null);
       }
+      await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
     });
 
     return () => {
@@ -337,47 +433,82 @@ const ReadStory = ({ route, navigation }) => {
     }
   };
 
+  // Improved viewable items handler with debouncing
   const onViewableItemsChanged = useRef(({ viewableItems }) => {
-    if (viewableItems.length > 0) {
+    if (!orientationChangeRef.current && !isScrollingRef.current && viewableItems.length > 0) {
       const newIndex = viewableItems[0].index;
-      if (newIndex !== currentPage) {
+      if (newIndex !== currentPage && newIndex !== null && newIndex !== undefined) {
         setCurrentPage(newIndex);
       }
     }
   }).current;
 
   const viewabilityConfig = useRef({
-    itemVisiblePercentThreshold: 50
+    itemVisiblePercentThreshold: 50,
+    waitForInteraction: false,
   }).current;
 
-  // Enhanced navigation functions
+  // Improved navigation functions with better error handling
   const goToPreviousPage = () => {
-    if (currentPage > 0) {
+    if (currentPage > 0 && !isScrollingRef.current) {
+      isScrollingRef.current = true;
+      
       if (currentAudio) {
         currentAudio.unloadAsync();
         setCurrentAudio(null);
       }
+      
       setShowCompletion(false);
-      flatListRef.current.scrollToIndex({ animated: true, index: currentPage - 1 });
+      const targetIndex = currentPage - 1;
+      
+      if (flatListRef.current) {
+        flatListRef.current.scrollToIndex({ 
+          animated: true, 
+          index: targetIndex 
+        });
+        
+        // Update currentPage immediately for better UX
+        setCurrentPage(targetIndex);
+        
+        setTimeout(() => {
+          isScrollingRef.current = false;
+        }, 300);
+      }
     }
   };
 
   const goToNextPage = () => {
-    if (currentPage < pageImages.length - 1) {
+    if (!isScrollingRef.current) {
+      isScrollingRef.current = true;
+      
       if (currentAudio) {
         currentAudio.unloadAsync();
         setCurrentAudio(null);
       }
-      setShowCompletion(false);
-      flatListRef.current.scrollToIndex({ animated: true, index: currentPage + 1 });
-    } else {
-      if (currentAudio) {
-        currentAudio.unloadAsync();
-        setCurrentAudio(null);
+      
+      if (currentPage < pageImages.length - 1) {
+        setShowCompletion(false);
+        const targetIndex = currentPage + 1;
+        
+        if (flatListRef.current) {
+          flatListRef.current.scrollToIndex({ 
+            animated: true, 
+            index: targetIndex 
+          });
+          
+          // Update currentPage immediately for better UX
+          setCurrentPage(targetIndex);
+          
+          setTimeout(() => {
+            isScrollingRef.current = false;
+          }, 300);
+        }
+      } else {
+        setShowCompletion(true);
+        completionScale.value = 0;
+        completionScale.value = withSpring(1, { damping: 15 });
+        isScrollingRef.current = false;
       }
-      setShowCompletion(true);
-      completionScale.value = 0;
-      completionScale.value = withSpring(1, { damping: 15 });
     }
   };
 
@@ -392,18 +523,30 @@ const ReadStory = ({ route, navigation }) => {
       currentAudio.unloadAsync();
       setIsPlaying(false);
       speakerScale.value = withSpring(1);
-      setCurrentAudio(null); // Add this line
+      setCurrentAudio(null);
     } else {
       playAudio(audioData[currentPage]);
     }
   };
 
-  const handleBackToStories = () => {
+  const handleBackToStories = async () => {
     if (currentAudio) {
       currentAudio.unloadAsync();
       setCurrentAudio(null);
     }
-    navigation.navigate('Home');
+    await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+    navigation.navigate('HomeTab', { screen: 'Home' });
+  };
+
+  // Improved scroll handler
+  const onScrollBeginDrag = () => {
+    isScrollingRef.current = true;
+  };
+
+  const onMomentumScrollEnd = () => {
+    setTimeout(() => {
+      isScrollingRef.current = false;
+    }, 100);
   };
 
   // Completion Screen Component
@@ -446,16 +589,26 @@ const ReadStory = ({ route, navigation }) => {
   );
 
   const renderPage = ({ item }) => (
-    <View style={styles.pageImageContainer}>
-      <View style={styles.imageFrame}>
+    <View style={isLandscape ? styles.landscapePageImageContainer : styles.pageImageContainer}>
+      <View style={isLandscape ? styles.landscapeImageFrame : styles.imageFrame}>
         <Image
           source={{ uri: item }}
-          style={styles.pageImage}
+          style={isLandscape ? styles.landscapePageImage : styles.pageImage}
           resizeMode="contain"
         />
       </View>
     </View>
   );
+
+  // Handle scroll to index failure
+  const onScrollToIndexFailed = (info) => {
+    const wait = new Promise(resolve => setTimeout(resolve, 500));
+    wait.then(() => {
+      if (flatListRef.current) {
+        flatListRef.current.scrollToIndex({ index: info.index, animated: false });
+      }
+    });
+  };
 
   if (loading || !imagesReady) {
     return (
@@ -479,63 +632,74 @@ const ReadStory = ({ route, navigation }) => {
   }
 
   return (
-    
     <ImageBackground
       source={require('../images/DarkViewStory.png')}
       style={styles.background}
       resizeMode="cover"
     >    
-    <AppHeader
-              navigation={navigation}
-              leftIconType="drawer"
-              showSearch={true}
-            />  
+    {!isLandscape && (
+      <AppHeader
+        navigation={navigation}
+        leftIconType="drawer"
+        showSearch={true}
+      />  
+    )}
 
       <GestureHandlerRootView style={{ flex: 1 }}>
-      
         <SafeAreaView style={styles.safeArea}>
           <TouchableWithoutFeedback onPress={() => setShowUI(true)}>
             <View style={{ flex: 1 }}>
-
-           <View style={styles.container}>
-            
-
+           <View style={isLandscape ? styles.landscapeContainer : styles.container}>
             {pageImages.length > 0 ? (
               <>
-                {/* Story Title and Author */}
-                <Animated.View style={[styles.storyHeader, uiAnimatedStyle]}>
-                  {storyTitle ? (
-                    <Text style={styles.storyTitle}>{storyTitle}</Text>
-                  ) : null}
-                  {storyAuthor ? (
-                    <Text style={styles.storyAuthor}>by {storyAuthor}</Text>
-                  ) : null}
-                </Animated.View>
-              
+                {!isLandscape && (
+                  <Animated.View style={[styles.storyHeader, uiAnimatedStyle]}>
+                    {storyTitle ? (
+                      <Text style={styles.storyTitle}>{storyTitle}</Text>
+                    ) : null}
+                    {storyAuthor ? (
+                      <Text style={styles.storyAuthor}>by {storyAuthor}</Text>
+                    ) : null}
+                  </Animated.View>
+                )}
 
-                {/* Show completion screen when story is finished */}
                 {showCompletion && <CompletionScreen />}
                 
-                {/* Decorative sparkles */}
-                <Animated.Text style={[styles.decorativeSparkle, styles.bottomLeft, sparkleAnimatedStyle]}>⭐</Animated.Text>
-                <Animated.Text style={[styles.decorativeSparkle, styles.bottomRight, sparkleAnimatedStyle]}>✨</Animated.Text>
+                {!isLandscape && (
+                  <>
+                    <Animated.Text style={[styles.decorativeSparkle, styles.bottomLeft, sparkleAnimatedStyle]}>⭐</Animated.Text>
+                    <Animated.Text style={[styles.decorativeSparkle, styles.bottomRight, sparkleAnimatedStyle]}>✨</Animated.Text>
+                  </>
+                )}
 
-                <FlatList
-                  ref={flatListRef}
-                  data={pageImages}
-                  renderItem={renderPage}
-                  keyExtractor={(item, index) => index.toString()}
-                  horizontal
-                  pagingEnabled
-                  showsHorizontalScrollIndicator={false}
-                  onViewableItemsChanged={onViewableItemsChanged}
-                  viewabilityConfig={viewabilityConfig}
-                  onScrollToIndexFailed={()=>{}}
-                />
-                
+                <View style={isLandscape ? styles.landscapeStoryContent : styles.storyContent}>
+                  <FlatList
+                    ref={flatListRef}
+                    data={pageImages}
+                    renderItem={renderPage}
+                    keyExtractor={(item, index) => `${index}-${isLandscape ? 'landscape' : 'portrait'}`}
+                    horizontal
+                    pagingEnabled
+                    showsHorizontalScrollIndicator={false}
+                    onViewableItemsChanged={onViewableItemsChanged}
+                    viewabilityConfig={viewabilityConfig}
+                    onScrollToIndexFailed={onScrollToIndexFailed}
+                    onScrollBeginDrag={onScrollBeginDrag}
+                    onMomentumScrollEnd={onMomentumScrollEnd}
+                    removeClippedSubviews={false}
+                    initialScrollIndex={initialPage}
+                    getItemLayout={(data, index) => ({
+                      length: isLandscape ? height : width,
+                      offset: (isLandscape ? height : width) * index,
+                      index,
+                    })}
+                  />
+                </View>
 
-                {/* Enhanced Listen Button */}
-                <Animated.View style={uiAnimatedStyle}>
+                <Animated.View style={[
+                  isLandscape ? styles.landscapeActionButtons : styles.actionButtons, 
+                  uiAnimatedStyle
+                ]}>
                   <TouchableOpacity
                     style={styles.listenButton}
                     onPress={handleSpeak}
@@ -551,14 +715,31 @@ const ReadStory = ({ route, navigation }) => {
                       </Text>
                     </Animated.View>
                   </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.landscapeButton}
+                    onPress={toggleOrientation}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.landscapeButtonContent}>
+                      <Text style={styles.landscapeButtonEmoji}>
+                        {isLandscape ? "📱" : "🔄"}
+                      </Text>
+                      <Text style={styles.landscapeButtonText}>
+                        {isLandscape ? "Portrait" : "Landscape"}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
                 </Animated.View>
 
-                {/* Enhanced Controls */}
-                <Animated.View style={[styles.controls, uiAnimatedStyle]}>
+                <Animated.View style={[
+                  isLandscape ? styles.landscapeControls : styles.controls, 
+                  uiAnimatedStyle
+                ]}>
                   <TouchableOpacity
-                    style={[styles.navButton, currentPage === 0 && styles.disabledButton]}
+                    style={[styles.navButton, (currentPage === 0 || isScrollingRef.current) && styles.disabledButton]}
                     onPress={goToPreviousPage}
-                    disabled={currentPage === 0}
+                    disabled={currentPage === 0 || isScrollingRef.current}
                     activeOpacity={0.7}
                   >
                     <Text style={styles.navButtonText}>{"⬅️ Back"}</Text>
@@ -579,8 +760,13 @@ const ReadStory = ({ route, navigation }) => {
                   </View>
                   
                   <TouchableOpacity
-                    style={[styles.navButton, currentPage === pageImages.length - 1 && styles.lastPageButton]}
+                    style={[
+                      styles.navButton, 
+                      currentPage === pageImages.length - 1 && styles.lastPageButton,
+                      isScrollingRef.current && styles.disabledButton
+                    ]}
                     onPress={goToNextPage}
+                    disabled={isScrollingRef.current}
                     activeOpacity={0.7}
                   >
                     <Text style={styles.navButtonText}>
@@ -602,15 +788,11 @@ const ReadStory = ({ route, navigation }) => {
                 </TouchableOpacity>
               </View>
             )}
-            
           </View>
-          
             </View>
           </TouchableWithoutFeedback>
         </SafeAreaView>
-        
       </GestureHandlerRootView>
-      
     </ImageBackground>
   );
 };
@@ -623,7 +805,11 @@ const styles = StyleSheet.create({
     flex: 1 
   },
   container: { 
-    flex: 1, 
+    flex: 1,
+  },
+  landscapeContainer: { 
+    flex: 1,
+    paddingTop: 10,
   },
   centered: { 
     flex: 1, 
@@ -631,11 +817,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
   },
-  // Story Header Styles
   storyHeader: {
     alignItems: 'center',
-    marginBottom: 15,
-    paddingHorizontal: 20,
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
     borderRadius: 15,
     padding: 10,
@@ -646,25 +829,33 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 3,
     elevation: 5,
-    marginTop: 100,
-    position: 'absolute',
-    top: 0,
-    left: 20,
-    right: 20,
+    marginHorizontal: 20,
+    justifyContent: 'center',
+    marginTop: 90,
     zIndex: 10,
   },
   storyTitle: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#FF6B6B',
     textAlign: 'center',
     marginBottom: 5,
   },
   storyAuthor: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#4ECDC4',
     fontStyle: 'italic',
     textAlign: 'center',
+  },
+  storyContent: {
+    flex: 1,
+    justifyContent: 'center',
+    marginBottom: 50,
+  },
+  landscapeStoryContent: {
+    flex: 1,
+    justifyContent: 'center',
+    marginBottom: 10,
   },
   loadingContainer: {
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
@@ -699,7 +890,6 @@ const styles = StyleSheet.create({
     top: -15,
     right: -15,
   },
-  // Completion Screen Styles
   completionOverlay: {
     position: 'absolute',
     top: 0,
@@ -746,7 +936,7 @@ const styles = StyleSheet.create({
   completionButton: {
     borderRadius: 20,
     paddingVertical: 15,
-    paddingHorizontal: 25,
+    paddingHorizontal: 10,
     borderWidth: 3,
     borderColor: 'white',
     shadowColor: '#000',
@@ -788,11 +978,17 @@ const styles = StyleSheet.create({
   },
   topLeft: { top: 100, left: 20 },
   topRight: { top: 120, right: 30 },
-  bottomLeft: { bottom: 160, left: 25 },
-  bottomRight: { bottom: 180, right: 20 },
+  bottomLeft: { bottom: 100, left: 25 },
+  bottomRight: { bottom: 120, right: 20 },
   pageImageContainer: {
     width: width,
-    height: height * 0.8,
+    height: height * 0.60,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  landscapePageImageContainer: {
+    width: height, // Use height as width in landscape
+    height: width * 0.85, // Use most of the available height
     justifyContent: "center",
     alignItems: "center",
   },
@@ -808,17 +1004,60 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: '#FFD700',
   },
+  landscapeImageFrame: {
+    backgroundColor: 'white',
+    borderRadius: 15,
+    padding: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 10,
+    borderWidth: 3,
+    borderColor: '#FFD700',
+  },
   pageImage: { 
     width: width * 0.85, 
-    height: height * 0.6,
+    height: height * 0.55,
     borderRadius: 10,
+  },
+  landscapePageImage: { 
+    width: height * 0.90, // Use most of the height as width in landscape
+    height: width * 0.70, // Use most of the width as height in landscape
+    borderRadius: 10,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'absolute',
+    bottom: 70,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    gap: 5,
+    marginLeft: 10,
+    marginRight: 10,
+  },
+  landscapeActionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'absolute',
+    bottom: 60,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    gap: 500,
+    marginBottom: 20,
+    marginLeft: 10,
+    marginRight: 10,
   },
   listenButton: {
     backgroundColor: '#FF6B6B',
     borderRadius: 20,
     paddingVertical: 12,
     paddingHorizontal: 25,
-    marginBottom: 25,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3,
@@ -826,22 +1065,53 @@ const styles = StyleSheet.create({
     elevation: 8,
     borderWidth: 3,
     borderColor: 'white',
-    position: 'absolute',
-    bottom: 70,
-    alignSelf: 'center',
-    zIndex: 10,
+    flex: 1,
+    marginBottom: 10,
+    
+  },
+  landscapeButton: {
+    backgroundColor: '#4ECDC4',
+    borderRadius: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 8,
+    borderWidth: 3,
+    borderColor: 'white',
+    flex: 1,
+    marginLeft: 20,
+    marginBottom: 10,
+
+    
   },
   listenButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    
+
+  },
+  landscapeButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   listenButtonEmoji: {
     fontSize: 18,
     marginRight: 10,
   },
+  landscapeButtonEmoji: {
+    fontSize: 18,
+    marginRight: 10,
+  },
   listenButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  landscapeButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
@@ -854,6 +1124,18 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     position: 'absolute',
     bottom: 10,
+    left: 10,
+    right: 10,
+    zIndex: 10,
+  },
+  landscapeControls: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    width: "95%",
+    marginBottom: 10,
+    position: 'absolute',
+    bottom: 5,
     left: 10,
     right: 10,
     zIndex: 10,

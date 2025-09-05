@@ -3,7 +3,7 @@
     "name": "Kwentura",
     "slug": "kwentura",
     "version": "1.0.0",
-    "orientation": "default",
+    "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
@@ -17,7 +17,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./images/mda_logo.png",
+        "foregroundImage": "./images/kwenturaMLogo.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.kwentura.mobile",

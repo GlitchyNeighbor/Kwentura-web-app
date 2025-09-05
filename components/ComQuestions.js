@@ -154,8 +154,11 @@ const ComQuestions = ({ route, navigation }) => {
 
   if (showResults) {
     return (
-      <ImageBackground source={require('../images/Home.png')} style={styles.background} resizeMode="cover">
+      <ImageBackground source={require('../images/DarkViewStory.png')} style={styles.background} resizeMode="cover">
+        
+        <AppHeader navigation={navigation} hideStars={true} />
         <SafeAreaView style={styles.container}>
+
           <Text style={styles.resultTitle}>🎉 Quiz Complete! 🎉</Text>
           <Text style={styles.resultText}>You scored {score} out of {questions.length + (moralLessonQuestion ? 1 : 0)}</Text>
           <Text style={styles.starsEarnedText}>You earned {score} stars! ⭐</Text>
@@ -167,7 +170,7 @@ const ComQuestions = ({ route, navigation }) => {
                   routes: [{ name: 'Home' }],
                 })
               );
-              navigation.navigate('RewardsTab');
+              navigation.navigate('HomeTab');
             }}
             style={styles.button}
           >
@@ -194,9 +197,9 @@ const ComQuestions = ({ route, navigation }) => {
   const displayQuestion = isMoralLessonPhase ? moralLessonQuestion : currentQuestion;
 
   return (
-    <ImageBackground source={require('../images/Home.png')} style={styles.background} resizeMode="cover">
+    <ImageBackground source={require('../images/DarkViewStory.png')} style={styles.background} resizeMode="cover">
       <SafeAreaView style={styles.safeArea}>
-        <AppHeader navigation={navigation} />
+        <AppHeader navigation={navigation} hideStars={true} />
         <ScrollView contentContainerStyle={styles.scrollViewContent}>
           <Text style={styles.storyTitle}>{storyTitle}</Text>
           <View style={styles.questionContainer}>
@@ -292,7 +295,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
   },
   selectedOption: {
     backgroundColor: '#FFCF2D',

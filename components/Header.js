@@ -5,7 +5,7 @@ import { auth, db } from "../FirebaseConfig"; // Adjust path as needed
 import { doc, onSnapshot } from "firebase/firestore";
 import { useProfile } from '../context/ProfileContext';
 
-const Header = ({ navigation, leftIconType = "drawer" }) => {
+const Header = ({ navigation, leftIconType = "drawer", hideStars = false }) => {
   const { profileData } = useProfile();
   const [userStars, setUserStars] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -59,15 +59,17 @@ const Header = ({ navigation, leftIconType = "drawer" }) => {
   return (
     <View style={styles.container}>
       
-      <View style={styles.starContainer}>
-        {Array.from({ length: userStars }).map((_, index) => (
-          <Image
-            key={index}
-            source={require('../images/Star.png')}
-            style={styles.dynamicStar}
-          />
-        ))}
-      </View>
+      {!hideStars && (
+        <View style={styles.starContainer}>
+          {Array.from({ length: userStars }).map((_, index) => (
+            <Image
+              key={index}
+              source={require('../images/Star.png')}
+              style={styles.dynamicStar}
+            />
+          ))}
+        </View>
+      )}
       <Image source={require('../images/Rainbow.png')} style={styles.Rainbow} />  
 
       <View style={styles.headerRow}>
@@ -78,10 +80,9 @@ const Header = ({ navigation, leftIconType = "drawer" }) => {
               style={styles.notificationCircle}
             />
           ) : (
-            <Image
-              source={require("../assets/avatars/default_profile.png")}
-              style={styles.notificationCircle}
-            />
+            <View style={styles.defaultAvatarContainer}>
+              <Ionicons name="person" size={18} color="#FFFFFF" />
+            </View>
           )}
         </TouchableOpacity>
 
@@ -110,6 +111,16 @@ const styles = StyleSheet.create({
     height: 35,
     justifyContent: "center",
     alignItems: "center",
+  },
+  defaultAvatarContainer: {
+    borderRadius: 100,
+    backgroundColor: "#979797bd",
+    width: 35,
+    height: 35,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: "#FFFFFF40",
   },
   ratingBox: {
     backgroundColor: '#979797bd',

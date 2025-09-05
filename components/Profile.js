@@ -344,7 +344,7 @@ const RestModeOverlay = ({ onRestart, formatTime }) => {
   );
 };
 
-const AvatarPicker = ({ visible, onClose, onSave, currentAvatar, avatarOptions }) => {
+const AvatarPicker = ({ visible, onClose, onSave, currentAvatar, avatarOptions, navigation }) => {
   const [selectedAvatar, setSelectedAvatar] = useState(null);
 
   const handleSave = useCallback(async () => {
@@ -361,18 +361,66 @@ const AvatarPicker = ({ visible, onClose, onSave, currentAvatar, avatarOptions }
     setSelectedAvatar(null);
   }, [onClose]);
 
-  const renderAvatarItem = useCallback(({ item }) => (
-    <TouchableOpacity
-      style={[
-        styles.avatarOption,
-        selectedAvatar === item && styles.avatarOptionSelected,
-      ]}
-      onPress={() => setSelectedAvatar(item)}
-      activeOpacity={0.7}
-    >
-      <Image source={item} style={styles.avatarOptionImage} />
-    </TouchableOpacity>
-  ), [selectedAvatar]);
+  const handleGoToRewards = useCallback(() => {
+    onClose();
+    setSelectedAvatar(null);
+    navigation.navigate("Rewards");
+  }, [onClose, navigation]);
+
+  const renderAvatarItem = useCallback(({ item }) => {
+    const isCurrentAvatar = currentAvatar === item;
+    const isSelectedForChange = selectedAvatar === item;
+    
+    return (
+      <TouchableOpacity
+        style={[
+          styles.avatarOption,
+          isSelectedForChange && styles.avatarOptionSelected,
+          isCurrentAvatar && styles.avatarOptionCurrent,
+        ]}
+        onPress={() => setSelectedAvatar(item)}
+        activeOpacity={0.7}
+      >
+        <Image source={item} style={styles.avatarOptionImage} />
+        {isCurrentAvatar && (
+          <View style={styles.currentAvatarIndicator}>
+           
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  }, [selectedAvatar, currentAvatar]);
+
+  // Show empty state when no avatars are available
+  if (!avatarOptions || avatarOptions.length === 0) {
+    return (
+      <Modal
+        visible={visible}
+        transparent
+        animationType="slide"
+        onRequestClose={handleClose}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Ionicons name="gift-outline" size={60} color="#FFCF2D" style={styles.emptyStateIcon} />
+            <Text style={styles.modalTitle}>No Animal Friends Yet</Text>
+            <Text style={styles.emptyStateText}>
+              You haven't unlocked any animal friends yet! Complete activities and earn rewards to unlock adorable animal avatars.
+            </Text>
+            <View style={styles.modalButtonContainer}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.rewardsButton]}
+                onPress={handleClose}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.modalButtonText}>Go back</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
 
   return (
     <Modal
@@ -389,7 +437,7 @@ const AvatarPicker = ({ visible, onClose, onSave, currentAvatar, avatarOptions }
             keyExtractor={(_, idx) => idx.toString()}
             numColumns={3}
             renderItem={renderAvatarItem}
-            extraData={selectedAvatar}
+            extraData={[selectedAvatar, currentAvatar]}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.avatarGrid}
           />
@@ -522,7 +570,7 @@ const Profile = ({ navigation }) => {
 
   return (
     <ImageBackground
-      source={require('../images/Home.png')}
+      source={require('../images/ProfileSubs.png')}
       style={styles.backgroundImage}
       resizeMode="cover"
     >
@@ -545,10 +593,16 @@ const Profile = ({ navigation }) => {
               <View style={styles.profileHeader}>
                 <TouchableOpacity onPress={handleAvatarPress} activeOpacity={0.8}>
                   <View style={styles.avatarCircle}>
-                    <Image
-                      source={profileData.avatarConfig}
-                      style={styles.avatarImage}
-                    />
+                    {profileData.avatarConfig ? (
+                      <Image
+                        source={profileData.avatarConfig}
+                        style={styles.avatarImage}
+                      />
+                    ) : (
+                      <View style={styles.defaultAvatarContainer}>
+                        <Ionicons name="person" size={50} color="#FFFFFF" />
+                      </View>
+                    )}
                     <View style={styles.editIcon}>
                       <Ionicons name="pencil" size={20} color="#fff" />
                     </View>
@@ -603,6 +657,7 @@ const Profile = ({ navigation }) => {
           onSave={updateAvatar}
           currentAvatar={profileData.avatarConfig}
           avatarOptions={unlockedAnimalAvatars}
+          navigation={navigation}
         />
       </SafeAreaView>
     </ImageBackground>
@@ -671,6 +726,16 @@ const styles = StyleSheet.create({
     width: 110,
     height: 110,
     borderRadius: 55,
+  },
+  defaultAvatarContainer: {
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: "#979797bd",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#FFFFFF40",
   },
   editIcon: {
     position: "absolute",
@@ -777,7 +842,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF6B6B',
     paddingVertical: 12,
     borderRadius: 12,
-    marginBottom: 10, // Add margin between button and any text below
     elevation: 2,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
@@ -926,11 +990,43 @@ const styles = StyleSheet.create({
     backgroundColor: '#ccc',
     opacity: 0.6,
   },
+  emptyStateIcon: {
+    marginBottom: 20,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 30,
+    maxWidth: 300,
+  },
+  rewardsButton: {
+    backgroundColor: '#FFCF2D',
+  },
   modalButtonText: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
   },
+  avatarOptionCurrent: {
+  borderColor: '#27e62e',
+  borderWidth: 4,
+  backgroundColor: 'rgba(39, 230, 46, 0.1)',
+},
+currentAvatarIndicator: {
+  position: 'absolute',
+  bottom: -2,
+  right: -2,
+  backgroundColor: '#fff',
+  borderRadius: 12,
+  padding: 1,
+  elevation: 3,
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 1 },
+  shadowOpacity: 0.22,
+  shadowRadius: 2.22,
+},
 });
 
 export default Profile;

@@ -328,7 +328,7 @@ const ViewStory = ({ navigation, route }) => {
                     <Text style={styles.placeholderText}>No Image</Text>
                   </View>
                 )}
-                {/* Floating category badge */}
+                {/* Category badge positioned in upper left corner */}
                 <View style={styles.categoryBadge}>
                   <Text style={styles.categoryBadgeText}>{categoryDisplay}</Text>
                 </View>
@@ -356,12 +356,12 @@ const ViewStory = ({ navigation, route }) => {
                       activeOpacity={0.7}
                     >
                       {bookmarkLoading ? (
-                        <ActivityIndicator size="small" color="#4A90E2" />
+                        <ActivityIndicator size="small" color="#FF6B6B" />
                       ) : (
                         <Ionicons
                           name={isBookmarked ? "heart" : "heart-outline"}
                           size={22}
-                          color="#4A90E2"
+                          color="#FF6B6B"
                         />
                       )}
                     </TouchableOpacity>
@@ -479,24 +479,26 @@ const styles = StyleSheet.create({
   },
   categoryBadge: {
     position: 'absolute',
-    top: -8,
-    right: -8,
+    top: 8, // Inside the container, not overlapping
+    left: 8, // Upper left corner
     backgroundColor: "rgba(0,0,0,0.7)",
     borderRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 4,
-    maxWidth: 80,
+    maxWidth: 100, // Prevent it from being too wide
+    zIndex: 1, // Ensure it appears above the image
   },
   categoryBadgeText: {
     color: '#FFF',
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: 'bold',
     textTransform: 'uppercase',
+    textAlign: 'center',
   },
   storyInfo: {
     flex: 1,

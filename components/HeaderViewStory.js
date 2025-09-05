@@ -6,17 +6,15 @@ import { doc, onSnapshot } from "firebase/firestore";
 
 const HeaderViewStory = ({ navigation }) => {
   const [userStars, setUserStars] = useState(0);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let unsubscribe;
     const currentUser = auth.currentUser;
-    
+
     if (currentUser) {
-      const userDocRef = doc(db, "users", currentUser.uid);
-      
-      unsubscribe = onSnapshot(
-        userDocRef,
+      const studentDocRef = doc(db, "students", currentUser.uid);
+      const unsubscribeUsers = onSnapshot(
+        studentDocRef,
         (docSnap) => {
           if (docSnap.exists()) {
             const userData = docSnap.data();
@@ -24,19 +22,20 @@ const HeaderViewStory = ({ navigation }) => {
           } else {
             setUserStars(0);
           }
-          setLoading(false);
         },
         (error) => {
           console.error("Error fetching user stars:", error);
           setUserStars(0);
-          setLoading(false);
         }
       );
+
+      unsubscribe = () => {
+        unsubscribeUsers();
+      };
     } else {
       setUserStars(0);
-      setLoading(false);
     }
-    
+
     return () => {
       if (unsubscribe) unsubscribe();
     };

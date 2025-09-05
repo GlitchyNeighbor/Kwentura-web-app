@@ -273,6 +273,7 @@ function ProfileStack() {
       <Stack.Screen name="PersonalInfo" component={PersonalInfo} />
       <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
       <Stack.Screen name="About" component={About} />
+      
     </Stack.Navigator>
   );
 }
@@ -307,7 +308,7 @@ function AppTabs() {
 
           return <Ionicons name={iconName} size={size} color={color} style={{ fontWeight: 'bold', borderRadius: 5 }} />;
         },
-        tabBarActiveTintColor: "#FFCF2D",
+        tabBarActiveTintColor: "#fac411ff",
         tabBarInactiveTintColor: "#919393",
         tabBarStyle: (() => {
           // Get the current route name from the HomeStack if we're on HomeTab
@@ -319,7 +320,9 @@ function AppTabs() {
             if (homeTabState) {
               const activeHomeRoute = homeTabState.routes[homeTabState.index];
               // Hide tab bar for ViewStory and ReadStory screens
-              if (activeHomeRoute?.name === "ViewStory" || activeHomeRoute?.name === "ReadStory") {
+               if (activeHomeRoute?.name === "ViewStory" || 
+                  activeHomeRoute?.name === "ReadStory" || 
+                  activeHomeRoute?.name === "ComQuestions") {
                 return { display: "none" };
               }
             }
@@ -696,6 +699,7 @@ function AuthStack() {
       <Stack.Screen name="Register" component={Register} />
       <Stack.Screen name="StudDetails" component={StudDetails} />
       <Stack.Screen name="RegisterComplete" component={RegisterComplete} />
+      <Stack.Screen name="Rewards" component={Rewards} />
       
       <Stack.Screen name="ForgotPass" component={ForgotPassword} /> 
       <Stack.Screen name="ChooseVerify" component={ChooseVerif} />

@@ -333,7 +333,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 3,
   },
   cardTitle: {
     fontSize: 18,
@@ -361,7 +360,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
     shadowRadius: 4,
-    elevation: 2,
   },
   featureHeader: {
     flexDirection: "row",
@@ -391,7 +389,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
     shadowRadius: 4,
-    elevation: 2,
   },
   sectionHeader: {
     flexDirection: "row",

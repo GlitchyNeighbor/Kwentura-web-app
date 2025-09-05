@@ -52,14 +52,7 @@ const HeaderReadStory = ({ navigation }) => {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-      
-      {/* Background decorative elements */}
-      <Image source={require('../images/Star.png')} style={styles.star1} />
-      <Image source={require('../images/Star.png')} style={styles.star2} />
-      <Image source={require('../images/Star.png')} style={styles.star3} />
-      <Image source={require('../images/Star.png')} style={styles.star4} />
-    
-      <Image source={require('../images/DarkRainbow.png')} style={styles.Rainbow} />        
+
       
       <View style={styles.headerRow}> 
         <TouchableOpacity
@@ -76,6 +69,7 @@ const HeaderReadStory = ({ navigation }) => {
               <Text style={styles.ratingNumber}>{userStars}</Text>
             </View>
           </View>    
+  
           <TouchableOpacity onPress={handleProfilePress}>
             {profileData.avatarConfig ? (
               <Image
@@ -83,10 +77,9 @@ const HeaderReadStory = ({ navigation }) => {
                 style={styles.notificationCircle}
               />
             ) : (
-              <Image
-                source={require("../assets/avatars/default_profile.png")}
-                style={styles.notificationCircle}
-              />
+              <View style={styles.defaultAvatarContainer}>
+                <Ionicons name="person" size={18} color="#FFFFFF" />
+              </View>
             )}
           </TouchableOpacity>
         </View>
@@ -108,9 +101,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    minHeight: 50,
+    minHeight: 30,
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 5,
     color: "#414141",
   },
   rightContainer: {
@@ -124,6 +117,16 @@ const styles = StyleSheet.create({
     height: 35,
     justifyContent: "center",
     alignItems: "center",
+  },
+  defaultAvatarContainer: {
+    borderRadius: 100,
+    backgroundColor: "#979797bd",
+    width: 35,
+    height: 35,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: "#FFFFFF40",
   },
   ratingBox: {
     backgroundColor: '#979797bd',

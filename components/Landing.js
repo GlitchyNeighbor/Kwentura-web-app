@@ -1,21 +1,169 @@
-import React from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import {
   View,
   Text,
   SafeAreaView,
   StyleSheet,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   ImageBackground,
-  Image
-} from 'react-native';
+  Image,
+  Animated
+} from 'react-native'; 
+import { Audio } from 'expo-av';
 import AppHeader from "./HeaderLanding";
 
 const Landing = ({ navigation }) => {
+  const [sound, setSound] = useState();
+
+  // Create animated values for each animal
+  const animatedValues = {
+    // For bounce on click
+    bee: useRef(new Animated.Value(1)).current,
+    parrot: useRef(new Animated.Value(1)).current,
+    ladybug: useRef(new Animated.Value(1)).current,
+    squirrel: useRef(new Animated.Value(1)).current,
+    fox: useRef(new Animated.Value(1)).current,
+    frog: useRef(new Animated.Value(1)).current,
+    chicken: useRef(new Animated.Value(1)).current,
+    lion: useRef(new Animated.Value(1)).current,
+    capybara: useRef(new Animated.Value(1)).current,
+    ostrich: useRef(new Animated.Value(1)).current,
+    snail: useRef(new Animated.Value(1)).current,
+
+    // For continuous floating movement
+    beePos: useRef(new Animated.ValueXY({ x: 0, y: 0 })).current,
+    parrotPos: useRef(new Animated.ValueXY({ x: 0, y: 0 })).current,
+    ladybugPos: useRef(new Animated.ValueXY({ x: 0, y: 0 })).current,
+    squirrelPos: useRef(new Animated.ValueXY({ x: 0, y: 0 })).current,
+    foxPos: useRef(new Animated.ValueXY({ x: 0, y: 0 })).current,
+    frogPos: useRef(new Animated.ValueXY({ x: 0, y: 0 })).current,
+    chickenPos: useRef(new Animated.ValueXY({ x: 0, y: 0 })).current,
+    lionPos: useRef(new Animated.ValueXY({ x: 0, y: 0 })).current,
+    capybaraPos: useRef(new Animated.ValueXY({ x: 0, y: 0 })).current,
+    ostrichPos: useRef(new Animated.ValueXY({ x: 0, y: 0 })).current,
+    snailPos: useRef(new Animated.ValueXY({ x: 0, y: 0 })).current,
+  };
+
+  // Load the sound when the component mounts
+  useEffect(() => {
+    const loadSound = async () => {
+      console.log('Loading sound...');
+      try {
+        const { sound } = await Audio.Sound.createAsync(
+           require('../assets/sounds/boink.mp3')
+        );
+        setSound(sound);
+        console.log('Sound loaded successfully');
+      } catch (error) {
+        console.error('Failed to load the sound', error);
+      }
+    };
+
+    loadSound();
+
+    // Unload the sound when the component unmounts
+    return () => {
+      if (sound) {
+        console.log('Unloading sound...');
+        sound.unloadAsync();
+      }
+    };
+  }, []); // The empty dependency array ensures this runs only once
+
+  // Function for continuous, random floating animation
+  const createFloatingAnimation = (positionValue) => {
+    const randomX = Math.random() * 10 - 5; // Random value between -5 and 5
+    const randomY = Math.random() * 10 - 5; // Random value between -5 and 5
+    const duration = Math.random() * 2000 + 3000; // Random duration between 3-5 seconds
+
+    Animated.timing(positionValue, {
+      toValue: { x: randomX, y: randomY },
+      duration: duration,
+      useNativeDriver: true,
+    }).start(() => {
+      // Loop the animation
+      createFloatingAnimation(positionValue);
+    });
+  };
+
+  // Start floating animations for all animals on mount
+  useEffect(() => {
+    Object.keys(animatedValues).forEach(key => {
+      if (key.endsWith('Pos')) {
+        const positionValue = animatedValues[key];
+        // Start each animation with a random delay to desynchronize them
+        const randomDelay = Math.random() * 2000;
+        setTimeout(() => {
+          createFloatingAnimation(positionValue);
+        }, randomDelay);
+      }
+    });
+  }, []);
+
+  // Function to handle animal clicks with bounce animation and sound
+  const handleAnimalClick = async (animalName) => {
+    const animatedValue = animatedValues[animalName.toLowerCase()];
+    
+    // Play the sound if it's loaded
+    if (sound) {
+      await sound.replayAsync(); // Replay the sound from the beginning
+    }
+    
+    // Create bounce animation
+    Animated.sequence([
+      Animated.timing(animatedValue, {
+        toValue: 1.3,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(animatedValue, {
+        toValue: 0.9,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(animatedValue, {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+    
+    console.log(`Bounced ${animalName} with boink sound!`);
+  };
+
+  const renderAnimal = (animalName, imagePath, style) => {
+    const animatedValue = animatedValues[animalName.toLowerCase()];
+    const positionValue = animatedValues[`${animalName.toLowerCase()}Pos`];
+    
+    return (
+      <TouchableWithoutFeedback
+        key={animalName}
+        onPress={() => handleAnimalClick(animalName)}
+      >
+        <Animated.View 
+          style={[
+            style,
+            {
+              transform: [
+                { scale: animatedValue },
+                ...positionValue.getTranslateTransform()
+              ],
+            },
+          ]}
+        >
+          <Image source={imagePath} style={styles.animalImage} />
+        </Animated.View>
+      </TouchableWithoutFeedback>
+    );
+  };
+
   return (
     <ImageBackground
       source={require('../images/Background.png')}
       style={styles.background}
       resizeMode="cover"
+      accessible={false} // Mark background as not important for accessibility
     >
       {/* Header with stars and rainbow at the top */}
       <AppHeader
@@ -24,76 +172,77 @@ const Landing = ({ navigation }) => {
         showSearch={true}
       />
 
-      {/* Animals positioned in the background */}
-      <View style={styles.animalsContainer}>
-        {/* Top area animals - smaller and more distant */}
-        <Image source={require('../images/animals/Bee.png')} style={styles.bee} />
-        <Image source={require('../images/animals/Parrot.png')} style={styles.parrot} />
-        <Image source={require('../images/animals/Ladybug.png')} style={styles.ladybug} />
-        
-        {/* Middle area animals - medium size */}
-        <Image source={require('../images/animals/Squirrel.png')} style={styles.squirrel} />
-        <Image source={require('../images/animals/Fox.png')} style={styles.fox} />
-        <Image source={require('../images/animals/Cat.png')} style={styles.cat} />
-        <Image source={require('../images/animals/Frog.png')} style={styles.frog} />
-        <Image source={require('../images/animals/Chicken.png')} style={styles.chicken} />
-        
-        {/* Lower area animals - larger and closer */}
-        <Image source={require('../images/animals/Lion.png')} style={styles.lion} />
-        <Image source={require('../images/animals/Dog.png')} style={styles.dog} />
-        <Image source={require('../images/animals/Capybara.png')} style={styles.capybara} />
-        <Image source={require('../images/animals/Kangaroo.png')} style={styles.kangaroo} />
-        <Image source={require('../images/animals/Ostrich.png')} style={styles.ostrich} />
-        <Image source={require('../images/animals/Snail.png')} style={styles.snail} />
-      </View>
+      {/* Main container for all interactive and decorative elements */}
+      <View style={styles.mainContainer}>
+        {/* Animals positioned in the background layer */}
+        <View style={styles.animalsContainer}>
+          {/* Top area animals - smaller and more distant */}
+          {renderAnimal('Bee', require('../images/animals/Bee.png'), styles.bee)}
+          {renderAnimal('Parrot', require('../images/animals/Parrot.png'), styles.parrot)}
+          {renderAnimal('Ladybug', require('../images/animals/Ladybug.png'), styles.ladybug)}
+          
+          {/* Middle area animals - medium size */}
+          {renderAnimal('Squirrel', require('../images/animals/Squirrel.png'), styles.squirrel)}
+          {renderAnimal('Fox', require('../images/animals/Fox.png'), styles.fox)}
+          {renderAnimal('Frog', require('../images/animals/Frog.png'), styles.frog)}
+          {renderAnimal('Chicken', require('../images/animals/Chicken.png'), styles.chicken)}
+          
+          {/* Lower area animals - larger and closer */}
+          {renderAnimal('Lion', require('../images/animals/Lion.png'), styles.lion)}
+          {renderAnimal('Capybara', require('../images/animals/Capybara.png'), styles.capybara)}
+          {renderAnimal('Ostrich', require('../images/animals/Ostrich.png'), styles.ostrich)}
+          {renderAnimal('Snail', require('../images/animals/Snail.png'), styles.snail)}
+        </View>
 
-      <View style={styles.bushContainer}>
-        <Image source={require('../images/Bush.png')} style={styles.bush1} />
-        <Image source={require('../images/Bush.png')} style={styles.bush2} />
-        <Image source={require('../images/Bush.png')} style={styles.bush3} />
-      </View>
+        {/* Decorative elements */}
+        <View style={styles.bushContainer}>
+          <Image source={require('../images/Bush.png')} style={styles.bush1} />
+          <Image source={require('../images/Bush.png')} style={styles.bush2} />
+          <Image source={require('../images/Bush.png')} style={styles.bush3} />
+        </View>
+        <View style={styles.flowerContainer}>
+          <Image source={require('../images/Flower1.png')} style={styles.flower1} />
+          <Image source={require('../images/Flower2.png')} style={styles.flower2} />
+          <Image source={require('../images/Flower3.png')} style={styles.flower3} />
+          <Image source={require('../images/Flower4.png')} style={styles.flower4} />
+          <Image source={require('../images/Flower5.png')} style={styles.flower5} />
+        </View>       
 
-      <View style={styles.flowerContainer}>
-        <Image source={require('../images/Flower1.png')} style={styles.flower1} />
-        <Image source={require('../images/Flower2.png')} style={styles.flower2} />
-        <Image source={require('../images/Flower3.png')} style={styles.flower3} />
-        <Image source={require('../images/Flower4.png')} style={styles.flower4} />
-        <Image source={require('../images/Flower5.png')} style={styles.flower5} />
-      </View>       
-
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.contentContainer}>          
-          <View style={styles.titleContainer}>
-            <Text style={[styles.titleLetter, { color: '#E63B3B' }]}>K</Text>
-            <Text style={[styles.titleLetter, { color: '#386CD2' }]}>w</Text>
-            <Text style={[styles.titleLetter, { color: '#FFD915' }]}>e</Text>
-            <Text style={[styles.titleLetter, { color: '#52FF00' }]}>n</Text>
-            <Text style={[styles.titleLetter, { color: '#FFD915' }]}>t</Text>
-            <Text style={[styles.titleLetter, { color: '#386CD2' }]}>u</Text>
-            <Text style={[styles.titleLetter, { color: '#52FF00' }]}>r</Text>
-            <Text style={[styles.titleLetter, { color: '#E63B3B' }]}>a</Text>
+        {/* UI elements (Title and Buttons) */}
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.contentContainer}>          
+            <View style={styles.titleContainer}>
+              <Text style={[styles.titleLetter, { color: '#E63B3B' }]}>K</Text>
+              <Text style={[styles.titleLetter, { color: '#386CD2' }]}>w</Text>
+              <Text style={[styles.titleLetter, { color: '#FFD915' }]}>e</Text>
+              <Text style={[styles.titleLetter, { color: '#52FF00' }]}>n</Text>
+              <Text style={[styles.titleLetter, { color: '#FFD915' }]}>t</Text>
+              <Text style={[styles.titleLetter, { color: '#386CD2' }]}>u</Text>
+              <Text style={[styles.titleLetter, { color: '#52FF00' }]}>r</Text>
+              <Text style={[styles.titleLetter, { color: '#E63B3B' }]}>a</Text>
+            </View>
           </View>
-        </View>
 
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={[styles.button, styles.signUpButton]}
-            onPress={() => navigation.navigate('Register')}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.buttonText, styles.signUpButtonText]}>
-              Sign up
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.button, styles.loginButton]}
-            onPress={() => navigation.navigate('Login')}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.buttonText, styles.loginButtonText]}>Login</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={[styles.button, styles.signUpButton]}
+              onPress={() => navigation.navigate('Register')}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.buttonText, styles.signUpButtonText]}>
+                Sign up
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, styles.loginButton]}
+              onPress={() => navigation.navigate('Login')}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.buttonText, styles.loginButtonText]}>Login</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </View>
     </ImageBackground>
   );
 };
@@ -102,12 +251,17 @@ const styles = StyleSheet.create({
   background: {
     flex: 1,
   },
+  mainContainer: {
+    flex: 1,
+    position: 'relative',
+  },
   safeArea: {
     flex: 1,
     backgroundColor: 'transparent',
     alignItems: 'center',
     paddingTop: 60,
-    zIndex: 2, // Above animals
+    // This zIndex ensures the buttons are on top of the animals
+    // within the mainContainer.
   },
   contentContainer: {
     flex: 1,
@@ -123,7 +277,7 @@ const styles = StyleSheet.create({
   },
   titleLetter: {
     fontFamily: 'Fredoka-SemiBold',
-    fontSize: 40,
+    fontSize: 50,
     fontWeight: '600',
     textShadowColor: 'rgba(0, 0, 0, 0.3)',
     textShadowOffset: { width: 3, height: 4 },
@@ -152,13 +306,13 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   signUpButton: {
-    backgroundColor: '#4ECDC4', // Turquoise/teal color
+    backgroundColor: '#4ECDC4',
     marginRight: 12,
     borderWidth: 3,
     borderColor: 'white',
   },
   loginButton: {
-    backgroundColor: '#FF6B6B', // Coral/salmon color
+    backgroundColor: '#FF6B6B',
     borderWidth: 3,
     borderColor: 'white',
   },
@@ -183,6 +337,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'flex-end',
+    zIndex: 1,
   },
   flower1: {
     width: 110,
@@ -222,6 +377,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'flex-end',
+    zIndex: 0,
   },
   bush1: {
     width: 200,
@@ -248,7 +404,14 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    zIndex: 1, // Above background but below main content
+    // This zIndex places the animals behind the buttons.
+    // It's absolutely positioned to fill the mainContainer.
+  },
+  // Common style for animal images
+  animalImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'contain',
   },
   // Top area animals (smaller, more distant)
   bee: {
@@ -288,8 +451,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 90,
     height: 90,
-    bottom: '30%',
-    right: '25%',
+    bottom: '25%',
+    right: '10%',
     opacity: 0.9,
   },
   cat: {
@@ -312,8 +475,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 60,
     height: 60,
-    bottom: '25%',
-    left: '15%',
+    bottom: '30%',
+    left: '40%',
     opacity: 0.9,
   },
   // Lower area animals (larger, closer)
@@ -321,8 +484,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 120,
     height: 120,
-    bottom: '33%',
-    left: '5%',
+    bottom: '18%',
+    left: '0%',
     opacity: 1,
   },
   dog: {
@@ -337,8 +500,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 70,
     height: 70,
-    bottom: '19%',
-    left: '35%',
+    bottom: '35%',
+    left: '10%',
     opacity: 1,
   },
   kangaroo: {
