@@ -1,6 +1,6 @@
-import React, { createContext, useState, useEffect, useContext, useCallback, useMemo } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback, useMemo, useRef } from 'react';
 import { getAuth, onAuthStateChanged, signOut, } from 'firebase/auth';
-import { getFirestore, collection, query, where, getDocs, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { getFirestore, collection, query, where, getDocs, doc, updateDoc, getDoc, onSnapshot } from 'firebase/firestore';
 import { app } from '../config/FirebaseConfig';
 
 const AuthContext = createContext();
@@ -19,6 +19,9 @@ export const AuthProvider = ({ children }) => {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Use a ref to hold userData to break dependency cycle
+  const userDataRef = useRef(userData);
   const auth = getAuth();
 
   const fetchUserDataFromFirestore = useCallback(async (currentUser) => {
@@ -125,28 +128,99 @@ export const AuthProvider = ({ children }) => {
     };
   }, [auth, fetchUserDataFromFirestore]);
 
-  const logout = useCallback(async () => {
-    if (user && userData) {
-        let collectionName = null;
-        const role = userData.role;
-        
-        if (role === USER_ROLES.TEACHER) collectionName = "teachers";
-        else if (role === USER_ROLES.ADMIN || role === USER_ROLES.SUPERADMIN) collectionName = "admins";
-        else if (role === USER_ROLES.STUDENT) collectionName = "students";
+  // Keep userDataRef updated to avoid dependency cycles
+  useEffect(() => {
+    userDataRef.current = userData;
+  }, [userData]);
 
-        if (collectionName) {
-          try {
-            const userDocRef = doc(db, collectionName, user.uid);
-            await updateDoc(userDocRef, { activeSessionId: null });
-          } catch (dbError) {
-            console.warn(`AuthContext: Could not clear active session for user in ${collectionName}:`, dbError);
-          }
+  const logout = useCallback(async () => {
+    const currentUserData = userDataRef.current;
+    if (user && currentUserData) {
+      let collectionName = null;
+      const role = currentUserData.role;
+
+      if (role === USER_ROLES.TEACHER) {
+        collectionName = "teachers";
+      } else if (role === USER_ROLES.ADMIN || role === USER_ROLES.SUPERADMIN) {
+        collectionName = "admins";
+      } else if (role === USER_ROLES.STUDENT) {
+        collectionName = "students";
+      }
+
+      if (collectionName && currentUserData.id) {
+        try {
+          const userDocRef = doc(db, collectionName, currentUserData.id);
+          await updateDoc(userDocRef, { activeSessionId: null });
+        } catch (error) {
+          console.error("Error clearing activeSessionId:", error);
         }
+      }
     }
-    await signOut(auth);
-    sessionStorage.clear();
-    localStorage.removeItem("user");
-  }, [auth, user, userData]);
+
+    try {
+      await signOut(auth);
+      sessionStorage.clear();
+      localStorage.removeItem("user");
+    } catch (error) {
+      console.error("Error signing out from Firebase:", error);
+      throw error;
+    }
+  }, [user, auth]); // Removed userData from dependencies
+
+  // Separate logout function for remote sign-out to avoid clearing the new session's ID
+  const remoteLogout = useCallback(async () => {
+    try {
+      await signOut(auth);
+      sessionStorage.clear();
+      localStorage.removeItem("user");
+    } catch (error) {
+      console.error("Error during remote sign out from Firebase:", error);
+      // Don't re-throw, as this is a background operation.
+    }
+  }, [auth]);
+
+  useEffect(() => {
+    // This effect should only run when the user logs in or out.
+    if (!user) {
+      return;
+    }
+    const sessionId = sessionStorage.getItem('activeSessionId');
+    if (!sessionId) {
+      return;
+    }
+
+    let collectionName;
+    const role = userData?.role; // Use userData directly since it's a dependency
+
+    if (role === USER_ROLES.TEACHER) {
+      collectionName = "teachers";
+    } else if (role === USER_ROLES.ADMIN || role === USER_ROLES.SUPERADMIN) {
+      collectionName = "admins";
+    } else if (role === USER_ROLES.STUDENT) {
+      collectionName = "students";
+    }
+    if (!collectionName) {
+      return;
+    }
+
+    const userDocRef = doc(db, collectionName, user.uid);
+    const unsubscribe = onSnapshot(userDocRef, (docSnapshot) => {
+      if (docSnapshot.exists()) {
+        const firestoreData = docSnapshot.data();
+        if (
+          firestoreData.activeSessionId &&
+          firestoreData.activeSessionId !== sessionId
+        ) {
+          // Another device has logged in. Log this one out.
+          unsubscribe(); // Stop listening to prevent re-triggering.
+          remoteLogout().then(() => {
+            alert("You have been logged out because you signed in on another device.");
+          });
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, [user, userData, remoteLogout]); // Depend on the new remoteLogout function
 
   const value = useMemo(() => ({
     user,
@@ -154,10 +228,14 @@ export const AuthProvider = ({ children }) => {
     loading,
     error,
     logout,
-    refetchUserData: () => { if(user) fetchUserDataFromFirestore(user) }
+    refetchUserData: () => user ? fetchUserDataFromFirestore(user) : Promise.resolve(),
   }), [user, userData, loading, error, logout, fetchUserDataFromFirestore]);
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuth = () => {

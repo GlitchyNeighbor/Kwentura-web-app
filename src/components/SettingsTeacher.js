@@ -3,16 +3,9 @@ import { User, ChevronLeft, Eye, EyeOff, Camera, Trash2, Upload, Check, RefreshC
 import { Row, Button, Form, Alert } from "react-bootstrap";
 import SidebarSettingsTeacher from "./SidebarSettingsTeacher.js";
 import TopNavbar from "./TopNavbar";
+import { signOut } from "firebase/auth";
 import "../scss/custom.scss";
-import {
-  getAuth,
-  signOut,
-  EmailAuthProvider,
-  reauthenticateWithCredential,
-  updatePassword,
-  onAuthStateChanged,
-  sendEmailVerification,
-} from "firebase/auth";
+import { getAuth, EmailAuthProvider, reauthenticateWithCredential, updatePassword, onAuthStateChanged, sendEmailVerification } from "firebase/auth";
 import {
   getFirestore,
   doc,
@@ -33,6 +26,7 @@ import {
 } from "firebase/storage";
 import { app } from "../config/FirebaseConfig.js";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext.js";
 
 const db = getFirestore(app);
 
@@ -72,6 +66,7 @@ const SettingsTeacher = () => {
   const [isEmailVerified, setIsEmailVerified] = useState(false);
 
   const auth = getAuth();
+  const { logout } = useAuth();
   const navigate = useNavigate();
 
   const fetchUserDataFromFirestore = useCallback(async (currentUser) => {
@@ -169,25 +164,6 @@ const SettingsTeacher = () => {
 
     return () => unsubscribe();
   }, [auth, navigate, fetchUserDataFromFirestore]);
-
-  const handleLogout = async () => {
-    try {
-      if (userDocId) {
-        const userDocRef = doc(db, "teachers", userDocId);
-        await updateDoc(userDocRef, { activeSessionId: null });
-      }
-      
-      await signOut(auth);
-      sessionStorage.clear();
-      localStorage.removeItem("user");
-      
-      setTimeout(() => {
-        navigate("/login", { replace: true });
-      }, 500);
-    } catch (error) {
-      console.error("Error signing out:", error);
-    }
-  };
 
   const handleSendVerificationEmail = async () => {
     const user = auth.currentUser;
@@ -530,7 +506,6 @@ const SettingsTeacher = () => {
             <SidebarSettingsTeacher
               isOpen={sidebarOpen}
               toggleSidebar={() => setSidebarOpen(false)}
-              handleLogout={handleLogout}
             />
           </div>
           <div
@@ -629,7 +604,6 @@ const SettingsTeacher = () => {
           <SidebarSettingsTeacher
             isOpen={sidebarOpen}
             toggleSidebar={() => setSidebarOpen(false)}
-            handleLogout={handleLogout}
             profileImageUrl={profileImageUrl}
             userRole={userRole}
           />

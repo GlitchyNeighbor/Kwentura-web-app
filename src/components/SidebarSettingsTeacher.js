@@ -1,13 +1,9 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { Nav, Navbar, Badge, Tooltip, OverlayTrigger } from "react-bootstrap";
 import { Settings, Shield, Info, Mail, LogOut } from "lucide-react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { getAuth, signOut } from "firebase/auth";
-import { doc, getDoc, getFirestore, updateDoc } from "firebase/firestore"; 
-import { app } from "../config/FirebaseConfig.js";
 import LogoutConfirmation from "./LogoutConfirmation.js";
-
-const db = getFirestore(app);
+import { useAuth } from "../context/AuthContext.js";
 
 // Constants - Matching SidebarSettingsAdmin
 const COLORS = {
@@ -208,50 +204,16 @@ const NavigationItem = React.memo(({ item, isActive, onNavigate }) => {
 
 // Main Component
 const SidebarSettingsTeacher = ({ isOpen, toggleSidebar, profileImageUrl, userRole }) => {
-  const [userName, setUserName] = useState("");
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const { userData, loading, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const fetchUserName = useCallback(async () => {
-    setLoading(true);
-    const auth = getAuth();
-    const user = auth.currentUser;
-    if (user) {
-      const collectionsToSearch = [
-        { name: "teachers", defaultRole: "teacher" },
-        { name: "admins", defaultRole: "admin" },
-        { name: "students", defaultRole: "student" },
-      ];
-
-      let userData = null;
-      for (const { name: collectionName } of collectionsToSearch) {
-        const userRef = doc(db, collectionName, user.uid);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          userData = userSnap.data();
-          break;
-        }
-      }
-
-      if (userData) {
-        setUserName(
-          userData.firstName
-            ? `${userData.firstName} ${userData.lastName || ""}`.trim()
-            : "Teacher"
-        );
-      } else {
-        setUserName(user.email || "Teacher");
-      }
-    }
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    fetchUserName();
-  }, [fetchUserName]);
+  const userName = useMemo(() => {
+    if (loading || !userData) return "Teacher";
+    return userData.fullName || userData.email || "Teacher";
+  }, [userData, loading]);
 
   const handleNavigate = useCallback((e, path) => {
     e.preventDefault();
@@ -269,29 +231,14 @@ const SidebarSettingsTeacher = ({ isOpen, toggleSidebar, profileImageUrl, userRo
   const handleLogoutConfirm = useCallback(async () => {
     setIsLoggingOut(true);
     try {
-      const auth = getAuth();
-      const user = auth.currentUser;
-      
-      if (user) {
-        // Assuming user.uid is the document ID in the 'teachers' collection
-        const userDocRef = doc(db, "teachers", user.uid); 
-        await updateDoc(userDocRef, { activeSessionId: null });
-      }
-      
-      await signOut(auth);
-      sessionStorage.clear();
-      localStorage.removeItem("user");
-      
-      // Small delay for better UX
-      setTimeout(() => {
-        navigate("/login", { replace: true });
-      }, 500);
+      await logout();
+      // Navigation will be handled by onAuthStateChanged in AuthContext
     } catch (error) {
       console.error("Error signing out:", error);
       setIsLoggingOut(false);
       // You might want to show an error toast here
     }
-  }, [navigate]);
+  }, [logout]);
 
   return (
     <>
@@ -321,7 +268,7 @@ const SidebarSettingsTeacher = ({ isOpen, toggleSidebar, profileImageUrl, userRo
         >
           {isOpen ? (
             <UserProfile
-              userName={userName || 'Teacher'}
+              userName={userName}
               profileImageUrl={profileImageUrl}
               userRole={userRole}
               loading={loading}

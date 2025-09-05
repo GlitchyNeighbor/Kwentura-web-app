@@ -167,7 +167,7 @@ const ReadStory = () => {
   const [currentWordIndex, setCurrentWordIndex] = useState(-1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [timepoints, setTimepoints] = useState([]);
-  const [currentPageNumber, setCurrentPageNumber] = useState(0);
+  const [currentPageNumber, setCurrentPageNumber] = useState(-1);
   const [isHovered, setIsHovered] = useState(false);
   const [currentFlipIndex, setCurrentFlipIndex] = useState(0);
   const [assessmentHovered, setAssessmentHovered] = useState(false);
@@ -377,7 +377,7 @@ const ReadStory = () => {
     }
   }, [story, currentLanguage]);
 
-  const playTtsForSinglePage = useCallback(async (pageIndex) => {
+  const playTtsForSinglePage = useCallback(async (pageIndex) => { // Restored this function
     if (pageIndex < 0 || !ttsAudioData || pageIndex >= pdfPagesAsImages.length) {
       console.log("Invalid page index or no audio data.");
       return;
@@ -418,7 +418,7 @@ const ReadStory = () => {
     }
   }, [ttsAudioData, isPlaying, currentPageNumber, stopTts, pdfPagesAsImages.length]);
 
-  const handleFlip = useCallback((e) => {
+  const handleFlip = useCallback(e => {
     const rightPageIndex = e.data;
     stopTts();
 
@@ -426,51 +426,37 @@ const ReadStory = () => {
     if (ttsAudioData.length > 0) {
       const leftPageIndex = rightPageIndex - 1;
       setCurrentFlipIndex(rightPageIndex);
-      const audioDataForLeftPage =
-        leftPageIndex >= 0
-          ? ttsAudioData.find((d) => d.pageNumber === leftPageIndex + 1)
-          : null;
-      const audioDataForRightPage = ttsAudioData.find((d) => d.pageNumber === rightPageIndex + 1);
-
+      const audioDataForLeftPage = leftPageIndex >= 0 ? ttsAudioData.find(d => d.pageNumber === leftPageIndex + 1) : null;
+      const audioDataForRightPage = ttsAudioData.find(d => d.pageNumber === rightPageIndex + 1);
       let leftAudio, rightAudio;
-      let leftTimepoints = [], rightTimepoints = [];
-
+      let leftTimepoints = [],
+        rightTimepoints = [];
       if (audioDataForLeftPage) {
         leftAudio = new Audio(audioDataForLeftPage.audioUrl);
         leftTimepoints = audioDataForLeftPage.timepoints || [];
       }
-
       if (audioDataForRightPage) {
         rightAudio = new Audio(audioDataForRightPage.audioUrl);
         rightTimepoints = audioDataForRightPage.timepoints || [];
       }
-
       const playAudiosSequentially = () => {
         if (leftAudio) {
           setCurrentPageNumber(leftPageIndex);
           setTtsAudio(leftAudio);
           setTimepoints(leftTimepoints);
           setIsPlaying(true);
-
           leftAudio.onended = () => {
             if (rightAudio) {
               setCurrentPageNumber(rightPageIndex);
               setTtsAudio(rightAudio);
               setTimepoints(rightTimepoints);
               setIsPlaying(true);
-
               rightAudio.onended = () => {
-                setIsPlaying(false);
-                setCurrentWordIndex(-1);
-                setTtsAudio(null);
-                setTimepoints([]);
+                stopTts();
               };
               rightAudio.play().catch(err => console.error("Error playing right page TTS:", err));
             } else {
-              setIsPlaying(false);
-              setCurrentWordIndex(-1);
-              setTtsAudio(null);
-              setTimepoints([]);
+              stopTts();
             }
           };
           leftAudio.play().catch(err => console.error("Error playing left page TTS:", err));
@@ -479,20 +465,12 @@ const ReadStory = () => {
           setTtsAudio(rightAudio);
           setTimepoints(rightTimepoints);
           setIsPlaying(true);
-
-          rightAudio.onended = () => {
-            setIsPlaying(false);
-            setCurrentWordIndex(-1);
-            setTtsAudio(null);
-            setTimepoints([]);
-          };
+          rightAudio.onended = () => stopTts();
           rightAudio.play().catch(err => console.error("Error playing right page TTS:", err));
         }
       };
-
       playAudiosSequentially();
     }
-
     if (rightPageIndex >= pdfPagesAsImages.length - 1) {
       setHasReachedEnd(true);
       setCompleted(true);
@@ -501,11 +479,9 @@ const ReadStory = () => {
 
   useEffect(() => {
     // Use the new ttsAudioData state which is language-aware
-    if (showFullscreenModal && ttsAudioData.length > 0 && !ttsAudioLoading && currentFlipIndex === 0) {
+    if (showFullscreenModal && ttsAudioData.length > 0 && !ttsAudioLoading) {
       const initializeFirstPage = () => {
         stopTts();
-        // Only reset flip index to cover when initializing the book for the first time
-        // not when just switching languages.
         setCurrentFlipIndex(0);
         const audioDataForFirstPage = ttsAudioData.find(d => d.pageNumber === 1);
         if (audioDataForFirstPage) {
@@ -516,16 +492,14 @@ const ReadStory = () => {
           setCurrentPageNumber(0);
           audio.play().catch(e => console.error("Error playing initial TTS:", e));
           // When the first page audio ends, automatically play the second if it exists
-          audio.onended = () => {
-            stopTts();
-          };
+          audio.onended = () => stopTts();
         }
       };
       initializeFirstPage();
     } else if (!showFullscreenModal || ttsAudioLoading) {
       stopTts();
     }
-  }, [showFullscreenModal, ttsAudioData, ttsAudioLoading, stopTts, currentFlipIndex]);
+  }, [showFullscreenModal, ttsAudioData, ttsAudioLoading, stopTts]);
 
   useEffect(() => {
     if (ttsAudio && timepoints && timepoints.length > 0 && isPlaying) {
@@ -863,10 +837,10 @@ const ReadStory = () => {
                 {currentLanguage === 'en-US' ? 'Filipino' : 'English'}
               </Button>
             )}
-            {/* --- START: Page-specific TTS Buttons --- */}
+            {/* --- START: Page-specific TTS Buttons (Restored) --- */}
             <div style={{ position: 'absolute', right: '180px', top: '12px', display: 'flex', gap: '8px' }}>
-              {/* Left Page Button */}
-              {currentFlipIndex > 0 && (
+              {/* Left Page Button (for the first visible page) */}
+              {currentFlipIndex > 0 && currentFlipIndex <= pdfPagesAsImages.length && (
                 <Button
                   variant="light"
                   size="sm"
@@ -876,14 +850,14 @@ const ReadStory = () => {
                     borderRadius: '20px',
                     fontWeight: '600',
                     color: '#333',
-                    background: isPlaying && currentPageNumber === currentFlipIndex - 1 ? '#ffadd6' : '#fff'
+                    background: isPlaying && currentPageNumber === (currentFlipIndex - 1) ? '#ffadd6' : '#fff'
                   }}
                 >
                   <Volume2 size={14} className="me-1" />
                   {currentFlipIndex}
                 </Button>
               )}
-              {/* Right Page Button */}
+              {/* Right Page Button (for the second visible page) */}
               {currentFlipIndex < pdfPagesAsImages.length && (
                  <Button
                   variant="light"
@@ -902,7 +876,7 @@ const ReadStory = () => {
                 </Button>
               )}
             </div>
-            {/* --- END: Page-specific TTS Buttons --- */}
+            {/* --- END: Page-specific TTS Buttons (Restored) --- */}
             {/* --- END: Language Toggle Button --- */}
           </Modal.Header>
           <Modal.Body className="p-0 d-flex flex-column" style={{ background: "#f8f9fa" }}>
@@ -970,7 +944,7 @@ const ReadStory = () => {
                       className="demo-book"
                       ref={flipBook}
                       usePortrait={true}
-                      singlePage={true}
+                      singlePage={false}
                       startPage={0}
                       drawShadow={true}
                     >
