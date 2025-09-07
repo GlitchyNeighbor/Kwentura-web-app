@@ -75,7 +75,7 @@ const TopNavbar = ({ toggleSidebar, isSidebarOpen = false }) => {
   }, [toggleSidebar]);
 
   const handleProfileClick = useCallback(() => {
-    navigate('/admin/settings');
+    navigate('/teacher/settings');
   }, [navigate]);
 
   const handleLogoutClick = useCallback(() => {

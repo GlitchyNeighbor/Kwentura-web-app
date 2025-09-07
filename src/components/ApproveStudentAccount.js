@@ -189,8 +189,13 @@ const ApproveStudentAccounts = () => {
     setLoading(true);
     try {
       const studentRef = doc(db, "students", studentId);
-      await deleteDoc(studentRef);
-      showAlert("Student account rejected and deleted.", "warning");
+      await updateDoc(studentRef, {
+        status: "rejected",
+        isArchived: true,
+        rejectedBy: currentTeacher.uid,
+        updatedAt: serverTimestamp(),
+      });
+      showAlert("Student account rejected and archived.", "warning");
       fetchPendingStudents();
     } catch (error) {
       showAlert(`Failed to reject student: ${error.message}`, "danger");
@@ -215,7 +220,7 @@ const ApproveStudentAccounts = () => {
     setConfirmationModal({
       show: true,
       title: "Confirm Rejection",
-      message: "Are you sure you want to reject and delete this student's account? This action cannot be undone.",
+      message: "Are you sure you want to reject and archive this student's account? This will remove them from the pending list.",
       onConfirm: () => {
         setConfirmationModal({ ...confirmationModal, show: false });
         executeReject(studentId);
@@ -515,7 +520,7 @@ const ApproveStudentAccounts = () => {
                                   {formatDisplayName(student)}
                                 </div>
                                 <div className="text-muted text-truncate" style={{ fontSize: "0.95rem", maxWidth: "180px" }}>
-                                  Grade {student.gradeLevel}
+                                {student.gradeLevel}
                                 </div>
                               </div>
                             </div>

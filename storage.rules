@@ -6,6 +6,11 @@ service firebase.storage {
       return request.auth != null;
     }
 
+    match /tts/{fileName} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
     match /{allPaths=**} {
       allow read, write: if isAuthenticated();
     }

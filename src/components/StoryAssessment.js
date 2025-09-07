@@ -49,6 +49,10 @@ const StoryAssessment = () => {
   const [ttsAudio, setTtsAudio] = useState(null);
   const [ttsLoading, setTtsLoading] = useState({});
   const ttsAudioRef = useRef(null);
+  const [feedbackUrls, setFeedbackUrls] = useState({
+    congratulations: '',
+    encouragement: '',
+  });
 
   // Build questions array function
 const buildQuestions = (storyData) => {
@@ -63,6 +67,7 @@ const buildQuestions = (storyData) => {
       options: storyData.moralLesson.options,
       correctIndex: storyData.moralLesson.correctOptionIndex,
       imageUrl: storyData.moralLesson.imageUrl || null,
+      audioUrl: storyData.moralLesson.audioUrl || null,
     });
   }
 
@@ -76,6 +81,7 @@ const buildQuestions = (storyData) => {
         options: q.options,
         correctIndex: q.correctOptionIndex,
         imageUrl: q.imageUrl || null,
+        audioUrl: q.audioUrl || null,
       });
     });
   }
@@ -123,8 +129,33 @@ const buildQuestions = (storyData) => {
       }
     };
 
+    const fetchFeedbackUrls = async () => {
+      try {
+        const congratulationsDoc = await getDoc(doc(db, "tts_config", "congratulations"));
+        const encouragementDoc = await getDoc(doc(db, "tts_config", "encouragement"));
+
+        if (congratulationsDoc.exists()) {
+          setFeedbackUrls(prev => ({ ...prev, congratulations: congratulationsDoc.data().url }));
+        }
+        if (encouragementDoc.exists()) {
+          setFeedbackUrls(prev => ({ ...prev, encouragement: encouragementDoc.data().url }));
+        }
+      } catch (error) {
+        console.error("Error fetching feedback TTS URLs:", error);
+      }
+    };
+
     fetchStory();
+    fetchFeedbackUrls();
   }, [id]);
+
+  const currentQuestion = questions[currentQuestionIndex];
+
+  useEffect(() => {
+    if (currentQuestion) {
+      playTts(currentQuestion.question, `question_${currentQuestion.id}`, currentQuestion.audioUrl);
+    }
+  }, [currentQuestion]);
 
   const stopTts = () => {
     if (ttsAudioRef.current) {
@@ -135,37 +166,65 @@ const buildQuestions = (storyData) => {
     setTtsAudio(null);
   };
 
-  const playTts = async (text, loadingKey) => {
-    if (!text?.trim()) return;
+  const playTts = async (text, loadingKey, audioUrl) => {
+    if (audioUrl) {
+        setTtsLoading(prev => ({ ...prev, [loadingKey]: true }));
+        stopTts();
+        try {
+            const audio = new Audio(audioUrl);
+            setTtsAudio(audio);
+            ttsAudioRef.current = audio;
 
-    setTtsLoading(prev => ({ ...prev, [loadingKey]: true }));
-    stopTts();
+            audio.onended = () => {
+                setTtsAudio(null);
+                ttsAudioRef.current = null;
+                setTtsLoading(prev => ({ ...prev, [loadingKey]: false }));
+            };
+            
+            audio.onerror = (e) => {
+                console.error("TTS audio playback error:", e);
+                setTtsAudio(null);
+                ttsAudioRef.current = null;
+                setTtsLoading(prev => ({ ...prev, [loadingKey]: false }));
+            };
+            
+            await audio.play();
+        } catch (err) {
+            console.error("TTS playback error from URL:", err);
+            setTtsLoading(prev => ({ ...prev, [loadingKey]: false }));
+        }
+    } else {
+        if (!text?.trim()) return;
 
-    try {
-      const functions = getFunctions();
-      const synthesizeSpeech = httpsCallable(functions, "synthesizeSpeechGoogle");
-      const result = await synthesizeSpeech({ text });
+        setTtsLoading(prev => ({ ...prev, [loadingKey]: true }));
+        stopTts();
 
-      const audio = new Audio(`data:audio/mp3;base64,${result.data.audioData}`);
-      setTtsAudio(audio);
-      ttsAudioRef.current = audio;
+        try {
+          const functions = getFunctions();
+          const synthesizeSpeech = httpsCallable(functions, "synthesizeSpeechGoogle");
+          const result = await synthesizeSpeech({ text });
 
-      audio.onended = () => {
-        setTtsAudio(null);
-        ttsAudioRef.current = null;
-      };
-      
-      audio.onerror = (e) => {
-        console.error("TTS audio playback error:", e);
-        setTtsAudio(null);
-        ttsAudioRef.current = null;
-      };
-      
-      await audio.play();
-    } catch (err) {
-      console.error("TTS synthesis error:", err);
-    } finally {
-      setTtsLoading(prev => ({ ...prev, [loadingKey]: false }));
+          const audio = new Audio(`data:audio/mp3;base64,${result.data.audioData}`);
+          setTtsAudio(audio);
+          ttsAudioRef.current = audio;
+
+          audio.onended = () => {
+            setTtsAudio(null);
+            ttsAudioRef.current = null;
+          };
+          
+          audio.onerror = (e) => {
+            console.error("TTS audio playback error:", e);
+            setTtsAudio(null);
+            ttsAudioRef.current = null;
+          };
+          
+          await audio.play();
+        } catch (err) {
+          console.error("TTS synthesis error:", err);
+        } finally {
+          setTtsLoading(prev => ({ ...prev, [loadingKey]: false }));
+        }
     }
   };
 
@@ -179,8 +238,17 @@ const buildQuestions = (storyData) => {
     setSubmitted(prev => ({ ...prev, [questionId]: true }));
     setCorrect(prev => ({ ...prev, [questionId]: isCorrect }));
 
-    const feedbackText = isCorrect ? "Correct! Well done." : "Not quite right. Think about the story again.";
-    playTts(feedbackText, `feedback_${questionId}`);
+    if (isCorrect) {
+        if (feedbackUrls.congratulations) {
+            const audio = new Audio(feedbackUrls.congratulations);
+            audio.play();
+        }
+    } else {
+        if (feedbackUrls.encouragement) {
+            const audio = new Audio(feedbackUrls.encouragement);
+            audio.play();
+        }
+    }
 
     // Auto advance after 2 seconds if correct
     if (isCorrect && currentQuestionIndex < questions.length - 1) {
@@ -297,7 +365,6 @@ const buildQuestions = (storyData) => {
     );
   }
 
-  const currentQuestion = questions[currentQuestionIndex];
   const progressPercentage = ((currentQuestionIndex + 1) / questions.length) * 100;
 
   return (
@@ -409,7 +476,7 @@ const buildQuestions = (storyData) => {
                       <span>{currentQuestion.type}</span>
                       <Button
                         variant="link"
-                        onClick={() => playTts(currentQuestion.question, `question_${currentQuestion.id}`)}
+                        onClick={() => playTts(currentQuestion.question, `question_${currentQuestion.id}`, currentQuestion.audioUrl)}
                         disabled={ttsLoading[`question_${currentQuestion.id}`]}
                         className="p-0"
                         style={{ color: "#fff" }}

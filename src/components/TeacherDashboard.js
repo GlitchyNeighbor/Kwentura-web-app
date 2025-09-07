@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Container, Row, Col, Card, Alert, Spinner, Badge } from "react-bootstrap";
-import { FaBook, FaUserGraduate, FaChartBar, FaUsers, FaExclamationTriangle, FaClock, FaEye } from "react-icons/fa";
+import { FaBook, FaUserGraduate, FaChartBar, FaUsers, FaExclamationTriangle, FaClock, FaEye, FaClipboardCheck } from "react-icons/fa";
 import SidebarMenuTeacher from "./SideMenuTeacher";
 import TopNavbar from "./TopNavbar";
 import "../scss/custom.scss";
-import { collection, getDocs, query, where } from "firebase/firestore"; 
+import { collection, getDocs, query, where, orderBy, limit } from "firebase/firestore"; 
 import { db } from "../config/FirebaseConfig.js";
 import {
   BarChart,
@@ -49,6 +49,7 @@ const CARD_STYLES = {
   students: { bg: "#FFE4E1", icon: "#98FB98" },
   grades: { bg: "#FFF0F5", icon: "#FFB6C1" },
   approval: { bg: "#FFE4E1", icon: "#FF69B4" },
+  quizzes: { bg: "#F0FFF0", icon: "#28a745" },
 };
 
 // Custom hooks
@@ -176,6 +177,55 @@ const fetchStudentsData = async (section) => {
   };
 };
 
+const fetchQuizScoresData = async (section) => {
+  if (!section) {
+    return { averageScore: 0, totalQuizzes: 0, averageScorePerStory: [] };
+  }
+
+  try {
+    const studentsQuery = query(
+      collection(db, "students"),
+      where("section", "==", section)
+    );
+    const studentsSnapshot = await getDocs(studentsQuery);
+    if (studentsSnapshot.empty) {
+      return { averageScore: 0, totalQuizzes: 0, averageScorePerStory: [] };
+    }
+
+    let totalScore = 0;
+    let totalQuestions = 0;
+    let totalQuizzes = 0;
+    const storyScores = {};
+
+    for (const studentDoc of studentsSnapshot.docs) {
+      const quizScoresQuery = collection(db, "students", studentDoc.id, "quizScores");
+      const quizScoresSnapshot = await getDocs(quizScoresQuery);
+      quizScoresSnapshot.forEach(quizDoc => {
+        const quizData = quizDoc.data();
+        totalScore += quizData.score || 0;
+        totalQuestions += quizData.totalQuestions || 0;
+        totalQuizzes++;
+
+        if (!storyScores[quizData.storyId]) {
+          storyScores[quizData.storyId] = { title: quizData.storyTitle, totalScore: 0, totalQuestions: 0 };
+        }
+        storyScores[quizData.storyId].totalScore += quizData.score;
+        storyScores[quizData.storyId].totalQuestions += quizData.totalQuestions;
+      });
+    }
+
+    const averageScore = totalQuestions > 0 ? (totalScore / totalQuestions) * 100 : 0;
+    const averageScorePerStory = Object.values(storyScores).map(story => ({
+      name: story.title,
+      averageScore: story.totalQuestions > 0 ? parseFloat(((story.totalScore / story.totalQuestions) * 100).toFixed(1)) : 0,
+    }));
+    return { averageScore: averageScore.toFixed(1), totalQuizzes, averageScorePerStory };
+  } catch (error) {
+    console.error("Error fetching quiz scores data:", error);
+    return { averageScore: 0, totalQuizzes: 0, recentScores: [] };
+  }
+};
+
 // UI Components - Updated to match AdminDashboard.js style
 const MetricCard = ({ title, value, icon: IconComponent, style, loading }) => (
   <Card className="shadow-sm h-100 border-0" style={{ borderRadius: "12px" }}>
@@ -254,7 +304,8 @@ const TeacherDashboard = () => {
   const [showSidebar, setShowSidebar] = useState(false);
   const [dashboardData, setDashboardData] = useState({
     stories: { totalCount: 0, chartData: [] },
-    students: { totalCount: 0, gradeData: [], approvalData: [] }
+    students: { totalCount: 0, gradeData: [], approvalData: [] },
+    quizzes: { averageScore: 0, totalQuizzes: 0, averageScorePerStory: [] }
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -272,14 +323,16 @@ const TeacherDashboard = () => {
     setError(null);
 
     try {
-      const [storiesResult, studentsResult] = await Promise.all([
+      const [storiesResult, studentsResult, quizzesResult] = await Promise.all([
         fetchPopularStoriesData(),
-        fetchStudentsData(teacherSection)
+        fetchStudentsData(teacherSection),
+        fetchQuizScoresData(teacherSection)
       ]);
 
       setDashboardData({
         stories: storiesResult,
-        students: studentsResult
+        students: studentsResult,
+        quizzes: quizzesResult
       });
     } catch (err) {
       console.error("Error fetching dashboard data:", err);
@@ -417,6 +470,47 @@ const TeacherDashboard = () => {
             </div>
           </div>
         </div>
+      </div>
+    );
+  }, []);
+
+  const renderQuizChart = useMemo(() => (data) => {
+    if (!data || data.length === 0) return null;
+
+    const processedData = data.map(item => ({
+      ...item,
+      shortName: item.name.length > 15 ? `${item.name.substring(0, 15)}...` : item.name,
+      fullName: item.name
+    }));
+
+    return (
+      <div className="chart-container">
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={processedData} margin={{ top: 5, right: 30, left: 20, bottom: 70 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#FFE4E1" />
+            <XAxis
+              dataKey="shortName"
+              angle={-45}
+              textAnchor="end"
+              height={80}
+              interval={0}
+              tick={{ fontSize: 11, fill: COLORS.dark }}
+            />
+            <YAxis
+              stroke={COLORS.dark}
+              fontSize={12}
+              domain={[0, 100]}
+              label={{
+                value: "Average Score (%)",
+                angle: -90,
+                position: "insideLeft",
+                style: { textAnchor: "middle", fill: COLORS.dark },
+              }}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <Bar dataKey="averageScore" name="Average Score" fill={CHART_COLORS.students} radius={[6, 6, 0, 0]} unit="%" />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
     );
   }, []);
@@ -580,36 +674,53 @@ const TeacherDashboard = () => {
                 loading={loading}
               />
             </Col>
+            <Col lg={3} md={6}>
+              <MetricCard
+                title="Quiz Performance"
+                value={`${dashboardData.quizzes.averageScore}%`}
+                icon={FaClipboardCheck}
+                style={CARD_STYLES.quizzes}
+                loading={loading}
+              />
+            </Col>
           </Row>
 
           {/* Charts Section */}
           <Row className="g-4 mb-4">
-            <Col xl={15} lg={12}>
+            <Col xl={6} lg={12}>
               <ChartCard
                 title="Popular Stories"
                 loading={loading}
                 noDataMessage="No story data available yet"
-                height={500}
+                height={450}
               >
                 {renderBarChart(dashboardData.stories.chartData)}
               </ChartCard>
             </Col>
-            
+            <Col xl={6} lg={12}>
+                <ChartCard
+                  title="Average Score Per Story"
+                  loading={loading}
+                  noDataMessage="No quiz data available for your section"
+                  height={450}
+                >
+                  {renderQuizChart(dashboardData.quizzes.averageScorePerStory)}
+                </ChartCard>
+              </Col>
           </Row>
 
           {/* Additional Chart Row */}
           {dashboardData.students.approvalData.length > 0 && (
             <Row className="g-4 mb-4">
-            
-            <Col xl={6} lg={12}>
-              <ChartCard
-                title={`Students by Grade Level${teacherSection ? ` (${teacherSection})` : ''}`}
-                loading={loading}
-                noDataMessage="No student grade data for your section"
-              >
-                {renderPieChart(dashboardData.students.gradeData)}
-              </ChartCard>
-            </Col>
+              <Col xl={6} lg={12}>
+                <ChartCard
+                  title={`Students by Grade Level${teacherSection ? ` (${teacherSection})` : ''}`}
+                  loading={loading}
+                  noDataMessage="No student grade data for your section"
+                >
+                  {renderPieChart(dashboardData.students.gradeData)}
+                </ChartCard>
+              </Col>
               <Col xl={6} lg={12}>
                 <ChartCard
                   title="Student Approval Status"

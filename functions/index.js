@@ -2,12 +2,17 @@ const admin = require("firebase-admin");
 const {GoogleGenerativeAI} = require("@google/generative-ai");
 const pdfParser = require("pdf-parse");
 const {onCall, HttpsError} = require("firebase-functions/v2/https");
-const {onDocumentWritten} = require("firebase-functions/v2/firestore");
+const {
+  onDocumentWritten,
+  onDocumentDeleted,
+} = require("firebase-functions/v2/firestore");
 const {getFirestore} = require("firebase-admin/firestore");
 const {getAuth} = require("firebase-admin/auth");
 const {onSchedule} = require("firebase-functions/v2/scheduler");
 
 admin.initializeApp();
+const db = getFirestore();
+
 exports.updateAdminPassword = onCall(async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated",
@@ -71,6 +76,65 @@ const synthesizeSpeechGoogle = onCall({timeoutSeconds: 3600},
 
 exports.synthesizeSpeechGoogle = synthesizeSpeechGoogle;
 
+exports.generateAndStoreTts = onCall(async (request) => {
+  const {text, fileName} = request.data;
+
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated",
+        "The function must be called while authenticated.");
+  }
+
+  if (!text || !fileName) {
+    throw new HttpsError("invalid-argument", "Missing text or fileName.");
+  }
+
+  const ttsRequest = {
+    input: {text: text},
+    voice: {
+      languageCode: "en-US",
+      name: "en-US-Chirp-HD-F",
+    },
+    audioConfig: {audioEncoding: "MP3"},
+  };
+
+  let response;
+  try {
+    const textToSpeech = require("@google-cloud/text-to-speech");
+    const ttsClient = new textToSpeech.TextToSpeechClient();
+    [response] = await ttsClient.synthesizeSpeech(ttsRequest);
+  } catch (error) {
+    console.error("Google Cloud TTS API Error:", error);
+    throw new HttpsError("internal",
+        "Failed to synthesize speech with Google Cloud TTS.", error.message);
+  }
+
+  try {
+    const bucket = admin.storage().bucket();
+    const filePath = `tts/${fileName}.mp3`;
+    const file = bucket.file(filePath);
+
+    await file.save(response.audioContent);
+    console.log(`TTS audio saved to ${filePath}`);
+
+    // Make the file public
+    await file.makePublic();
+
+    // Get the public URL
+    const publicUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
+
+    // Save the URL to Firestore
+    await db.collection("tts_config").doc(fileName).set({
+      url: publicUrl,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    return {success: true, url: publicUrl};
+  } catch (error) {
+    console.error("Error saving TTS to Firebase Storage or Firestore:", error);
+    throw new HttpsError("internal", "Failed to save TTS audio.");
+  }
+});
+
 exports.translatePageTexts = onCall(async (request) => {
   const {texts, targetLanguage} = request.data;
 
@@ -118,8 +182,6 @@ exports.translatePageTexts = onCall(async (request) => {
   }
 });
 
-
-const db = getFirestore();
 const API_KEY = process.env.GEMINI_API_KEY;
 
 let genAI;
@@ -136,8 +198,7 @@ if (API_KEY) {
 } else {
   console.error(
       "Ensure GEMINI_API_KEY environment variable is set or " +
-      "directly in the Google Cloud console for deployed functions).",
-  );
+      "directly in the Google Cloud console for deployed functions).");
 }
 
 exports.generateStorySynopsisFromPdf = onCall(
@@ -189,7 +250,7 @@ exports.generateStorySynopsisFromPdf = onCall(
 
           if (oIndex === -1) {
             console.error("PDF URL path does not contain"+
-            `'/o/' marker:", pathName, "Full URL:", pdfUrl`);
+            "`'/o/' marker:", pathName, "Full URL:", pdfUrl);
             throw new Error("Invalid PDF URL format: missing '/o/' marker.");
           }
           const encodedFilePath = pathName.substring(oIndex +
@@ -458,8 +519,7 @@ exports.logAdminAction = onDocumentWritten(
       } else {
         console.warn(
             `No authenticated user found for this write to ` +
-            `${collectionName}/${documentId}. Action logged as 'system'.`,
-        );
+            `${collectionName}/${documentId}. Action logged as 'system'.`);
       }
 
       const logEntry = {
@@ -741,6 +801,57 @@ exports.approveTeacher = onCall(async (request) => {
     throw new HttpsError("internal", "Unable to approve teacher.",
         error.message);
   }
+});
+
+/**
+ * Cleans up associated data in Firestore and Storage when a story is deleted.
+ */
+exports.onStoryDelete =
+onDocumentDeleted("stories/{storyId}", async (event) => {
+  const storyId = event.params.storyId;
+  const db = getFirestore();
+  const bucket = admin.storage().bucket();
+
+  console.log(`Starting cleanup for deleted story: ${storyId}`);
+
+  // 1. Delete associated files in Cloud Storage
+  const storagePrefixes = [
+    `stories/${storyId}`,
+    `story_pdfs/${storyId}`,
+    `story_pages/${storyId}/`,
+    `story_tts/${storyId}/`,
+    `assessment_images/${storyId}/`,
+  ];
+
+  for (const prefix of storagePrefixes) {
+    try {
+      await bucket.deleteFiles({prefix: prefix});
+      console.log(`Successfully deleted files with prefix: ${prefix}`);
+    } catch (error) {
+      if (error.code !== 404) {
+        console.error(`Error deleting files with prefix ${prefix}:`, error);
+      } else {
+        console.log(`No files found with prefix ${prefix}, skipping.`);
+      }
+    }
+  }
+
+  // 2. Delete subcollections (e.g., 'readers')
+  const subcollections = await db.collection("stories")
+      .doc(storyId).listCollections();
+  for (const subcollection of subcollections) {
+    try {
+      const snapshot = await subcollection.get();
+      const deletePromises = snapshot.docs.map((doc) => doc.ref.delete());
+      await Promise.all(deletePromises);
+      console.log(`Successfully deleted subcollection: ${subcollection.id}`);
+    } catch (error) {
+      console.error(`Error deleting subcollection ${subcollection.id}:`, error);
+    }
+  }
+
+  console.log(`Cleanup finished for story: ${storyId}`);
+  return null;
 });
 
 exports.rejectTeacher = onCall(async (request) => {

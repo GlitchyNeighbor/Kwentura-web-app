@@ -103,6 +103,7 @@ const generateMoralLessonAI = httpsCallable(functions, 'generateMoralLessonFromT
 const generateStorySynopsis = httpsCallable(functions, 'generateStorySynopsisFromPdf');
 const generateQuestions = httpsCallable(functions, 'generateComprehensionQuestionsFromText');
 const translatePageTexts = httpsCallable(functions, 'translatePageTexts');
+const generateAndStoreTts = httpsCallable(functions, 'generateAndStoreTts');
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `${process.env.PUBLIC_URL}/pdf.worker.min.js`;
 
@@ -164,6 +165,17 @@ const ManageStories = () => {
   });
 
   const [formErrors, setFormErrors] = useState({});
+
+  // const generateFeedbackTTS = async () => {
+  //   try {
+  //       const generateAndStoreTts = httpsCallable(functions, 'generateAndStoreTts');
+  //       await generateAndStoreTts({ text: "Correct! Well done.", fileName: "congratulations" });
+  //       await generateAndStoreTts({ text: "Not quite right. Think about the story again.", fileName: "encouragement" });
+  //       showAlert("Feedback TTS generated successfully!");
+  //   } catch (error) {
+  //       showAlert("Error generating feedback TTS: " + error.message, "danger");
+  //   }
+  // };
 
   const navigate = useNavigate();
 
@@ -503,6 +515,37 @@ const uploadAssessmentImage = async (file, storyId, type, index) => {
     return getDownloadURL(imageRef);
 };
 
+/**
+ * Generates TTS audio for a single question and uploads it.
+ * @param {string} text The text of the question.
+ * @param {string} languageCode The language for TTS.
+ * @param {string} storyId The story ID.
+ * @param {string} type 'moral' or 'comprehension'.
+ * @param {number} index The question index.
+ * @returns {Promise<string|null>} The audio URL or null on failure.
+ */
+const generateQuestionTTS = async (text, languageCode, storyId, type, index) => {
+    if (!text || !text.trim()) return null;
+
+    try {
+        const synthesizeSpeech = httpsCallable(functions, "synthesizeSpeechGoogle");
+        const result = await synthesizeSpeech({ text, languageCode });
+
+        if (!result.data || !result.data.audioData) throw new Error("Invalid audio data from TTS function.");
+
+        const byteCharacters = atob(result.data.audioData);
+        const byteNumbers = Array.from(byteCharacters, (char) => char.charCodeAt(0));
+        const byteArray = new Uint8Array(byteNumbers);
+        const audioBlob = new Blob([byteArray], { type: "audio/mp3" });
+        const audioRef = ref(storage, `assessment_audio/${storyId}/${type}_${index}.mp3`);
+        await uploadBytes(audioRef, audioBlob);
+        return await getDownloadURL(audioRef);
+    } catch (error) {
+        console.error(`Error generating TTS for ${type} question ${index}:`, error);
+        return null;
+    }
+};
+
 const handleSubmit = async () => {
   if (!validateForm()) {
     showAlert("Please fill in all required fields", "danger");
@@ -551,10 +594,18 @@ const handleSubmit = async () => {
       formData.moralOptions.every((opt) => opt && opt.trim() !== "") &&
       formData.moralCorrectOptionIndex !== null
     ) {
+      const moralAudioUrl = await generateQuestionTTS(
+        formData.moralQuestion.trim(),
+        formData.language,
+        storyId,
+        'moral',
+        0
+      );
       storyDataPayload.moralLesson = {
         question: formData.moralQuestion.trim(),
         options: formData.moralOptions.map((opt) => opt.trim()),
         correctOptionIndex: formData.moralCorrectOptionIndex,
+        audioUrl: moralAudioUrl,
       };
     } else {
       if (isEditing && selectedStory && selectedStory.moralLesson)
@@ -565,7 +616,7 @@ const handleSubmit = async () => {
     if (formData.moralImageFile) {
       const url = await uploadAssessmentImage(formData.moralImageFile, storyId, 'moral', 0);
       if (url && storyDataPayload.moralLesson) {
-        storyDataPayload.moralLesson.imageUrl = url;
+        storyDataPayload.moralLesson.imageUrl = url; // This is correct
       }
     } else if (isEditing && selectedStory.moralLesson?.imageUrl) {
       if (storyDataPayload.moralLesson) {
@@ -581,11 +632,20 @@ const handleSubmit = async () => {
                     const newUrl = await uploadAssessmentImage(q.imageFile, storyId, 'comprehension', index);
                     if (newUrl) finalImageUrl = newUrl;
                 }
+                // Generate TTS for the comprehension question
+                const questionAudioUrl = await generateQuestionTTS(
+                    q.question,
+                    formData.language,
+                    storyId,
+                    'comprehension',
+                    index
+                );
                 return {
                     question: q.question,
                     options: q.options,
                     correctOptionIndex: q.correctOptionIndex,
                     imageUrl: finalImageUrl,
+                    audioUrl: questionAudioUrl,
                 };
             })
         );
@@ -890,6 +950,7 @@ const handleSubmit = async () => {
                 <PlusCircleFill size={18} />
                 Add Story
               </Button>
+              {/* <Button onClick={generateFeedbackTTS}>Generate Feedback TTS</Button> */}
             </div>
           </div>
 
@@ -1168,7 +1229,7 @@ const handleSubmit = async () => {
         </Container>
       </div>
 
-      {/* Story Registration/Edit Modal */} 
+      {/* Story Registration/Edit Modal */}
       <Modal show={showModal} onHide={handleCloseModal} size="lg" centered>
         <Modal.Header closeButton style={{ border: "none", background: `linear-gradient(135deg, ${COLORS.lightPink} 0%, ${COLORS.softPink} 100%)` }}>
           <Modal.Title className="w-100 text-center">
@@ -1221,7 +1282,7 @@ const handleSubmit = async () => {
           <>
             <div
               className="rounded-circle d-flex align-items-center justify-content-center mb-3"
-              style={{ 
+              style={{
                 width: "80px", 
                 height: "80px",
                 background: `linear-gradient(135deg, ${COLORS.pink} 0%, ${COLORS.secondary} 100%)`,
@@ -1503,7 +1564,7 @@ const handleSubmit = async () => {
                     className="shadow-sm"
                     style={{ 
                       backgroundColor: formData.moralCorrectOptionIndex === index ? COLORS.pink : COLORS.light,
-                      color: formData.moralCorrectOptionIndex === index ? 'white' : COLORS.dark,
+                      color: formData.moralCorrectOptionIndex === index ? 'white' :COLORS.dark,
                       borderRadius: "0 12px 12px 0",
                       borderColor: COLORS.pink,
                       fontWeight: '500',
@@ -1519,7 +1580,7 @@ const handleSubmit = async () => {
           ))}
         </Row>
         
-        {formErrors.moralLesson && !formData.moralQuestion.trim() && ( 
+        {formErrors.moralLesson && !formData.moralQuestion.trim() && (
           <Form.Text className="text-danger d-block mt-3">
             {formErrors.moralLesson}
           </Form.Text>
@@ -1764,4 +1825,3 @@ const handleSubmit = async () => {
 };
 
 export default ManageStories;
-          

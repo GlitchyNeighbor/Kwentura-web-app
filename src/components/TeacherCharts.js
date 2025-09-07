@@ -46,11 +46,13 @@ const TeacherCharts = () => {
   const [showSidebar, setShowSidebar] = useState(false);
   const [storiesData, setStoriesData] = useState([]);
   const [studentsByGradeInSectionData, setStudentsByGradeInSectionData] = useState([]);
+  const [averageScorePerStoryData, setAverageScorePerStoryData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
   const [currentTeacher, setCurrentTeacher] = useState(null);
   const [teacherSection, setTeacherSection] = useState("");
+  const [noQuizData, setNoQuizData] = useState(false);
 
   const storiesChartRef = useRef();
   const studentsGradeChartRef = useRef();
@@ -144,13 +146,64 @@ const TeacherCharts = () => {
     }
   };
 
+  const fetchAverageScorePerStory = async () => {
+    if (!teacherSection) return;
+    try {
+      const studentsQuery = query(
+        collection(db, "students"),
+        where("section", "==", teacherSection)
+      );
+      const studentsSnapshot = await getDocs(studentsQuery);
+      if (studentsSnapshot.empty) {
+        setAverageScorePerStoryData([]);
+        setNoQuizData(true);
+        return;
+      }
+
+      const storyScores = {};
+
+      for (const studentDoc of studentsSnapshot.docs) {
+        const quizScoresQuery = collection(db, "students", studentDoc.id, "quizScores");
+        const quizScoresSnapshot = await getDocs(quizScoresQuery);
+        quizScoresSnapshot.forEach(quizDoc => {
+          const data = quizDoc.data();
+          if (!storyScores[data.storyId]) {
+            storyScores[data.storyId] = { title: data.storyTitle, totalScore: 0, totalQuestions: 0, count: 0 };
+          }
+          storyScores[data.storyId].totalScore += data.score;
+          storyScores[data.storyId].totalQuestions += data.totalQuestions;
+          storyScores[data.storyId].count++;
+        });
+      }
+
+      if (Object.keys(storyScores).length === 0) {
+        setNoQuizData(true);
+      }
+
+      const chartData = Object.values(storyScores).map(story => ({
+        name: story.title,
+        averageScore: story.totalQuestions > 0 ? (story.totalScore / story.totalQuestions) * 100 : 0,
+      })).map(d => ({ ...d, averageScore: parseFloat(d.averageScore.toFixed(1)) }));
+
+      setAverageScorePerStoryData(chartData);
+
+    } catch (error) {
+      console.error("Error fetching average score data:", error);
+      throw error;
+    }
+  };
+
   useEffect(() => {
     if (teacherSection) {
       const fetchData = async () => {
         try {
           setLoading(true);
           setError(null);
-          await Promise.all([fetchPopularStoriesData(), fetchStudentsByGradeData()]);
+          await Promise.all([
+            fetchPopularStoriesData(), 
+            fetchStudentsByGradeData(),
+            fetchAverageScorePerStory()
+          ]);
         } catch (err) {
           console.error("Error loading charts data:", err);
           setError(err.message);
@@ -170,7 +223,7 @@ const TeacherCharts = () => {
           <p className="mb-1 fw-semibold" style={{ color: COLORS.dark }}>{label}</p>
           {payload.map((entry, index) => (
             <p key={index} className="mb-0" style={{ color: COLORS.pink }}>
-              {`${entry.name}: ${entry.value}${entry.name === 'Total Readers' ? ` reader${entry.value !== 1 ? 's' : ''}` : ''}`}
+              {`${entry.name}: ${entry.value}${entry.name === 'Total Readers' ? ` reader${entry.value !== 1 ? 's' : ''}` : ''}${entry.unit || ''}`}
             </p>
           ))}
         </div>
@@ -376,7 +429,7 @@ const TeacherCharts = () => {
 
           <div ref={chartsRef}>
             <Row className="g-4">
-              <Col xl={8} lg={12}>
+              <Col xl={6} lg={12} className="mb-4">
                 <div ref={storiesChartRef}>
                   <ChartCard 
                     title="Most Read Stories" 
@@ -433,8 +486,7 @@ const TeacherCharts = () => {
                   </ChartCard>
                 </div>
               </Col>
-              
-              <Col xl={4} lg={12}>
+              <Col xl={6} lg={12} className="mb-4">
                 <div ref={studentsGradeChartRef}>
                   <ChartCard 
                     title="Students Per Grade (My Section)" 
@@ -472,6 +524,53 @@ const TeacherCharts = () => {
                     )}
                   </ChartCard>
                 </div>
+              </Col>
+              <Col xl={12} lg={12}>
+                <ChartCard 
+                  ref={storiesChartRef}
+                  title="Average Score Per Story" 
+                  loading={false}
+                  onDownload={() => handleDownloadChartPdf(storiesChartRef, "average_score_chart.pdf")}
+                >
+                  {averageScorePerStoryData.length > 0 ? (
+                    <div className="chart-container">
+                      <ResponsiveContainer width="100%" height={300}>
+                        <BarChart data={averageScorePerStoryData} margin={{ top: 5, right: 30, left: 20, bottom: 60 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#FFE4E1" />
+                          <XAxis
+                            dataKey="name"
+                            angle={-45}
+                            textAnchor="end"
+                            height={80}
+                            interval={0}
+                            tick={{ fontSize: 11 }}
+                            stroke="#2D2D2D"
+                          />
+                          <YAxis
+                            stroke="#2D2D2D"
+                            fontSize={12}
+                            domain={[0, 100]}
+                            label={{
+                              value: "Average Score (%)",
+                              angle: -90,
+                              position: "insideLeft",
+                              style: { textAnchor: "middle", fill: "#2D2D2D" },
+                            }}
+                          />
+                          <Tooltip content={<CustomTooltip />} />
+                          <Bar dataKey="averageScore" name="Average Score" fill={COLORS.success} radius={[6, 6, 0, 0]} unit="%" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  ) : (
+                    <div className="d-flex align-items-center justify-content-center" style={{ height: 300 }}>
+                      <div className="text-center">
+                        <FaExclamationTriangle size={48} className="text-muted mb-3" style={{ opacity: 0.3 }} />
+                        <p className="text-muted mb-0">{noQuizData ? "No quiz data available for your section" : "Loading data..."}</p>
+                      </div>
+                    </div>
+                  )}
+                </ChartCard>
               </Col>
             </Row>
           </div>
