@@ -4,11 +4,11 @@
     "slug": "kwentura",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/kwenturaMobileIcon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/Logo.png",
+      "image": "./assets/kwenturaMobileLogo.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -17,14 +17,14 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./images/Logo.png",
+        "foregroundImage": "./images/kwenturaMobileLogo.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.kwentura.mobile",
       "versionCode": 8
     },
     "web": {
-      "favicon": "./assets/icon.png"
+      "favicon": "./assets/kwenturaMobileIcon.png"
     },
     "extra": {
       "eas": {

@@ -15,6 +15,7 @@ import { doc, getDoc, updateDoc, increment, setDoc } from 'firebase/firestore';
 import { db, auth } from '../FirebaseConfig';
 import { CommonActions } from '@react-navigation/native';
 import AppHeader from './HeaderReadStory';
+import * as Speech from 'expo-speech';
 
 const ComQuestions = ({ route, navigation }) => {
   const { storyId, storyTitle } = route.params;
@@ -63,6 +64,13 @@ const ComQuestions = ({ route, navigation }) => {
     fetchQuestions();
   }, [storyId]);
 
+  // Cleanup speech on component unmount
+  useEffect(() => {
+    return () => {
+      Speech.stop();
+    };
+  }, []);
+
   useEffect(() => {
     if (showResults && score > 0) {
       addStars(score);
@@ -99,8 +107,13 @@ const ComQuestions = ({ route, navigation }) => {
     }
 
     const currentQ = questions[currentQuestionIndex];
-    if (selectedOption && currentQ.correctAnswer && selectedOption.trim().toLowerCase() === currentQ.correctAnswer.trim().toLowerCase()) {
+    const isCorrect = selectedOption && currentQ.correctAnswer && selectedOption.trim().toLowerCase() === currentQ.correctAnswer.trim().toLowerCase();
+
+    if (isCorrect) {
       setScore(score + 1);
+      Speech.speak("That's correct! Great job!", { language: 'en-US' });
+    } else {
+      Speech.speak("Not quite, but keep trying! You're doing great.", { language: 'en-US' });
     }
 
     setSelectedOption(null);
@@ -120,8 +133,13 @@ const ComQuestions = ({ route, navigation }) => {
       return;
     }
 
-    if (selectedOption && moralLessonQuestion.correctAnswer && selectedOption.trim().toLowerCase() === moralLessonQuestion.correctAnswer.trim().toLowerCase()) {
+    const isCorrect = selectedOption && moralLessonQuestion.correctAnswer && selectedOption.trim().toLowerCase() === moralLessonQuestion.correctAnswer.trim().toLowerCase();
+
+    if (isCorrect) {
       setScore(score + 1);
+      Speech.speak("That's correct! Well done!", { language: 'en-US' });
+    } else {
+      Speech.speak("Good try! Keep learning.", { language: 'en-US' });
     }
     setShowResults(true);
   };

@@ -35,6 +35,7 @@ import AppHeader from "./Header";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Speech from 'expo-speech';
 
 const { width, height } = Dimensions.get("window");
 
@@ -102,6 +103,13 @@ const Rewards = ({ navigation }) => {
       }
     });
     return () => unsubscribeAuth();
+  }, []);
+
+  // Cleanup speech on component unmount
+  useEffect(() => {
+    return () => {
+      Speech.stop();
+    };
   }, []);
 
   // Effect to handle stars earned from quiz - REMOVED
@@ -201,6 +209,10 @@ const Rewards = ({ navigation }) => {
       // Show styled unlocked modal instead of alert
       setUnlockedReward(reward);
       setUnlockedModalVisible(true);
+
+      // Congratulate the user with speech
+      const speechMessage = `Congratulations ! You've unlocked the ${reward.title}!`;
+      Speech.speak(speechMessage, { language: 'en-US' });
 
     } catch (error) {
       console.error("Error unlocking reward:", error);
@@ -968,7 +980,10 @@ const renderAnimalReward = (reward, index) => {
           visible={unlockedModalVisible}
           transparent={true}
           animationType="fade"
-          onRequestClose={() => setUnlockedModalVisible(false)}
+          onRequestClose={() => {
+            Speech.stop();
+            setUnlockedModalVisible(false);
+          }}
         >
           <View style={styles.unlockedOverlay}>
             <View style={styles.unlockedContainer}>
@@ -1027,7 +1042,10 @@ const renderAnimalReward = (reward, index) => {
               {/* Awesome Button */}
               <TouchableOpacity
                 style={styles.unlockedAwesomeButton}
-                onPress={() => setUnlockedModalVisible(false)}
+                onPress={() => {
+                  Speech.stop();
+                  setUnlockedModalVisible(false);
+                }}
               >
                 <Text style={styles.unlockedAwesomeText}>Awesome!</Text>
               </TouchableOpacity>
@@ -1830,4 +1848,3 @@ const styles = StyleSheet.create({
 });
 
 export default Rewards;
-
