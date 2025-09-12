@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import SideMenuTeacher from "./SideMenuTeacher";
 import TopNavbar from "./TopNavbar";
 import { useNavigate } from "react-router-dom";
-import Tesseract from "tesseract.js";
 import {
   Table,
   Button,
@@ -40,7 +39,6 @@ import {
   deleteDoc,
   doc,
   serverTimestamp,
-  writeBatch,
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import * as pdfjsLib from "pdfjs-dist";
@@ -87,93 +85,20 @@ export async function convertAndUploadPdfPages(pdfFile, storyId, storage) {
 }
 
 // Extracts text from each page of a PDF file and returns an array of strings
-/**
- * Extracts text from a PDF file (browser safe).
- * Cleans kerning, removes duplicates, and can fall back to OCR if enabled.
- * @param {File} pdfFile - PDF file from input
- * @param {Object} [options]
- * @param {boolean} [options.useOcrFallback=false] - Whether to use OCR when no text is found
- * @returns {Promise<string[]>} - Array of page texts
- */
-export async function extractPdfPageTexts(pdfFile, options = {}) {
-  const { useOcrFallback = false } = options;
-
+export async function extractPdfPageTexts(pdfFile) {
   const arrayBuffer = await pdfFile.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   const pageTexts = [];
-
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
     const textContent = await page.getTextContent();
-
-    // Join text items
-    let pageText = textContent.items.map(item => item.str).join(" ");
-
-    // // Cleanup: fix kerning and spaces
-    // pageText = pageText.replace(/\s+/g, " ").trim();
-
-    // Cleanup: remove repeated consecutive phrases (basic dedupe)
-    // pageText = pageText.replace(/(\b[\w\s:;,.!?'"-]{3,}\b)(\s*\1)+/gi, "$1");
-
-    // Fallback: OCR if no text and option is enabled
-    if (useOcrFallback && (!pageText || pageText.length < 5)) {
-      const viewport = page.getViewport({ scale: 2 });
-      const canvas = document.createElement("canvas");
-      const context = canvas.getContext("2d");
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-      await page.render({ canvasContext: context, viewport }).promise;
-
-      try {
-        const ocrResult = await Tesseract.recognize(canvas, "eng");
-        pageText = ocrResult.data.text.trim();
-      } catch (ocrErr) {
-        console.error(`OCR failed on page ${i}:`, ocrErr);
-        pageText = "";
-      }
-    }
-
+    const pageText = textContent.items.map((item) => item.str).join(" ").trim();
     pageTexts.push(pageText);
   }
-
   return pageTexts;
 }
+
 const functions = getFunctions(firebaseApp);
-const synthesizeSpeechGoogle = httpsCallable(functions, "synthesizeSpeechGoogle");
-
-/**
- * Generates TTS audio for a single question and uploads it.
- * @param {string} text The text of the question.
- * @param {string} languageCode The language for TTS.
- * @param {string} storyId The story ID.
- * @param {string} type 'moral' or 'comprehension'.
- * @param {number} index The question index.
- * @returns {Promise<string|null>} The audio URL or null on failure.
- */
-const generateQuestionTTS = async (text, languageCode, storyId, type, index) => {
-    if (!text || !text.trim()) return null;
-
-    try {
-        const result = await synthesizeSpeechGoogle({ text, languageCode });
-
-        if (!result.data || !result.data.audioData) {
-            throw new Error("Invalid audio data from TTS function.");
-        }
-
-        const byteCharacters = atob(result.data.audioData);
-        const byteNumbers = Array.from(byteCharacters, (char) => char.charCodeAt(0));
-        const byteArray = new Uint8Array(byteNumbers);
-        const audioBlob = new Blob([byteArray], { type: "audio/mp3" });
-
-        const audioRef = ref(storage, `assessment_audio/${storyId}/${type}_${index}.mp3`);
-        await uploadBytes(audioRef, audioBlob);
-        return await getDownloadURL(audioRef);
-    } catch (error) {
-        console.error(`Error generating TTS for ${type} question ${index}:`, error);
-        return null;
-    }
-};
-
 const generateMoralLessonAI = httpsCallable(functions, 'generateMoralLessonFromText');
 const generateStorySynopsis = httpsCallable(functions, 'generateStorySynopsisFromPdf');
 const generateQuestions = httpsCallable(functions, 'generateComprehensionQuestionsFromText');
@@ -298,10 +223,6 @@ const ManageStories = () => {
 
     if (!formData.category.trim()) {
       errors.category = "Category is required";
-    }
-
-    if (!isEditing && !formData.pdfFile) {
-      errors.pdfFile = "A PDF file is required for a new story.";
     }
 
     if (formData.moralQuestion.trim() &&
@@ -652,21 +573,6 @@ const handleSubmit = async () => {
       }
     }
 
-    // ---- START: Added Moral Lesson TTS Generation ----
-    if (storyDataPayload.moralLesson) {
-        const moralAudioUrl = await generateQuestionTTS(
-            storyDataPayload.moralLesson.question,
-            formData.language,
-            storyId,
-            'moral',
-            0
-        );
-        if (storyDataPayload.moralLesson) {
-            storyDataPayload.moralLesson.audioUrl = moralAudioUrl;
-        }
-    }
-    // ---- END: Added Moral Lesson TTS Generation ----
-
     if (Array.isArray(formData.comprehensionQuestions) && formData.comprehensionQuestions.length > 0) {
         const processedQuestions = await Promise.all(
             formData.comprehensionQuestions.map(async (q, index) => {
@@ -675,20 +581,11 @@ const handleSubmit = async () => {
                     const newUrl = await uploadAssessmentImage(q.imageFile, storyId, 'comprehension', index);
                     if (newUrl) finalImageUrl = newUrl;
                 }
-        // Generate TTS for the comprehension question
-        const questionAudioUrl = await generateQuestionTTS(
-            q.question,
-            formData.language,
-            storyId,
-            'comprehension',
-            index
-        );
                 return {
                     question: q.question,
                     options: q.options,
                     correctOptionIndex: q.correctOptionIndex,
                     imageUrl: finalImageUrl,
-            audioUrl: questionAudioUrl,
                 };
             })
         );
@@ -846,34 +743,14 @@ const handleSubmit = async () => {
   };
 
   const confirmDelete = async () => {
-    if (!selectedStory) return;
-    const storyIdToDelete = selectedStory.id;
-
     try {
-      // Delete associated story_engagement records
-      const engagementQuery = collection(db, "story_engagement");
-      const engagementSnapshot = await getDocs(engagementQuery);
-      
-      const batch = writeBatch(db);
-      engagementSnapshot.forEach(docSnapshot => {
-        // Doc ID is in format 'userId_storyId'
-        if (docSnapshot.id.endsWith(`_${storyIdToDelete}`)) {
-          batch.delete(docSnapshot.ref);
-        }
-      });
-      
-      await batch.commit();
-
-      // Now, delete the story document itself
-      await deleteDoc(doc(db, "stories", storyIdToDelete));
-      
+      await deleteDoc(doc(db, "stories", selectedStory.id));
       setShowDeleteModal(false);
-      showAlert("Story and all related student progress/bookmarks deleted successfully!", "success");
+      showAlert("Story deleted successfully!", "success");
       fetchStoriesFromFirestore();
-
     } catch (error) {
-      showAlert("Error deleting story and related data", "danger");
-      console.error("Error during story deletion:", error);
+      showAlert("Error deleting story", "danger");
+      console.error(error);
     }
   };
 
@@ -1815,7 +1692,7 @@ const handleSubmit = async () => {
               <Button
                 className="w-100"
                 onClick={handleSubmit}
-                disabled={isSubmitting || (!isEditing && !formData.pdfFile)}
+                disabled={isSubmitting}
                 style={{
                   backgroundColor: COLORS.pink,
                   border: "none",

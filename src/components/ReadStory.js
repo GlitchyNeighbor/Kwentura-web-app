@@ -172,6 +172,7 @@ const ReadStory = () => {
   const [currentFlipIndex, setCurrentFlipIndex] = useState(0);
   const [assessmentHovered, setAssessmentHovered] = useState(false);
 
+  const [isFlipbookInitialized, setIsFlipbookInitialized] = useState(false);
   // --- START: New states for translation ---
   const [currentLanguage, setCurrentLanguage] = useState(null);
   const [displayedPageTexts, setDisplayedPageTexts] = useState([]);
@@ -480,26 +481,29 @@ const ReadStory = () => {
   useEffect(() => {
     // Use the new ttsAudioData state which is language-aware
     if (showFullscreenModal && ttsAudioData.length > 0 && !ttsAudioLoading) {
-      const initializeFirstPage = () => {
-        stopTts();
-        setCurrentFlipIndex(0);
-        const audioDataForFirstPage = ttsAudioData.find(d => d.pageNumber === 1);
-        if (audioDataForFirstPage) {
-          const audio = new Audio(audioDataForFirstPage.audioUrl);
-          setTtsAudio(audio);
-          setTimepoints(audioDataForFirstPage.timepoints || []);
-          setIsPlaying(true);
-          setCurrentPageNumber(0);
-          audio.play().catch(e => console.error("Error playing initial TTS:", e));
-          // When the first page audio ends, automatically play the second if it exists
-          audio.onended = () => stopTts();
-        }
-      };
-      initializeFirstPage();
+      if (!isFlipbookInitialized) {
+        const initializeFirstPage = () => {
+          stopTts();
+          setCurrentFlipIndex(0);
+          const audioDataForFirstPage = ttsAudioData.find(d => d.pageNumber === 1);
+          if (audioDataForFirstPage) {
+            const audio = new Audio(audioDataForFirstPage.audioUrl);
+            setTtsAudio(audio);
+            setTimepoints(audioDataForFirstPage.timepoints || []);
+            setIsPlaying(true);
+            setCurrentPageNumber(0);
+            audio.play().catch(e => console.error("Error playing initial TTS:", e));
+            // When the first page audio ends, automatically play the second if it exists
+            audio.onended = () => stopTts();
+          }
+        };
+        initializeFirstPage();
+        setIsFlipbookInitialized(true);
+      }
     } else if (!showFullscreenModal || ttsAudioLoading) {
       stopTts();
     }
-  }, [showFullscreenModal, ttsAudioData, ttsAudioLoading, stopTts]);
+  }, [showFullscreenModal, ttsAudioData, ttsAudioLoading, stopTts, isFlipbookInitialized]);
 
   useEffect(() => {
     if (ttsAudio && timepoints && timepoints.length > 0 && isPlaying) {
@@ -534,6 +538,7 @@ const ReadStory = () => {
   }, [stopTts]);
 
   const handleOpenFullscreen = () => {
+    setIsFlipbookInitialized(false); // Reset on open
     setShowFullscreenModal(true);
   };
 

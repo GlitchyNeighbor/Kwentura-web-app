@@ -640,7 +640,7 @@ const AdminDashboard = () => {
 
           {/* Charts Row 2 */}
           <Row className="g-4 mb-4">
-            <Col xl={6} lg={12}>
+            <Col>
               <ChartCard title="Students per Section" loading={false}>
                 <div className="chart-container">
                   <ResponsiveContainer width="100%" height={300}>
@@ -675,7 +675,7 @@ const AdminDashboard = () => {
                 </div>
               </ChartCard>
             </Col>
-            <Col xl={6} lg={12}>
+            {/* <Col xl={6} lg={12}>
               <ChartCard title="User Retention" loading={false}>
                 <div className="chart-container">
                   <ResponsiveContainer width="100%" height={300}>
@@ -709,7 +709,7 @@ const AdminDashboard = () => {
                   </ResponsiveContainer>
                 </div>
               </ChartCard>
-            </Col>
+            </Col> */}
           </Row>
 
           {/* Engagement Cards - Updated styling */}

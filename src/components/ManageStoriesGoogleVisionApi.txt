@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import SideMenuTeacher from "./SideMenuTeacher";
 import TopNavbar from "./TopNavbar";
 import { useNavigate } from "react-router-dom";
-import Tesseract from "tesseract.js";
 import {
   Table,
   Button,
@@ -40,146 +39,19 @@ import {
   deleteDoc,
   doc,
   serverTimestamp,
-  writeBatch,
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import * as pdfjsLib from "pdfjs-dist";
 
 // Converts PDF to images, uploads to Firebase Storage, returns array of URLs
 export async function convertAndUploadPdfPages(pdfFile, storyId, storage) {
-  const arrayBuffer = await pdfFile.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-
-  // Create an array of promises for all pages
-  const pagePromises = [];
-  for (let i = 1; i <= pdf.numPages; i++) {
-    pagePromises.push(
-      (async (pageNum) => {
-        const page = await pdf.getPage(pageNum);
-        const viewport = page.getViewport({ scale: 2 });
-        const canvas = document.createElement("canvas");
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        const context = canvas.getContext("2d");
-        await page.render({ canvasContext: context, viewport }).promise;
-        const blob = await new Promise((resolve) =>
-          canvas.toBlob(resolve, "image/png")
-        );
-        const imageRef = ref(storage, `story_pages/${storyId}/page_${pageNum}.png`);
-        await uploadBytes(imageRef, blob);
-        const url = await getDownloadURL(imageRef);
-        canvas.width = 0;
-        canvas.height = 0;
-        return { pageNum, url };
-      })(i)
-    );
-  }
-
-  // Wait for all pages to finish processing/uploading in parallel
-  const pageResults = await Promise.all(pagePromises);
-
-  // Sort by page number to ensure correct order
-  const pageImageUrls = pageResults
-    .sort((a, b) => a.pageNum - b.pageNum)
-    .map((result) => result.url);
-
-  return pageImageUrls;
+  // This function is now a placeholder. The new backend pipeline should handle this.
+  // You will need a library like pdf-poppler or pdf-image in your Cloud Function environment.
+  console.warn("convertAndUploadPdfPages is now a placeholder. Implement server-side.");
+  return [];
 }
 
-// Extracts text from each page of a PDF file and returns an array of strings
-/**
- * Extracts text from a PDF file (browser safe).
- * Cleans kerning, removes duplicates, and can fall back to OCR if enabled.
- * @param {File} pdfFile - PDF file from input
- * @param {Object} [options]
- * @param {boolean} [options.useOcrFallback=false] - Whether to use OCR when no text is found
- * @returns {Promise<string[]>} - Array of page texts
- */
-export async function extractPdfPageTexts(pdfFile, options = {}) {
-  const { useOcrFallback = false } = options;
-
-  const arrayBuffer = await pdfFile.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-  const pageTexts = [];
-
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const textContent = await page.getTextContent();
-
-    // Join text items
-    let pageText = textContent.items.map(item => item.str).join(" ");
-
-    // // Cleanup: fix kerning and spaces
-    // pageText = pageText.replace(/\s+/g, " ").trim();
-
-    // Cleanup: remove repeated consecutive phrases (basic dedupe)
-    // pageText = pageText.replace(/(\b[\w\s:;,.!?'"-]{3,}\b)(\s*\1)+/gi, "$1");
-
-    // Fallback: OCR if no text and option is enabled
-    if (useOcrFallback && (!pageText || pageText.length < 5)) {
-      const viewport = page.getViewport({ scale: 2 });
-      const canvas = document.createElement("canvas");
-      const context = canvas.getContext("2d");
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-      await page.render({ canvasContext: context, viewport }).promise;
-
-      try {
-        const ocrResult = await Tesseract.recognize(canvas, "eng");
-        pageText = ocrResult.data.text.trim();
-      } catch (ocrErr) {
-        console.error(`OCR failed on page ${i}:`, ocrErr);
-        pageText = "";
-      }
-    }
-
-    pageTexts.push(pageText);
-  }
-
-  return pageTexts;
-}
 const functions = getFunctions(firebaseApp);
-const synthesizeSpeechGoogle = httpsCallable(functions, "synthesizeSpeechGoogle");
-
-/**
- * Generates TTS audio for a single question and uploads it.
- * @param {string} text The text of the question.
- * @param {string} languageCode The language for TTS.
- * @param {string} storyId The story ID.
- * @param {string} type 'moral' or 'comprehension'.
- * @param {number} index The question index.
- * @returns {Promise<string|null>} The audio URL or null on failure.
- */
-const generateQuestionTTS = async (text, languageCode, storyId, type, index) => {
-    if (!text || !text.trim()) return null;
-
-    try {
-        const result = await synthesizeSpeechGoogle({ text, languageCode });
-
-        if (!result.data || !result.data.audioData) {
-            throw new Error("Invalid audio data from TTS function.");
-        }
-
-        const byteCharacters = atob(result.data.audioData);
-        const byteNumbers = Array.from(byteCharacters, (char) => char.charCodeAt(0));
-        const byteArray = new Uint8Array(byteNumbers);
-        const audioBlob = new Blob([byteArray], { type: "audio/mp3" });
-
-        const audioRef = ref(storage, `assessment_audio/${storyId}/${type}_${index}.mp3`);
-        await uploadBytes(audioRef, audioBlob);
-        return await getDownloadURL(audioRef);
-    } catch (error) {
-        console.error(`Error generating TTS for ${type} question ${index}:`, error);
-        return null;
-    }
-};
-
-const generateMoralLessonAI = httpsCallable(functions, 'generateMoralLessonFromText');
-const generateStorySynopsis = httpsCallable(functions, 'generateStorySynopsisFromPdf');
-const generateQuestions = httpsCallable(functions, 'generateComprehensionQuestionsFromText');
-const translatePageTexts = httpsCallable(functions, 'translatePageTexts');
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = `${process.env.PUBLIC_URL}/pdf.worker.min.js`;
+const processStoryPipeline = httpsCallable(functions, 'processStoryPipeline');
 
 const formatDate = (timestamp) => {
   if (!timestamp) return "N/A";
@@ -196,18 +68,6 @@ const formatDate = (timestamp) => {
   }
 };
 
-const MAX_TTS_CHARS = 1500;
-
-function splitTextForTTS(text, maxLength = MAX_TTS_CHARS) {
-  const chunks = [];
-  let current = 0;
-  while (current < text.length) {
-    chunks.push(text.substring(current, current + maxLength));
-    current += maxLength;
-  }
-  return chunks;
-}
-
 const ManageStories = () => {
   const [showSidebar, setShowSidebar] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -217,8 +77,8 @@ const ManageStories = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [alert, setAlert] = useState({ show: false, message: "", type: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
 
-  const [isGeneratingMoral, setIsGeneratingMoral] = useState(false);
   const [stories, setStories] = useState([]);
 
   const [formData, setFormData] = useState({
@@ -298,17 +158,6 @@ const ManageStories = () => {
 
     if (!formData.category.trim()) {
       errors.category = "Category is required";
-    }
-
-    if (!isEditing && !formData.pdfFile) {
-      errors.pdfFile = "A PDF file is required for a new story.";
-    }
-
-    if (formData.moralQuestion.trim() &&
-        (!formData.moralOptions.every(opt => opt && opt.trim() !== "") ||
-         formData.moralOptions.length !== 3 ||
-         formData.moralCorrectOptionIndex === null)) {
-      errors.moralLesson = "If a moral question is provided, all options must be filled and a correct answer selected.";
     }
 
     setFormErrors(errors);
@@ -420,6 +269,8 @@ const ManageStories = () => {
     }
   };
 
+  const previewPdfInsights = httpsCallable(functions, "previewPdfInsights");
+
   const handlePdfUpload = async (e) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -431,389 +282,94 @@ const ManageStories = () => {
         showAlert("PDF size should be less than 50MB", "danger");
         return;
       }
+      setFormData(prev => ({ ...prev, pdfFile: file, pdfPreviewName: file.name }));
+      setIsGeneratingQuestions(true); // Start loading
 
-      const baseMoralLesson = (isEditing && selectedStory && selectedStory.moralLesson)
-        ? selectedStory.moralLesson
-        : { question: "", options: ["", "", ""], correctOptionIndex: null };
+      // Upload temporarily to storage
+      const tempRef = ref(storage, `preview_pdfs/${file.name}`);
+      await uploadBytes(tempRef, file);
+      const tempUrl = await getDownloadURL(tempRef);
 
-      showAlert("Processing PDF, attempting to generate moral lesson...", "info");
-      setIsGeneratingMoral(true);
-
+      // Call backend preview
       try {
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        let fullText = "";
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const textContent = await page.getTextContent();
-          fullText +=
-            textContent.items.map((item) => item.str).join(" ") + "\n";
-        }
-        const extractedText = fullText.trim();
-
-        let finalMoralLesson = baseMoralLesson;
-        let finalComprehensionQuestions = [];
-        if (extractedText) {
-          try {
-            const [moralLessonResult, questionsResult] = await Promise.all([
-              generateMoralLessonAI({ text: extractedText }),
-              generateQuestions({ text: extractedText })
-            ]);
-
-            const aiMoralLesson = moralLessonResult.data;
-            if (aiMoralLesson.question && Array.isArray(aiMoralLesson.options) && aiMoralLesson.options.length === 3 && typeof aiMoralLesson.correctOptionIndex === 'number') {
-              finalMoralLesson = aiMoralLesson;
-              showAlert("Moral lesson question and options generated!", "success");
-            } else {
-              showAlert("Generated moral lesson from AI is not in the expected format.", "warning");
-            }
-
-            const aiQuestions = questionsResult.data.questions;
-            if (
-              Array.isArray(aiQuestions) &&
-              aiQuestions.length === 3 &&
-              aiQuestions.every(q =>
-                q.question &&
-                Array.isArray(q.options) &&
-                q.options.length === 3 &&
-                typeof q.correctOptionIndex === "number"
-              )
-            ) {
-              finalComprehensionQuestions = aiQuestions;
-              showAlert("Comprehension questions generated!", "success");
-            } else {
-              showAlert("Generated questions from AI are not in the expected format.", "warning");
-            }
-          } catch (aiError) {
-            console.error("Error generating moral lesson or questions via Firebase Function:", aiError);
-            showAlert(`Failed to generate moral lesson or questions: ${aiError.message}.`, "warning");
-          }
-        } else {
-          showAlert("No text could be extracted from the PDF. Moral lesson not generated.", "warning");
-        }
-
-        setFormData(prevFormData => ({
-          ...prevFormData,
-          pdfFile: file,
-          pdfPreviewName: file.name,
-          moralQuestion: finalMoralLesson?.question || "",
-          moralOptions: Array.isArray(finalMoralLesson?.options) && finalMoralLesson.options.length === 3 ? finalMoralLesson.options : ["", "", ""],
-          moralCorrectOptionIndex: finalMoralLesson?.correctOptionIndex !== undefined ? finalMoralLesson.correctOptionIndex : null,
-          comprehensionQuestions: finalComprehensionQuestions,
+        const result = await previewPdfInsights({ pdfUrl: tempUrl });
+        console.log("Result from previewPdfInsights:", result);
+        setFormData(prev => ({
+          ...prev,
+          moralQuestion: result.data.moralLesson.question,
+          moralOptions: result.data.moralLesson.options,
+          moralCorrectOptionIndex: result.data.moralLesson.correctOptionIndex,
+          comprehensionQuestions: result.data.comprehension.questions,
         }));
-
-      } catch (error) {
-        console.error("Error processing PDF or generating moral lesson:", error);
-        showAlert(`Failed to process PDF or generate moral lesson: ${error.message}. You can still upload the file.`, "danger");
-      } finally {
-        setIsGeneratingMoral(false);
-      }
-    }
-  };
-
-/**
- * Generates TTS audio for a given set of page texts and language.
- * @param {string[]} texts - Array of texts for each page.
- * @param {string} languageCode - The language code for TTS (e.g., 'en-US').
- * @param {string} storyId - The ID of the story to associate the audio with.
- * @returns {Promise<{audioData: object[], failedPages: number[]}>}
- */
-const generateTtsForLanguage = async (texts, languageCode, storyId) => {
-  const synthesizeSpeech = httpsCallable(functions, "synthesizeSpeechGoogle");
-  const audioPromises = [];
-  const failedPages = [];
-
-  for (let i = 0; i < texts.length; i++) {
-    const textToSpeak = texts[i];
-    const pageNumber = i + 1;
-
-    if (!textToSpeak || !textToSpeak.trim()) {
-      failedPages.push(pageNumber);
-      continue;
-    }
-
-    const ttsChunks = splitTextForTTS(textToSpeak);
-    ttsChunks.forEach((chunk, chunkIdx) => {
-      const promise = synthesizeSpeech({ text: chunk, languageCode })
-        .then(async (result) => {
-          if (!result.data || !result.data.audioData || typeof result.data.audioData !== "string") {
-            console.warn(`Invalid audio data for page ${pageNumber} (lang: ${languageCode}), skipping.`);
-            failedPages.push(pageNumber);
-            return null;
-          }
-          const byteCharacters = atob(result.data.audioData);
-          const byteNumbers = Array.from(byteCharacters, (char) => char.charCodeAt(0));
-          const byteArray = new Uint8Array(byteNumbers);
-          const audioBlob = new Blob([byteArray], { type: "audio/mp3" });
-          const audioRef = ref(storage, `story_tts/${storyId}/page_${pageNumber}_chunk${chunkIdx + 1}_${languageCode}.mp3`);
-          await uploadBytes(audioRef, audioBlob);
-          const audioUrl = await getDownloadURL(audioRef);
-          return { audioUrl, timepoints: result.data.timepoints || [], pageNumber };
-        })
-        .catch((err) => {
-          console.error(`Error generating TTS for page ${pageNumber} (lang: ${languageCode}):`, err);
-          failedPages.push(pageNumber);
-          return null;
-        });
-      audioPromises.push(promise);
-    });
-  }
-
-  const audioDataResults = await Promise.all(audioPromises);
-  return {
-    audioData: audioDataResults.filter(Boolean),
-    failedPages: [...new Set(failedPages)],
-  };
-};
-
-/**
- * Uploads an image for an assessment question to Firebase Storage.
- * @param {File} file The image file to upload.
- * @param {string} storyId The ID of the story.
- * @param {string} type The type of question ('moral' or 'comprehension').
- * @param {number} index The index of the question.
- * @returns {Promise<string|null>} The download URL of the uploaded image.
- */
-const uploadAssessmentImage = async (file, storyId, type, index) => {
-    if (!file) return null;
-    const filePath = `assessment_images/${storyId}/${type}_${index}_${Date.now()}_${file.name}`;
-    const imageRef = ref(storage, filePath);
-    await uploadBytes(imageRef, file);
-    return getDownloadURL(imageRef);
-};
-
-const handleSubmit = async () => {
-  if (!validateForm()) {
-    showAlert("Please fill in all required fields", "danger");
-    return;
-  }
-  setIsSubmitting(true);
-
-  let finalPdfUrl = isEditing && selectedStory ? selectedStory.pdfUrl || "" : "";
-  let finalImageUrl = isEditing && selectedStory ? selectedStory.image || "" : "";
-
-  try {
-    const storyId = isEditing && selectedStory 
-      ? selectedStory.id 
-      : doc(collection(db, "stories")).id; // Generate a new ID upfront
-
-    const uploadTasks = [];
-    if (formData.imageFile) {
-      uploadTasks.push(uploadImageAndGetUrl(formData.imageFile, storyId));
-    } else {
-      uploadTasks.push(Promise.resolve(finalImageUrl));
-    }
-    if (formData.pdfFile) {
-      uploadTasks.push(uploadPdfAndGetUrl(formData.pdfFile, storyId));
-    } else {
-      uploadTasks.push(Promise.resolve(finalPdfUrl));
-    }
-
-    let [uploadedImageUrl, uploadedPdfUrl] = await Promise.all(uploadTasks);
-    finalImageUrl = uploadedImageUrl;
-    finalPdfUrl = uploadedPdfUrl;
-
-    const storyDataPayload = {
-      title: formData.title,
-      author: formData.author, 
-      category: formData.category,
-      pdfUrl: finalPdfUrl,
-      image: finalImageUrl,
-      language: formData.language, // Use the new language field
-      comprehensionQuestions: Array.isArray(formData.comprehensionQuestions) && formData.comprehensionQuestions.length === 3
-        ? formData.comprehensionQuestions
-        : [],
-    };
-
-    if (
-      formData.moralQuestion &&
-      formData.moralOptions.every((opt) => opt && opt.trim() !== "") &&
-      formData.moralCorrectOptionIndex !== null
-    ) {
-      storyDataPayload.moralLesson = {
-        question: formData.moralQuestion.trim(),
-        options: formData.moralOptions.map((opt) => opt.trim()),
-        correctOptionIndex: formData.moralCorrectOptionIndex,
-      };
-    } else {
-      if (isEditing && selectedStory && selectedStory.moralLesson)
-        storyDataPayload.moralLesson = null;
-    }
-
-    // Handle assessment image uploads
-    if (formData.moralImageFile) {
-      const url = await uploadAssessmentImage(formData.moralImageFile, storyId, 'moral', 0);
-      if (url && storyDataPayload.moralLesson) {
-        storyDataPayload.moralLesson.imageUrl = url;
-      }
-    } else if (isEditing && selectedStory.moralLesson?.imageUrl) {
-      if (storyDataPayload.moralLesson) {
-        storyDataPayload.moralLesson.imageUrl = selectedStory.moralLesson.imageUrl;
-      }
-    }
-
-    // ---- START: Added Moral Lesson TTS Generation ----
-    if (storyDataPayload.moralLesson) {
-        const moralAudioUrl = await generateQuestionTTS(
-            storyDataPayload.moralLesson.question,
-            formData.language,
-            storyId,
-            'moral',
-            0
-        );
-        if (storyDataPayload.moralLesson) {
-            storyDataPayload.moralLesson.audioUrl = moralAudioUrl;
-        }
-    }
-    // ---- END: Added Moral Lesson TTS Generation ----
-
-    if (Array.isArray(formData.comprehensionQuestions) && formData.comprehensionQuestions.length > 0) {
-        const processedQuestions = await Promise.all(
-            formData.comprehensionQuestions.map(async (q, index) => {
-                let finalImageUrl = q.imageUrl || null; // Keep existing URL by default
-                if (q.imageFile) { // If a new file is uploaded
-                    const newUrl = await uploadAssessmentImage(q.imageFile, storyId, 'comprehension', index);
-                    if (newUrl) finalImageUrl = newUrl;
-                }
-        // Generate TTS for the comprehension question
-        const questionAudioUrl = await generateQuestionTTS(
-            q.question,
-            formData.language,
-            storyId,
-            'comprehension',
-            index
-        );
-                return {
-                    question: q.question,
-                    options: q.options,
-                    correctOptionIndex: q.correctOptionIndex,
-                    imageUrl: finalImageUrl,
-            audioUrl: questionAudioUrl,
-                };
-            })
-        );
-        storyDataPayload.comprehensionQuestions = processedQuestions;
-    }
-
-    let randomStoryId, storyRef;
-    if (isEditing && selectedStory) {
-      storyRef = doc(db, "stories", selectedStory.id);
-      storyDataPayload.dateModified = serverTimestamp(); // Use server timestamp for modification
-      await updateDoc(storyRef, storyDataPayload);
-      randomStoryId = selectedStory.id;
-    } else {
-      // For new stories
-      storyDataPayload.createdAt = serverTimestamp(); // Use server timestamp for creation
-      storyDataPayload.dateModified = serverTimestamp(); // Initial modification date same as creation
-
-      randomStoryId = storyId;
-      storyRef = doc(db, "stories", storyId);
-      storyDataPayload.storyId = storyId;
-
-      await setDoc(storyRef, storyDataPayload);
-    }
-
-    // PDF-to-image and text extraction in parallel (if PDF present)
-    if (formData.pdfFile && randomStoryId) {
-      try {
-        showAlert("Splitting PDF into images and extracting text...", "info");
-        const [imageUrls, pageTexts] = await Promise.all([
-          convertAndUploadPdfPages(formData.pdfFile, randomStoryId, storage),
-          extractPdfPageTexts(formData.pdfFile),
-        ]);
-
-        // ---- START: Translation Logic ----
-        showAlert("Translating page content...", "info");
-        const sourceLang = formData.language;
-        const targetLang = sourceLang === 'en-US' ? 'tl' : 'en'; // Target for Google Translate API
-        const targetLangCode = sourceLang === 'en-US' ? 'fil-PH' : 'en-US'; // Target for saving in Firestore
-        let translatedTexts = [];
-        try {
-          const translationResult = await translatePageTexts({
-            texts: pageTexts,
-            targetLanguage: targetLang
-          });
-          translatedTexts = translationResult.data.translatedTexts;
-          
-          await updateDoc(doc(db, "stories", randomStoryId), {
-            translations: { [targetLangCode]: translatedTexts }
-          });
-          showAlert("Page content translated successfully!", "success");
-        } catch (translationError) {
-          console.error("Translation failed:", translationError);
-          showAlert(`Translation failed: ${translationError.message}`, "danger");
-          // Continue without translation if it fails
-        }
-        // ---- END: Translation Logic ----
-        
-        // ---- START: Bilingual TTS Generation ----
-        showAlert("Generating audio for all languages...", "info");
-        const ttsPayload = {};
-        
-        // Generate for source language using the single 'language' field
-        const sourceTtsResult = await generateTtsForLanguage(pageTexts, sourceLang, randomStoryId);
-        ttsPayload[sourceLang] = sourceTtsResult.audioData;
-        if (sourceTtsResult.failedPages.length > 0) {
-          showAlert(`TTS failed for some pages in ${sourceLang}: ${sourceTtsResult.failedPages.join(", ")}`, "warning");
-        }
-
-        // Generate for target language if translation was successful
-        if (translatedTexts.length > 0) {
-          // Use targetLangCode for TTS voice selection (e.g., 'fil-PH')
-          const targetTtsResult = await generateTtsForLanguage(translatedTexts, targetLangCode, randomStoryId);
-          ttsPayload[targetLangCode] = targetTtsResult.audioData;
-          if (targetTtsResult.failedPages.length > 0) {
-            showAlert(`TTS failed for some pages in ${targetLangCode}: ${targetTtsResult.failedPages.join(", ")}`, "warning");
-          }
-        }
-        
-        const storyUpdate = {
-          pageImages: imageUrls,
-          pageTexts,
-          ttsAudio: ttsPayload,
-        };
-        await updateDoc(doc(db, "stories", randomStoryId), storyUpdate);
-        showAlert("PDF processed and all audio generated.", "success");
+        showAlert("Preview generated successfully!", "success");
       } catch (err) {
-        showAlert("Failed to split PDF into pages: " + err.message, "danger");
+        console.error("Preview failed", err);
+        showAlert("Could not generate preview", "danger");
+      } finally {
+        setIsGeneratingQuestions(false); // End loading
       }
     }
-
-    // Trigger synopsis generation in the background (if PDF present)
-    if (finalPdfUrl && randomStoryId) {
-      showAlert("Synopsis generation initiated in the background...", "info");
-      await generateStorySynopsis({ storyId: randomStoryId })
-        .then(() => {
-          showAlert("Synopsis generation process completed. It will appear in the story details soon.", "success");
-        })
-        .catch((error) => {
-          console.error("Error calling generateStorySynopsis function:", error);
-          showAlert(`Synopsis generation failed to start: ${error.message}`, "danger");
-        });
-    }
-
-    fetchStoriesFromFirestore();
-    resetFormAndCloseModal(); // Use the new reset function
-  } catch (error) {
-    showAlert("Error saving story: " + error.message, "danger");
-    console.error("Error saving story:", error);
-  } finally {
-    setIsSubmitting(false);
-  }
-};
-
-  const uploadImageAndGetUrl = async (file, storyId) => {
-    if (!file) return "";
-    const imageRef = ref(storage, `stories/${storyId}_${file.name}`);
-    await uploadBytes(imageRef, file);
-    return await getDownloadURL(imageRef);
   };
 
-  const uploadPdfAndGetUrl = async (file, storyId) => {
-    if (!file) return "";
-    const pdfRef = ref(storage, `story_pdfs/${storyId}_${file.name}`);
-    await uploadBytes(pdfRef, file);
-    return await getDownloadURL(pdfRef);
+  const handleSubmit = async () => {
+    if (!validateForm()) {
+      showAlert("Please fill in all required fields", "danger");
+      return;
+    } 
+    setIsSubmitting(true);
+
+    try {
+      const storyId = isEditing && selectedStory ? selectedStory.id : doc(collection(db, "stories")).id;
+
+      let finalImageUrl = isEditing && selectedStory ? selectedStory.image || "" : "";
+      if (formData.imageFile) {
+        const imageRef = ref(storage, `stories/${storyId}_${formData.imageFile.name}`);
+        await uploadBytes(imageRef, formData.imageFile);
+        finalImageUrl = await getDownloadURL(imageRef);
+      }
+
+      let finalPdfUrl = isEditing && selectedStory ? selectedStory.pdfUrl || "" : "";
+      if (formData.pdfFile) {
+        const pdfRef = ref(storage, `story_pdfs/${storyId}_${formData.pdfFile.name}`);
+        await uploadBytes(pdfRef, formData.pdfFile);
+        finalPdfUrl = await getDownloadURL(pdfRef);
+      }
+
+      const storyDataPayload = {
+        title: formData.title,
+        author: formData.author,
+        category: formData.category,
+        pdfUrl: finalPdfUrl,
+        image: finalImageUrl,
+        language: formData.language,
+        storyId: storyId,
+      };
+
+      if (isEditing) {
+        storyDataPayload.dateModified = serverTimestamp();
+        await updateDoc(doc(db, "stories", storyId), storyDataPayload);
+      } else {
+        storyDataPayload.createdAt = serverTimestamp();
+        storyDataPayload.dateModified = serverTimestamp();
+        await setDoc(doc(db, "stories", storyId), storyDataPayload);
+      }
+
+      if (formData.pdfFile) {
+        showAlert("Story saved. Starting background processing for PDF...", "info");
+        await processStoryPipeline({ storyId });
+        showAlert("PDF processing pipeline finished.", "success");
+      } else {
+        showAlert(isEditing ? "Story updated successfully!" : "Story created successfully!", "success");
+      }
+
+      fetchStoriesFromFirestore();
+      resetFormAndCloseModal();
+    } catch (error) {
+      showAlert("Error saving story: " + error.message, "danger");
+      console.error("Error saving story:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleEditStory = (story) => {
@@ -846,34 +402,14 @@ const handleSubmit = async () => {
   };
 
   const confirmDelete = async () => {
-    if (!selectedStory) return;
-    const storyIdToDelete = selectedStory.id;
-
     try {
-      // Delete associated story_engagement records
-      const engagementQuery = collection(db, "story_engagement");
-      const engagementSnapshot = await getDocs(engagementQuery);
-      
-      const batch = writeBatch(db);
-      engagementSnapshot.forEach(docSnapshot => {
-        // Doc ID is in format 'userId_storyId'
-        if (docSnapshot.id.endsWith(`_${storyIdToDelete}`)) {
-          batch.delete(docSnapshot.ref);
-        }
-      });
-      
-      await batch.commit();
-
-      // Now, delete the story document itself
-      await deleteDoc(doc(db, "stories", storyIdToDelete));
-      
+      await deleteDoc(doc(db, "stories", selectedStory.id));
       setShowDeleteModal(false);
-      showAlert("Story and all related student progress/bookmarks deleted successfully!", "success");
+      showAlert("Story deleted successfully!", "success");
       fetchStoriesFromFirestore();
-
     } catch (error) {
-      showAlert("Error deleting story and related data", "danger");
-      console.error("Error during story deletion:", error);
+      showAlert("Error deleting story", "danger");
+      console.error(error);
     }
   };
 
@@ -1013,6 +549,7 @@ const handleSubmit = async () => {
                 <PlusCircleFill size={18} />
                 Add Story
               </Button>
+              {/* <Button onClick={generateFeedbackTTS}>Generate Feedback TTS</Button> */}
             </div>
           </div>
 
@@ -1291,7 +828,7 @@ const handleSubmit = async () => {
         </Container>
       </div>
 
-      {/* Story Registration/Edit Modal */} 
+      {/* Story Registration/Edit Modal */}
       <Modal show={showModal} onHide={handleCloseModal} size="lg" centered>
         <Modal.Header closeButton style={{ border: "none", background: `linear-gradient(135deg, ${COLORS.lightPink} 0%, ${COLORS.softPink} 100%)` }}>
           <Modal.Title className="w-100 text-center">
@@ -1344,7 +881,7 @@ const handleSubmit = async () => {
           <>
             <div
               className="rounded-circle d-flex align-items-center justify-content-center mb-3"
-              style={{ 
+              style={{
                 width: "80px", 
                 height: "80px",
                 background: `linear-gradient(135deg, ${COLORS.pink} 0%, ${COLORS.secondary} 100%)`,
@@ -1489,6 +1026,7 @@ const handleSubmit = async () => {
                 variant="outline-primary"
                 onClick={() => document.getElementById("pdfUpload").click()}
                 className="me-2"
+                disabled={isGeneratingQuestions}
                 style={{
                   borderColor: COLORS.pink,
                   color: COLORS.pink,
@@ -1496,7 +1034,12 @@ const handleSubmit = async () => {
                   padding: "8px 20px"
                 }}
               >
-                {formData.pdfFile
+                {isGeneratingQuestions ? (
+                  <>
+                    <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
+                    Processing PDF...
+                  </>
+                ) : formData.pdfFile
                   ? "Change PDF"
                   : formData.pdfPreviewName &&
                     formData.pdfPreviewName.startsWith("http")
@@ -1558,16 +1101,13 @@ const handleSubmit = async () => {
       <Card.Header className="border-0" style={{ backgroundColor: COLORS.light, borderRadius: "15px 15px 0 0" }}>
         <h6 className="mb-0 fw-bold" style={{ color: COLORS.pink }}>
           Moral Lesson
-          {isGeneratingMoral && (
-            <Spinner animation="border" size="sm" className="ms-2" />
-          )}
         </h6>
       </Card.Header>
       <Card.Body className="p-4">
-        {isGeneratingMoral && (
-          <div className="d-flex align-items-center mb-3 p-3" style={{ backgroundColor: '#f8f9fa', borderRadius: '10px' }}>
-            <Spinner animation="border" size="sm" className="me-2" />
-            <span className="text-muted">Generating moral lesson...</span>
+        {isGeneratingQuestions && (
+          <div className="text-center py-3">
+            <Spinner animation="border" role="status" className="me-2" style={{ color: COLORS.pink }} />
+            <p className="text-muted mb-0">Generating moral lesson...</p>
           </div>
         )}
         
@@ -1581,10 +1121,10 @@ const handleSubmit = async () => {
             value={formData.moralQuestion || ""}
             onChange={handleInputChange}
             placeholder="e.g., What is the main lesson of the story?"
-            disabled={isGeneratingMoral || isSubmitting}
             isInvalid={!!formErrors.moralLesson}
             className="border-0 shadow-sm"
             style={{ borderRadius: "12px" }}
+            disabled={isGeneratingQuestions}
           />
           <Form.Control.Feedback type="invalid" className={formErrors.moralLesson ? 'd-block' : ''}>
             {formErrors.moralLesson}
@@ -1607,26 +1147,26 @@ const handleSubmit = async () => {
                       setFormData(prev => ({ ...prev, moralOptions: newOptions }));
                     }}
                     placeholder={`Enter option ${String.fromCharCode(65 + index)}`}
-                    disabled={isGeneratingMoral || isSubmitting}
                     className="border-0 shadow-sm"
                     style={{ borderRadius: "12px 0 0 12px" }}
+                    disabled={isGeneratingQuestions}
                   />
                   <InputGroup.Radio
                     name="correctMoralOption"
                     aria-label={`Set Option ${index + 1} as correct`}
                     checked={formData.moralCorrectOptionIndex === index}
                     onChange={() => setFormData(prev => ({ ...prev, moralCorrectOptionIndex: index }))}
-                    disabled={isGeneratingMoral || isSubmitting}
                     style={{ 
                       backgroundColor: formData.moralCorrectOptionIndex === index ? COLORS.pink : 'transparent',
                       borderColor: COLORS.pink 
                     }}
+                    disabled={isGeneratingQuestions}
                   />
                   <InputGroup.Text 
                     className="shadow-sm"
                     style={{ 
                       backgroundColor: formData.moralCorrectOptionIndex === index ? COLORS.pink : COLORS.light,
-                      color: formData.moralCorrectOptionIndex === index ? 'white' : COLORS.dark,
+                      color: formData.moralCorrectOptionIndex === index ? 'white' :COLORS.dark,
                       borderRadius: "0 12px 12px 0",
                       borderColor: COLORS.pink,
                       fontWeight: '500',
@@ -1642,7 +1182,7 @@ const handleSubmit = async () => {
           ))}
         </Row>
         
-        {formErrors.moralLesson && !formData.moralQuestion.trim() && ( 
+        {formErrors.moralLesson && !formData.moralQuestion.trim() && (
           <Form.Text className="text-danger d-block mt-3">
             {formErrors.moralLesson}
           </Form.Text>
@@ -1651,7 +1191,7 @@ const handleSubmit = async () => {
         {/* Moral Lesson Image Upload */}
         <Form.Group className="mt-3">
           <Form.Label className="fw-medium">Question Image (Optional)</Form.Label>
-          <Form.Control type="file" size="sm" accept="image/*" onChange={(e) => handleAssessmentImageUpload(e, 'moralLesson')} />
+          <Form.Control type="file" size="sm" accept="image/*" onChange={(e) => handleAssessmentImageUpload(e, 'moralLesson')} disabled={isGeneratingQuestions} />
           {formData.moralImagePreviewUrl && (
             <div className="mt-2">
               <img 
@@ -1685,6 +1225,12 @@ const handleSubmit = async () => {
         </h6>
       </Card.Header>
       <Card.Body className="p-4">
+        {isGeneratingQuestions && (
+          <div className="text-center py-3">
+            <Spinner animation="border" role="status" className="me-2" style={{ color: COLORS.pink }} />
+            <p className="text-muted mb-0">Generating comprehension questions...</p>
+          </div>
+        )}
         {Array.isArray(formData.comprehensionQuestions) && formData.comprehensionQuestions.length > 0 ? (
           <div className="w-100">
             {formData.comprehensionQuestions.map((q, idx) => (
@@ -1693,7 +1239,7 @@ const handleSubmit = async () => {
                 {/* Comprehension Question Image Upload */}
                 <Form.Group className="mb-3">
                   <Form.Label className="fw-medium small">Image for Question {idx + 1} (Optional)</Form.Label>
-                  <Form.Control type="file" size="sm" accept="image/*" onChange={(e) => handleAssessmentImageUpload(e, 'comprehensionQuestions', idx)} />
+                  <Form.Control type="file" size="sm" accept="image/*" onChange={(e) => handleAssessmentImageUpload(e, 'comprehensionQuestions', idx)} disabled={isGeneratingQuestions} />
                   {(q.imagePreviewUrl || q.imageUrl) && (
                     <div className="mt-2">
                       <img 
@@ -1720,9 +1266,9 @@ const handleSubmit = async () => {
                       }));
                     }}
                     placeholder={`Enter question ${idx + 1}`}
-                    disabled={isGeneratingMoral || isSubmitting}
                     className="border-0 shadow-sm"
                     style={{ borderRadius: "10px" }}
+                    disabled={isGeneratingQuestions}
                   />
                 </Form.Group>
                 
@@ -1743,13 +1289,13 @@ const handleSubmit = async () => {
                             }));
                           }}
                           placeholder={`Option ${String.fromCharCode(65 + oidx)}`}
-                          disabled={isGeneratingMoral || isSubmitting}
                           className="border-0 shadow-sm"
                           style={{ 
                             backgroundColor: q.correctOptionIndex === oidx ? '#FFE4E1' : 'white',
                             borderColor: COLORS.pink,
                             borderRadius: "10px 0 0 10px"
                           }}
+                          disabled={isGeneratingQuestions}
                         />
                         <InputGroup.Text 
                           className="shadow-sm"
@@ -1771,6 +1317,7 @@ const handleSubmit = async () => {
                               comprehensionQuestions: updatedQuestions
                             }));
                           }}
+                          disabled={isGeneratingQuestions}
                         >
                           {q.correctOptionIndex === oidx ? "Correct" : "Incorrect"}
                         </InputGroup.Text>
@@ -1799,7 +1346,7 @@ const handleSubmit = async () => {
                 variant="outline-light"
                 className="w-100"
                 onClick={handleCloseModal}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isGeneratingQuestions}
                 style={{ 
                   borderColor: COLORS.pink, 
                   color: COLORS.pink,
@@ -1815,7 +1362,7 @@ const handleSubmit = async () => {
               <Button
                 className="w-100"
                 onClick={handleSubmit}
-                disabled={isSubmitting || (!isEditing && !formData.pdfFile)}
+                disabled={isSubmitting}
                 style={{
                   backgroundColor: COLORS.pink,
                   border: "none",
@@ -1887,4 +1434,3 @@ const handleSubmit = async () => {
 };
 
 export default ManageStories;
-          

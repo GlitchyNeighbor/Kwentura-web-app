@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Container, Row, Col, Card, Alert, Spinner, Badge } from "react-bootstrap";
-import { FaBook, FaUserGraduate, FaChartBar, FaUsers, FaExclamationTriangle, FaClock, FaEye, FaClipboardCheck } from "react-icons/fa";
+import { FaBook, FaUserGraduate, FaChartBar, FaUsers, FaExclamationTriangle, FaClock, FaEye, FaClipboardCheck, FaBookmark } from "react-icons/fa";
 import SidebarMenuTeacher from "./SideMenuTeacher";
 import TopNavbar from "./TopNavbar";
 import "../scss/custom.scss";
@@ -21,6 +21,7 @@ import {
 } from "recharts";
 import { getAuth, onAuthStateChanged } from "firebase/auth"; 
 import { doc, getDoc } from "firebase/firestore"; 
+import { generateContent } from "../services/AIService.js";
 
 // Constants - Updated to match AdminDashboard.js color scheme
 const COLORS = {
@@ -41,7 +42,8 @@ const CHART_COLORS = {
   stories: "#FF69B4",
   students: "#98FB98",
   grades: ["#98FB98", "#FF69B4", "#FFB6C1", "#DDA0DD", "#87CEEB"],
-  approval: ["#98FB98", "#FFB6C1", "#FF69B4", "#DDA0DD"]
+  approval: ["#98FB98", "#FFB6C1", "#FF69B4", "#DDA0DD"],
+  bookmarks: "#FFD700"
 };
 
 const CARD_STYLES = {
@@ -50,6 +52,7 @@ const CARD_STYLES = {
   grades: { bg: "#FFF0F5", icon: "#FFB6C1" },
   approval: { bg: "#FFE4E1", icon: "#FF69B4" },
   quizzes: { bg: "#F0FFF0", icon: "#28a745" },
+  bookmarks: { bg: "#FFFACD", icon: "#FFD700" },
 };
 
 // Custom hooks
@@ -123,6 +126,42 @@ const fetchPopularStoriesData = async () => {
     };
   } catch (error) {
     console.error("Error fetching popular stories data:", error);
+    return {
+      totalCount: 0,
+      chartData: [],
+    };
+  }
+};
+
+const fetchStoryBookmarkCounts = async () => {
+  try {
+    const storiesRef = collection(db, "stories");
+    const storiesSnapshot = await getDocs(storiesRef);
+    const stories = storiesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), bookmarks: 0 }));
+
+    const studentsRef = collection(db, "students");
+    const studentsSnapshot = await getDocs(studentsRef);
+
+    for (const studentDoc of studentsSnapshot.docs) {
+        const bookmarksRef = collection(db, "students", studentDoc.id, "bookmarks");
+        const bookmarksSnapshot = await getDocs(bookmarksRef);
+        bookmarksSnapshot.forEach(favDoc => {
+          const story = stories.find(s => s.id === favDoc.id);
+        if (story) {
+          story.bookmarks++;
+        }
+      });
+    }
+
+    const sortedStories = stories.sort((a, b) => b.bookmarks - a.bookmarks).slice(0, 10);
+    const totalBookmarks = stories.reduce((sum, story) => sum + story.bookmarks, 0);
+
+    return {
+      totalCount: totalBookmarks,
+      chartData: sortedStories,
+    };
+  } catch (error) {
+    console.error("Error fetching story bookmark counts:", error);
     return {
       totalCount: 0,
       chartData: [],
@@ -207,7 +246,7 @@ const fetchQuizScoresData = async (section) => {
         totalQuizzes++;
 
         if (!storyScores[quizData.storyId]) {
-          storyScores[quizData.storyId] = { title: quizData.storyTitle, totalScore: 0, totalQuestions: 0 };
+          storyScores[quizData.storyId] = { title: quizData.storyTitle, totalScore: 0, totalQuestions: 0, genre: quizData.genre || 'Unknown' };
         }
         storyScores[quizData.storyId].totalScore += quizData.score;
         storyScores[quizData.storyId].totalQuestions += quizData.totalQuestions;
@@ -218,6 +257,7 @@ const fetchQuizScoresData = async (section) => {
     const averageScorePerStory = Object.values(storyScores).map(story => ({
       name: story.title,
       averageScore: story.totalQuestions > 0 ? parseFloat(((story.totalScore / story.totalQuestions) * 100).toFixed(1)) : 0,
+      genre: story.genre
     }));
     return { averageScore: averageScore.toFixed(1), totalQuizzes, averageScorePerStory };
   } catch (error) {
@@ -283,6 +323,30 @@ const ChartCard = ({ title, children, loading, noDataMessage, height = 300 }) =>
   </Card>
 );
 
+const AIInsightCard = ({ insight, loading }) => (
+    <Card className="shadow-sm h-100 border-0" style={{ borderRadius: "12px", background: 'linear-gradient(135deg, #E6E6FA 0%, #D8BFD8 100%)' }}>
+      <Card.Header 
+        className="border-0 py-4"
+        style={{ 
+          borderRadius: "12px 12px 0 0",
+          backgroundColor: 'rgba(255, 255, 255, 0.5)'
+        }}
+      >
+        <h5 className="mb-0 fw-semibold text-dark">AI-Powered Insight</h5>
+      </Card.Header>
+      <Card.Body className="p-4 d-flex align-items-center justify-content-center">
+        {loading ? (
+          <div className="text-center">
+            <Spinner size="lg" style={{ color: COLORS.primary }} className="mb-3" />
+            <p className="text-muted mb-0">Generating insight...</p>
+          </div>
+        ) : (
+          <p className="text-dark" style={{ fontSize: '1rem' }}>{insight}</p>
+        )}
+      </Card.Body>
+    </Card>
+  );
+
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
@@ -305,15 +369,47 @@ const TeacherDashboard = () => {
   const [dashboardData, setDashboardData] = useState({
     stories: { totalCount: 0, chartData: [] },
     students: { totalCount: 0, gradeData: [], approvalData: [] },
-    quizzes: { averageScore: 0, totalQuizzes: 0, averageScorePerStory: [] }
+    quizzes: { averageScore: 0, totalQuizzes: 0, averageScorePerStory: [] },
+    bookmarkedStories: { totalCount: 0, chartData: [] }
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [aiInsight, setAiInsight] = useState('');
+  const [loadingInsight, setLoadingInsight] = useState(false);
 
   const { currentTeacher, teacherSection, authLoading, error: authError } = useAuth();
 
   const toggleSidebar = useCallback(() => {
     setShowSidebar(prev => !prev);
+  }, []);
+
+  const fetchAIInsight = useCallback(async (data) => {
+    setLoadingInsight(true);
+    try {
+        const prompt = `As an expert educational analyst, 
+        review the following data for a teacher's class and provide a single, 
+        concise, and actionable insight. The data includes popular stories (by number of reads) 
+        and the average quiz score for each story.
+
+        Popular Stories (Top 10 by reads):
+        ${JSON.stringify(data.stories.chartData)}
+        
+        Average Quiz Score per Story:
+        ${JSON.stringify(data.quizzes.averageScorePerStory)}
+        
+        Based on this data, what is one concrete suggestion you can give to the teacher? 
+        For example, if a story category has high readership and high scores, 
+        you might suggest adding more stories of that type. 
+        Frame the insight directly to the teacher. Keep it to 2-3 sentences.`;
+
+      const insight = await generateContent(prompt);
+      setAiInsight(insight);
+    } catch (err) {
+      console.error("Error generating AI insight:", err);
+      setAiInsight("Could not generate an insight at this time. Please check the data and try again later.");
+    } finally {
+      setLoadingInsight(false);
+    }
   }, []);
 
   const fetchDashboardData = useCallback(async () => {
@@ -323,24 +419,28 @@ const TeacherDashboard = () => {
     setError(null);
 
     try {
-      const [storiesResult, studentsResult, quizzesResult] = await Promise.all([
+      const [storiesResult, studentsResult, quizzesResult, bookmarkedResult] = await Promise.all([
         fetchPopularStoriesData(),
         fetchStudentsData(teacherSection),
-        fetchQuizScoresData(teacherSection)
+        fetchQuizScoresData(teacherSection),
+        fetchStoryBookmarkCounts()
       ]);
 
-      setDashboardData({
+      const data = {
         stories: storiesResult,
         students: studentsResult,
-        quizzes: quizzesResult
-      });
+        quizzes: quizzesResult,
+        bookmarkedStories: bookmarkedResult
+      };
+      setDashboardData(data);
+      fetchAIInsight(data);
     } catch (err) {
       console.error("Error fetching dashboard data:", err);
       setError("Failed to load dashboard data. Please refresh the page.");
     } finally {
       setLoading(false);
     }
-  }, [currentTeacher, teacherSection]);
+  }, [currentTeacher, teacherSection, fetchAIInsight]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -412,9 +512,9 @@ const TeacherDashboard = () => {
               tick={{ fontSize: 12, fill: COLORS.dark }}
               tickLine={false}
               axisLine={false}
-              label={{ 
-                value: 'Number of Reads', 
-                angle: -90, 
+              label={{
+                value: 'Number of Reads',
+                angle: -90,
                 position: 'insideLeft',
                 style: { textAnchor: 'middle', fill: COLORS.dark, fontSize: '12px' }
               }}
@@ -470,6 +570,78 @@ const TeacherDashboard = () => {
             </div>
           </div>
         </div>
+      </div>
+    );
+  }, []);
+
+  const renderBookmarkChart = useMemo(() => (data) => {
+    if (!data.length) return null;
+
+    // Truncate long titles for better display
+    const processedData = data.map(item => ({
+      ...item,
+      shortTitle: item.title.length > 8 ? `${item.title.substring(0, 8)}...` : item.title,
+      fullTitle: item.title
+    }));
+
+    return (
+      <div className="chart-container">
+        <ResponsiveContainer width="100%" height={400}>
+          <BarChart 
+            data={processedData} 
+            margin={{ top: 50, right: 20, left: 50, bottom: 20 }}
+            barCategoryGap="30%"
+          >
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#FFE4E1" />
+            <XAxis 
+              dataKey="shortTitle" 
+              tick={{ fontSize: 9, fill: COLORS.dark }}
+              angle={-45}
+              textAnchor="end"
+              height={90}
+              tickLine={false}
+              axisLine={false}
+              interval={0}
+              tickMargin={15}
+            />
+            <YAxis 
+              allowDecimals={false} 
+              tick={{ fontSize: 12, fill: COLORS.dark }}
+              tickLine={false}
+              axisLine={false}
+              label={{
+                value: 'Number of Bookmarks',
+                angle: -90,
+                position: 'insideLeft',
+                style: { textAnchor: 'middle', fill: COLORS.dark, fontSize: '12px' }
+              }}
+            />
+            <Tooltip 
+              content={({ active, payload, label }) => {
+                if (active && payload && payload.length) {
+                  const data = payload[0].payload;
+                  return (
+                    <div className="bg-white p-3 border rounded shadow-sm" style={{ borderColor: CHART_COLORS.bookmarks, maxWidth: '200px' }}>
+                      <p className="mb-2 fw-semibold text-dark" style={{ fontSize: '0.9rem' }}>
+                        {data.fullTitle}
+                      </p>
+                      <p className="mb-1" style={{ color: CHART_COLORS.bookmarks, fontSize: '0.85rem' }}>
+                        🔖 Bookmarks: <span className="fw-bold">{data.bookmarks}</span>
+                      </p>
+                    </div>
+                  );
+                }
+                return null;
+              }}
+            />
+            <Bar
+              dataKey="bookmarks"
+              name="Bookmarks"
+              fill={CHART_COLORS.bookmarks}
+              radius={[4, 4, 0, 0]}
+            />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
     );
   }, []);
@@ -531,7 +703,7 @@ const TeacherDashboard = () => {
               padding: "20px",
               height: "100vh",
               flex: 1,
-              background: 'linear-gradient(135deg, #FFF5F8 0%, #FFE8F1 50%, #F8E8FF 100%)',              
+              background: 'linear-gradient(135deg, #FFF5F8 0%, #FFE8F1 50%, #F8E8FF 100%)',
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -564,7 +736,7 @@ const TeacherDashboard = () => {
               padding: "24px",
               height: "calc(100vh - 56px)",
               flex: 1,
-              background: 'linear-gradient(135deg, #FFF5F8 0%, #FFE8F1 50%, #F8E8FF 100%)',              
+              background: 'linear-gradient(135deg, #FFF5F8 0%, #FFE8F1 50%, #F8E8FF 100%)',
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -658,10 +830,10 @@ const TeacherDashboard = () => {
             </Col>
             <Col lg={3} md={6}>
               <MetricCard
-                title="Grade Levels"
-                value={dashboardData.students.gradeData.length}
-                icon={FaUsers}
-                style={CARD_STYLES.grades}
+                title="Total Bookmarks"
+                value={dashboardData.bookmarkedStories.totalCount}
+                icon={FaBookmark}
+                style={CARD_STYLES.bookmarks}
                 loading={loading}
               />
             </Col>
@@ -689,24 +861,22 @@ const TeacherDashboard = () => {
           <Row className="g-4 mb-4">
             <Col xl={6} lg={12}>
               <ChartCard
-                title="Popular Stories"
+                title="Popular Stories by Reads"
                 loading={loading}
                 noDataMessage="No story data available yet"
-                height={450}
               >
                 {renderBarChart(dashboardData.stories.chartData)}
               </ChartCard>
             </Col>
             <Col xl={6} lg={12}>
-                <ChartCard
-                  title="Average Score Per Story"
-                  loading={loading}
-                  noDataMessage="No quiz data available for your section"
-                  height={450}
-                >
-                  {renderQuizChart(dashboardData.quizzes.averageScorePerStory)}
-                </ChartCard>
-              </Col>
+              <ChartCard
+                title="Popular Stories by Bookmarks"
+                loading={loading}
+                noDataMessage="No bookmark data available yet"
+              >
+                {renderBookmarkChart(dashboardData.bookmarkedStories.chartData)}
+              </ChartCard>
+            </Col>
           </Row>
 
           {/* Additional Chart Row */}
@@ -807,6 +977,18 @@ const TeacherDashboard = () => {
                     )}
                   </Card.Body>
                 </Card>
+              </Col>
+                <Col xl={6} lg={12}>
+                    <AIInsightCard insight={aiInsight} loading={loadingInsight} />
+                </Col>
+              <Col xl={6} lg={12}>
+                <ChartCard
+                  title="Average Score Per Story"
+                  loading={loading}
+                  noDataMessage="No quiz data available for your section"
+                >
+                  {renderQuizChart(dashboardData.quizzes.averageScorePerStory)}
+                </ChartCard>
               </Col>
             </Row>
           )}

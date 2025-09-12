@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import SideMenuTeacher from "./SideMenuTeacher";
 import TopNavbar from "./TopNavbar";
 import { useNavigate } from "react-router-dom";
-import Tesseract from "tesseract.js";
 import {
   Table,
   Button,
@@ -40,17 +39,16 @@ import {
   deleteDoc,
   doc,
   serverTimestamp,
-  writeBatch,
 } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import * as pdfjsLib from "pdfjs-dist";
+import { ref, uploadBytes, getDownloadURL, } from "firebase/storage";
+import { getDoc } from "firebase/firestore";
 
-// Converts PDF to images, uploads to Firebase Storage, returns array of URLs
+// Converts PDF pages → PNG images → uploads to Firebase Storage → returns URLs
 export async function convertAndUploadPdfPages(pdfFile, storyId, storage) {
   const arrayBuffer = await pdfFile.arrayBuffer();
+  const pdfjsLib = await import("pdfjs-dist");
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 
-  // Create an array of promises for all pages
   const pagePromises = [];
   for (let i = 1; i <= pdf.numPages; i++) {
     pagePromises.push(
@@ -61,125 +59,47 @@ export async function convertAndUploadPdfPages(pdfFile, storyId, storage) {
         canvas.width = viewport.width;
         canvas.height = viewport.height;
         const context = canvas.getContext("2d");
+
         await page.render({ canvasContext: context, viewport }).promise;
-        const blob = await new Promise((resolve) =>
-          canvas.toBlob(resolve, "image/png")
-        );
+
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
         const imageRef = ref(storage, `story_pages/${storyId}/page_${pageNum}.png`);
         await uploadBytes(imageRef, blob);
         const url = await getDownloadURL(imageRef);
-        canvas.width = 0;
-        canvas.height = 0;
+
         return { pageNum, url };
       })(i)
     );
   }
 
-  // Wait for all pages to finish processing/uploading in parallel
   const pageResults = await Promise.all(pagePromises);
-
-  // Sort by page number to ensure correct order
-  const pageImageUrls = pageResults
-    .sort((a, b) => a.pageNum - b.pageNum)
-    .map((result) => result.url);
-
-  return pageImageUrls;
+  return pageResults.sort((a, b) => a.pageNum - b.pageNum).map((res) => res.url);
 }
 
-// Extracts text from each page of a PDF file and returns an array of strings
-/**
- * Extracts text from a PDF file (browser safe).
- * Cleans kerning, removes duplicates, and can fall back to OCR if enabled.
- * @param {File} pdfFile - PDF file from input
- * @param {Object} [options]
- * @param {boolean} [options.useOcrFallback=false] - Whether to use OCR when no text is found
- * @returns {Promise<string[]>} - Array of page texts
- */
-export async function extractPdfPageTexts(pdfFile, options = {}) {
-  const { useOcrFallback = false } = options;
 
-  const arrayBuffer = await pdfFile.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-  const pageTexts = [];
+// // Extracts text from each page of a PDF file and returns an array of strings
+// export async function extractPdfPageTexts(pdfFile) {
+//   const arrayBuffer = await pdfFile.arrayBuffer();
+//   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+//   const pageTexts = [];
+//   for (let i = 1; i <= pdf.numPages; i++) {
+//     const page = await pdf.getPage(i);
+//     const textContent = await page.getTextContent();
+//     const pageText = textContent.items.map((item) => item.str).join(" ").trim();
+//     pageTexts.push(pageText);
+//   }
+//   return pageTexts;
+// }
 
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const textContent = await page.getTextContent();
-
-    // Join text items
-    let pageText = textContent.items.map(item => item.str).join(" ");
-
-    // // Cleanup: fix kerning and spaces
-    // pageText = pageText.replace(/\s+/g, " ").trim();
-
-    // Cleanup: remove repeated consecutive phrases (basic dedupe)
-    // pageText = pageText.replace(/(\b[\w\s:;,.!?'"-]{3,}\b)(\s*\1)+/gi, "$1");
-
-    // Fallback: OCR if no text and option is enabled
-    if (useOcrFallback && (!pageText || pageText.length < 5)) {
-      const viewport = page.getViewport({ scale: 2 });
-      const canvas = document.createElement("canvas");
-      const context = canvas.getContext("2d");
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-      await page.render({ canvasContext: context, viewport }).promise;
-
-      try {
-        const ocrResult = await Tesseract.recognize(canvas, "eng");
-        pageText = ocrResult.data.text.trim();
-      } catch (ocrErr) {
-        console.error(`OCR failed on page ${i}:`, ocrErr);
-        pageText = "";
-      }
-    }
-
-    pageTexts.push(pageText);
-  }
-
-  return pageTexts;
-}
 const functions = getFunctions(firebaseApp);
-const synthesizeSpeechGoogle = httpsCallable(functions, "synthesizeSpeechGoogle");
-
-/**
- * Generates TTS audio for a single question and uploads it.
- * @param {string} text The text of the question.
- * @param {string} languageCode The language for TTS.
- * @param {string} storyId The story ID.
- * @param {string} type 'moral' or 'comprehension'.
- * @param {number} index The question index.
- * @returns {Promise<string|null>} The audio URL or null on failure.
- */
-const generateQuestionTTS = async (text, languageCode, storyId, type, index) => {
-    if (!text || !text.trim()) return null;
-
-    try {
-        const result = await synthesizeSpeechGoogle({ text, languageCode });
-
-        if (!result.data || !result.data.audioData) {
-            throw new Error("Invalid audio data from TTS function.");
-        }
-
-        const byteCharacters = atob(result.data.audioData);
-        const byteNumbers = Array.from(byteCharacters, (char) => char.charCodeAt(0));
-        const byteArray = new Uint8Array(byteNumbers);
-        const audioBlob = new Blob([byteArray], { type: "audio/mp3" });
-
-        const audioRef = ref(storage, `assessment_audio/${storyId}/${type}_${index}.mp3`);
-        await uploadBytes(audioRef, audioBlob);
-        return await getDownloadURL(audioRef);
-    } catch (error) {
-        console.error(`Error generating TTS for ${type} question ${index}:`, error);
-        return null;
-    }
-};
-
 const generateMoralLessonAI = httpsCallable(functions, 'generateMoralLessonFromText');
 const generateStorySynopsis = httpsCallable(functions, 'generateStorySynopsisFromPdf');
 const generateQuestions = httpsCallable(functions, 'generateComprehensionQuestionsFromText');
+const extractTextWithVision = httpsCallable(functions, "extractTextWithVision");
 const translatePageTexts = httpsCallable(functions, 'translatePageTexts');
+const generateAndStoreTts = httpsCallable(functions, 'generateAndStoreTts');
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = `${process.env.PUBLIC_URL}/pdf.worker.min.js`;
+// pdfjsLib.GlobalWorkerOptions.workerSrc = `${process.env.PUBLIC_URL}/pdf.worker.min.js`;
 
 const formatDate = (timestamp) => {
   if (!timestamp) return "N/A";
@@ -240,6 +160,17 @@ const ManageStories = () => {
 
   const [formErrors, setFormErrors] = useState({});
 
+  // const generateFeedbackTTS = async () => {
+  //   try {
+  //       const generateAndStoreTts = httpsCallable(functions, 'generateAndStoreTts');
+  //       await generateAndStoreTts({ text: "Correct! Well done.", fileName: "congratulations" });
+  //       await generateAndStoreTts({ text: "Not quite right. Think about the story again.", fileName: "encouragement" });
+  //       showAlert("Feedback TTS generated successfully!");
+  //   } catch (error) {
+  //       showAlert("Error generating feedback TTS: " + error.message, "danger");
+  //   }
+  // };
+
   const navigate = useNavigate();
 
   const COLORS = {
@@ -298,10 +229,6 @@ const ManageStories = () => {
 
     if (!formData.category.trim()) {
       errors.category = "Category is required";
-    }
-
-    if (!isEditing && !formData.pdfFile) {
-      errors.pdfFile = "A PDF file is required for a new story.";
     }
 
     if (formData.moralQuestion.trim() &&
@@ -420,96 +347,70 @@ const ManageStories = () => {
     }
   };
 
-  const handlePdfUpload = async (e) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      if (file.type !== "application/pdf") {
-        showAlert("Please select a PDF file.", "danger");
-        return;
-      }
-      if (file.size > 50 * 1024 * 1024) {
-        showAlert("PDF size should be less than 50MB", "danger");
-        return;
-      }
-
-      const baseMoralLesson = (isEditing && selectedStory && selectedStory.moralLesson)
-        ? selectedStory.moralLesson
-        : { question: "", options: ["", "", ""], correctOptionIndex: null };
-
-      showAlert("Processing PDF, attempting to generate moral lesson...", "info");
-      setIsGeneratingMoral(true);
-
-      try {
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        let fullText = "";
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const textContent = await page.getTextContent();
-          fullText +=
-            textContent.items.map((item) => item.str).join(" ") + "\n";
-        }
-        const extractedText = fullText.trim();
-
-        let finalMoralLesson = baseMoralLesson;
-        let finalComprehensionQuestions = [];
-        if (extractedText) {
-          try {
-            const [moralLessonResult, questionsResult] = await Promise.all([
-              generateMoralLessonAI({ text: extractedText }),
-              generateQuestions({ text: extractedText })
-            ]);
-
-            const aiMoralLesson = moralLessonResult.data;
-            if (aiMoralLesson.question && Array.isArray(aiMoralLesson.options) && aiMoralLesson.options.length === 3 && typeof aiMoralLesson.correctOptionIndex === 'number') {
-              finalMoralLesson = aiMoralLesson;
-              showAlert("Moral lesson question and options generated!", "success");
-            } else {
-              showAlert("Generated moral lesson from AI is not in the expected format.", "warning");
-            }
-
-            const aiQuestions = questionsResult.data.questions;
-            if (
-              Array.isArray(aiQuestions) &&
-              aiQuestions.length === 3 &&
-              aiQuestions.every(q =>
-                q.question &&
-                Array.isArray(q.options) &&
-                q.options.length === 3 &&
-                typeof q.correctOptionIndex === "number"
-              )
-            ) {
-              finalComprehensionQuestions = aiQuestions;
-              showAlert("Comprehension questions generated!", "success");
-            } else {
-              showAlert("Generated questions from AI are not in the expected format.", "warning");
-            }
-          } catch (aiError) {
-            console.error("Error generating moral lesson or questions via Firebase Function:", aiError);
-            showAlert(`Failed to generate moral lesson or questions: ${aiError.message}.`, "warning");
-          }
-        } else {
-          showAlert("No text could be extracted from the PDF. Moral lesson not generated.", "warning");
-        }
-
-        setFormData(prevFormData => ({
-          ...prevFormData,
-          pdfFile: file,
-          pdfPreviewName: file.name,
-          moralQuestion: finalMoralLesson?.question || "",
-          moralOptions: Array.isArray(finalMoralLesson?.options) && finalMoralLesson.options.length === 3 ? finalMoralLesson.options : ["", "", ""],
-          moralCorrectOptionIndex: finalMoralLesson?.correctOptionIndex !== undefined ? finalMoralLesson.correctOptionIndex : null,
-          comprehensionQuestions: finalComprehensionQuestions,
-        }));
-
-      } catch (error) {
-        console.error("Error processing PDF or generating moral lesson:", error);
-        showAlert(`Failed to process PDF or generate moral lesson: ${error.message}. You can still upload the file.`, "danger");
-      } finally {
-        setIsGeneratingMoral(false);
-      }
+const handlePdfUpload = async (e) => {
+  if (e.target.files && e.target.files[0]) {
+    const file = e.target.files[0];
+    if (file.type !== "application/pdf") {
+      showAlert("Please select a PDF file.", "danger");
+      return;
     }
-  };
+    if (file.size > 50 * 1024 * 1024) {
+      showAlert("PDF size should be less than 50MB", "danger");
+      return;
+    }
+
+    const storyId = doc(collection(db, "stories")).id;
+
+    try {
+      // Upload PDF to Firebase Storage
+      const pdfRef = ref(storage, `story_pdfs/${storyId}_${file.name}`);
+      await uploadBytes(pdfRef, file);
+      const pdfUrl = await getDownloadURL(pdfRef);
+
+      showAlert("Running OCR with Vision AI...", "info");
+
+      // Call Vision OCR function
+      const result = await extractTextWithVision({
+        storyId,
+        pdfStoragePath: `story_pdfs/${storyId}_${file.name}`,
+      });
+
+      const extractedText = result.data.text || "";
+
+      console.log("Extracted text (Vision AI):", extractedText);
+
+      // Generate AI moral lesson & questions
+      let finalMoralLesson = {};
+      let finalComprehensionQuestions = [];
+
+      if (extractedText.trim()) {
+        const [moralLessonResult, questionsResult] = await Promise.all([
+          generateMoralLessonAI({ text: extractedText }),
+          generateQuestions({ text: extractedText }),
+        ]);
+
+        finalMoralLesson = moralLessonResult.data || {};
+        finalComprehensionQuestions = questionsResult.data.questions || [];
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        pdfFile: file,
+        pdfPreviewName: file.name,
+        moralQuestion: finalMoralLesson.question || "",
+        moralOptions: finalMoralLesson.options || ["", "", ""],
+        moralCorrectOptionIndex: finalMoralLesson.correctOptionIndex ?? null,
+        comprehensionQuestions: finalComprehensionQuestions,
+      }));
+
+      showAlert("OCR + AI generation complete!", "success");
+    } catch (err) {
+      console.error("OCR/AI error:", err);
+      showAlert("Failed to process with Vision AI: " + err.message, "danger");
+    }
+  }
+};
+
 
 /**
  * Generates TTS audio for a given set of page texts and language.
@@ -582,6 +483,37 @@ const uploadAssessmentImage = async (file, storyId, type, index) => {
     return getDownloadURL(imageRef);
 };
 
+/**
+ * Generates TTS audio for a single question and uploads it.
+ * @param {string} text The text of the question.
+ * @param {string} languageCode The language for TTS.
+ * @param {string} storyId The story ID.
+ * @param {string} type 'moral' or 'comprehension'.
+ * @param {number} index The question index.
+ * @returns {Promise<string|null>} The audio URL or null on failure.
+ */
+const generateQuestionTTS = async (text, languageCode, storyId, type, index) => {
+    if (!text || !text.trim()) return null;
+
+    try {
+        const synthesizeSpeech = httpsCallable(functions, "synthesizeSpeechGoogle");
+        const result = await synthesizeSpeech({ text, languageCode });
+
+        if (!result.data || !result.data.audioData) throw new Error("Invalid audio data from TTS function.");
+
+        const byteCharacters = atob(result.data.audioData);
+        const byteNumbers = Array.from(byteCharacters, (char) => char.charCodeAt(0));
+        const byteArray = new Uint8Array(byteNumbers);
+        const audioBlob = new Blob([byteArray], { type: "audio/mp3" });
+        const audioRef = ref(storage, `assessment_audio/${storyId}/${type}_${index}.mp3`);
+        await uploadBytes(audioRef, audioBlob);
+        return await getDownloadURL(audioRef);
+    } catch (error) {
+        console.error(`Error generating TTS for ${type} question ${index}:`, error);
+        return null;
+    }
+};
+
 const handleSubmit = async () => {
   if (!validateForm()) {
     showAlert("Please fill in all required fields", "danger");
@@ -595,8 +527,9 @@ const handleSubmit = async () => {
   try {
     const storyId = isEditing && selectedStory 
       ? selectedStory.id 
-      : doc(collection(db, "stories")).id; // Generate a new ID upfront
+      : doc(collection(db, "stories")).id;
 
+    // --- Upload image & PDF ---
     const uploadTasks = [];
     if (formData.imageFile) {
       uploadTasks.push(uploadImageAndGetUrl(formData.imageFile, storyId));
@@ -613,36 +546,48 @@ const handleSubmit = async () => {
     finalImageUrl = uploadedImageUrl;
     finalPdfUrl = uploadedPdfUrl;
 
+    // --- Base story payload ---
     const storyDataPayload = {
       title: formData.title,
-      author: formData.author, 
+      author: formData.author,
       category: formData.category,
       pdfUrl: finalPdfUrl,
       image: finalImageUrl,
-      language: formData.language, // Use the new language field
-      comprehensionQuestions: Array.isArray(formData.comprehensionQuestions) && formData.comprehensionQuestions.length === 3
-        ? formData.comprehensionQuestions
-        : [],
+      language: formData.language,
+      comprehensionQuestions:
+        Array.isArray(formData.comprehensionQuestions) &&
+        formData.comprehensionQuestions.length === 3
+          ? formData.comprehensionQuestions
+          : [],
     };
 
+    // --- Moral lesson (with TTS + optional image) ---
     if (
       formData.moralQuestion &&
       formData.moralOptions.every((opt) => opt && opt.trim() !== "") &&
       formData.moralCorrectOptionIndex !== null
     ) {
+      const moralAudioUrl = await generateQuestionTTS(
+        formData.moralQuestion.trim(),
+        formData.language,
+        storyId,
+        "moral",
+        0
+      );
       storyDataPayload.moralLesson = {
         question: formData.moralQuestion.trim(),
         options: formData.moralOptions.map((opt) => opt.trim()),
         correctOptionIndex: formData.moralCorrectOptionIndex,
+        audioUrl: moralAudioUrl,
       };
     } else {
-      if (isEditing && selectedStory && selectedStory.moralLesson)
+      if (isEditing && selectedStory && selectedStory.moralLesson) {
         storyDataPayload.moralLesson = null;
+      }
     }
 
-    // Handle assessment image uploads
     if (formData.moralImageFile) {
-      const url = await uploadAssessmentImage(formData.moralImageFile, storyId, 'moral', 0);
+      const url = await uploadAssessmentImage(formData.moralImageFile, storyId, "moral", 0);
       if (url && storyDataPayload.moralLesson) {
         storyDataPayload.moralLesson.imageUrl = url;
       }
@@ -652,139 +597,153 @@ const handleSubmit = async () => {
       }
     }
 
-    // ---- START: Added Moral Lesson TTS Generation ----
-    if (storyDataPayload.moralLesson) {
-        const moralAudioUrl = await generateQuestionTTS(
-            storyDataPayload.moralLesson.question,
-            formData.language,
-            storyId,
-            'moral',
-            0
-        );
-        if (storyDataPayload.moralLesson) {
-            storyDataPayload.moralLesson.audioUrl = moralAudioUrl;
-        }
-    }
-    // ---- END: Added Moral Lesson TTS Generation ----
-
-    if (Array.isArray(formData.comprehensionQuestions) && formData.comprehensionQuestions.length > 0) {
-        const processedQuestions = await Promise.all(
-            formData.comprehensionQuestions.map(async (q, index) => {
-                let finalImageUrl = q.imageUrl || null; // Keep existing URL by default
-                if (q.imageFile) { // If a new file is uploaded
-                    const newUrl = await uploadAssessmentImage(q.imageFile, storyId, 'comprehension', index);
-                    if (newUrl) finalImageUrl = newUrl;
-                }
-        // Generate TTS for the comprehension question
-        const questionAudioUrl = await generateQuestionTTS(
+    // --- Comprehension questions (with TTS + optional image) ---
+    if (
+      Array.isArray(formData.comprehensionQuestions) &&
+      formData.comprehensionQuestions.length > 0
+    ) {
+      const processedQuestions = await Promise.all(
+        formData.comprehensionQuestions.map(async (q, index) => {
+          let finalImageUrl = q.imageUrl || null;
+          if (q.imageFile) {
+            const newUrl = await uploadAssessmentImage(q.imageFile, storyId, "comprehension", index);
+            if (newUrl) finalImageUrl = newUrl;
+          }
+          const questionAudioUrl = await generateQuestionTTS(
             q.question,
             formData.language,
             storyId,
-            'comprehension',
+            "comprehension",
             index
-        );
-                return {
-                    question: q.question,
-                    options: q.options,
-                    correctOptionIndex: q.correctOptionIndex,
-                    imageUrl: finalImageUrl,
+          );
+          return {
+            question: q.question,
+            options: q.options,
+            correctOptionIndex: q.correctOptionIndex,
+            imageUrl: finalImageUrl,
             audioUrl: questionAudioUrl,
-                };
-            })
-        );
-        storyDataPayload.comprehensionQuestions = processedQuestions;
+          };
+        })
+      );
+      storyDataPayload.comprehensionQuestions = processedQuestions;
     }
 
+    // --- Save story doc (new or update) ---
     let randomStoryId, storyRef;
     if (isEditing && selectedStory) {
       storyRef = doc(db, "stories", selectedStory.id);
-      storyDataPayload.dateModified = serverTimestamp(); // Use server timestamp for modification
+      storyDataPayload.dateModified = serverTimestamp();
       await updateDoc(storyRef, storyDataPayload);
       randomStoryId = selectedStory.id;
     } else {
-      // For new stories
-      storyDataPayload.createdAt = serverTimestamp(); // Use server timestamp for creation
-      storyDataPayload.dateModified = serverTimestamp(); // Initial modification date same as creation
-
+      storyDataPayload.createdAt = serverTimestamp();
+      storyDataPayload.dateModified = serverTimestamp();
       randomStoryId = storyId;
       storyRef = doc(db, "stories", storyId);
       storyDataPayload.storyId = storyId;
-
       await setDoc(storyRef, storyDataPayload);
     }
 
-    // PDF-to-image and text extraction in parallel (if PDF present)
+    // --- Process PDF: images + Vision OCR text ---
     if (formData.pdfFile && randomStoryId) {
       try {
         showAlert("Splitting PDF into images and extracting text...", "info");
-        const [imageUrls, pageTexts] = await Promise.all([
-          convertAndUploadPdfPages(formData.pdfFile, randomStoryId, storage),
-          extractPdfPageTexts(formData.pdfFile),
-        ]);
 
-        // ---- START: Translation Logic ----
+        // Convert pages -> images
+        const imageUrls = await convertAndUploadPdfPages(formData.pdfFile, randomStoryId, storage);
+
+        // Get Vision OCR page texts from Firestore
+        let pageTexts = [];
+        try {
+          const storySnap = await getDoc(doc(db, "stories", randomStoryId));
+          if (storySnap.exists()) {
+            const storyData = storySnap.data();
+            if (Array.isArray(storyData.pageTexts)) {
+              pageTexts = storyData.pageTexts;
+            } else if (storyData.extractedText) {
+              pageTexts = [storyData.extractedText];
+            }
+          }
+        } catch (err) {
+          console.error("Error fetching extractedText from Firestore:", err);
+        }
+
+        // --- Translation ---
         showAlert("Translating page content...", "info");
         const sourceLang = formData.language;
-        const targetLang = sourceLang === 'en-US' ? 'tl' : 'en'; // Target for Google Translate API
-        const targetLangCode = sourceLang === 'en-US' ? 'fil-PH' : 'en-US'; // Target for saving in Firestore
+        const targetLang = sourceLang === "en-US" ? "tl" : "en";
+        const targetLangCode = sourceLang === "en-US" ? "fil-PH" : "en-US";
+
         let translatedTexts = [];
         try {
           const translationResult = await translatePageTexts({
             texts: pageTexts,
-            targetLanguage: targetLang
+            targetLanguage: targetLang,
           });
           translatedTexts = translationResult.data.translatedTexts;
-          
+
           await updateDoc(doc(db, "stories", randomStoryId), {
-            translations: { [targetLangCode]: translatedTexts }
+            translations: { [targetLangCode]: translatedTexts },
           });
           showAlert("Page content translated successfully!", "success");
         } catch (translationError) {
           console.error("Translation failed:", translationError);
           showAlert(`Translation failed: ${translationError.message}`, "danger");
-          // Continue without translation if it fails
-        }
-        // ---- END: Translation Logic ----
-        
-        // ---- START: Bilingual TTS Generation ----
-        showAlert("Generating audio for all languages...", "info");
-        const ttsPayload = {};
-        
-        // Generate for source language using the single 'language' field
-        const sourceTtsResult = await generateTtsForLanguage(pageTexts, sourceLang, randomStoryId);
-        ttsPayload[sourceLang] = sourceTtsResult.audioData;
-        if (sourceTtsResult.failedPages.length > 0) {
-          showAlert(`TTS failed for some pages in ${sourceLang}: ${sourceTtsResult.failedPages.join(", ")}`, "warning");
         }
 
-        // Generate for target language if translation was successful
+        // --- Bilingual TTS ---
+        showAlert("Generating audio for all languages...", "info");
+        const ttsPayload = {};
+
+        const sourceTtsResult = await generateTtsForLanguage(
+          pageTexts,
+          sourceLang,
+          randomStoryId
+        );
+        ttsPayload[sourceLang] = sourceTtsResult.audioData;
+        if (sourceTtsResult.failedPages.length > 0) {
+          showAlert(
+            `TTS failed for some pages in ${sourceLang}: ${sourceTtsResult.failedPages.join(", ")}`,
+            "warning"
+          );
+        }
+
         if (translatedTexts.length > 0) {
-          // Use targetLangCode for TTS voice selection (e.g., 'fil-PH')
-          const targetTtsResult = await generateTtsForLanguage(translatedTexts, targetLangCode, randomStoryId);
+          const targetTtsResult = await generateTtsForLanguage(
+            translatedTexts,
+            targetLangCode,
+            randomStoryId
+          );
           ttsPayload[targetLangCode] = targetTtsResult.audioData;
           if (targetTtsResult.failedPages.length > 0) {
-            showAlert(`TTS failed for some pages in ${targetLangCode}: ${targetTtsResult.failedPages.join(", ")}`, "warning");
+            showAlert(
+              `TTS failed for some pages in ${targetLangCode}: ${targetTtsResult.failedPages.join(", ")}`,
+              "warning"
+            );
           }
         }
-        
-        const storyUpdate = {
+
+        await updateDoc(doc(db, "stories", randomStoryId), {
           pageImages: imageUrls,
           pageTexts,
           ttsAudio: ttsPayload,
-        };
-        await updateDoc(doc(db, "stories", randomStoryId), storyUpdate);
+        });
+
         showAlert("PDF processed and all audio generated.", "success");
       } catch (err) {
         showAlert("Failed to split PDF into pages: " + err.message, "danger");
       }
     }
 
-    // Trigger synopsis generation in the background (if PDF present)
+    // --- Trigger synopsis in background ---
     if (finalPdfUrl && randomStoryId) {
       showAlert("Synopsis generation initiated in the background...", "info");
       await generateStorySynopsis({ storyId: randomStoryId })
         .then(() => {
-          showAlert("Synopsis generation process completed. It will appear in the story details soon.", "success");
+          showAlert(
+            "Synopsis generation process completed. It will appear in the story details soon.",
+            "success"
+          );
         })
         .catch((error) => {
           console.error("Error calling generateStorySynopsis function:", error);
@@ -793,7 +752,7 @@ const handleSubmit = async () => {
     }
 
     fetchStoriesFromFirestore();
-    resetFormAndCloseModal(); // Use the new reset function
+    resetFormAndCloseModal();
   } catch (error) {
     showAlert("Error saving story: " + error.message, "danger");
     console.error("Error saving story:", error);
@@ -801,6 +760,7 @@ const handleSubmit = async () => {
     setIsSubmitting(false);
   }
 };
+
 
   const uploadImageAndGetUrl = async (file, storyId) => {
     if (!file) return "";
@@ -846,34 +806,14 @@ const handleSubmit = async () => {
   };
 
   const confirmDelete = async () => {
-    if (!selectedStory) return;
-    const storyIdToDelete = selectedStory.id;
-
     try {
-      // Delete associated story_engagement records
-      const engagementQuery = collection(db, "story_engagement");
-      const engagementSnapshot = await getDocs(engagementQuery);
-      
-      const batch = writeBatch(db);
-      engagementSnapshot.forEach(docSnapshot => {
-        // Doc ID is in format 'userId_storyId'
-        if (docSnapshot.id.endsWith(`_${storyIdToDelete}`)) {
-          batch.delete(docSnapshot.ref);
-        }
-      });
-      
-      await batch.commit();
-
-      // Now, delete the story document itself
-      await deleteDoc(doc(db, "stories", storyIdToDelete));
-      
+      await deleteDoc(doc(db, "stories", selectedStory.id));
       setShowDeleteModal(false);
-      showAlert("Story and all related student progress/bookmarks deleted successfully!", "success");
+      showAlert("Story deleted successfully!", "success");
       fetchStoriesFromFirestore();
-
     } catch (error) {
-      showAlert("Error deleting story and related data", "danger");
-      console.error("Error during story deletion:", error);
+      showAlert("Error deleting story", "danger");
+      console.error(error);
     }
   };
 
@@ -883,9 +823,9 @@ const handleSubmit = async () => {
 
   const filteredStories = stories.filter(
     (story) =>
-      story.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      story.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      story.category.toLowerCase().includes(searchTerm.toLowerCase())
+      (story.title || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (story.author || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (story.category || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const getCategoryColor = (category) => {
@@ -1013,6 +953,7 @@ const handleSubmit = async () => {
                 <PlusCircleFill size={18} />
                 Add Story
               </Button>
+              {/* <Button onClick={generateFeedbackTTS}>Generate Feedback TTS</Button> */}
             </div>
           </div>
 
@@ -1291,7 +1232,7 @@ const handleSubmit = async () => {
         </Container>
       </div>
 
-      {/* Story Registration/Edit Modal */} 
+      {/* Story Registration/Edit Modal */}
       <Modal show={showModal} onHide={handleCloseModal} size="lg" centered>
         <Modal.Header closeButton style={{ border: "none", background: `linear-gradient(135deg, ${COLORS.lightPink} 0%, ${COLORS.softPink} 100%)` }}>
           <Modal.Title className="w-100 text-center">
@@ -1344,7 +1285,7 @@ const handleSubmit = async () => {
           <>
             <div
               className="rounded-circle d-flex align-items-center justify-content-center mb-3"
-              style={{ 
+              style={{
                 width: "80px", 
                 height: "80px",
                 background: `linear-gradient(135deg, ${COLORS.pink} 0%, ${COLORS.secondary} 100%)`,
@@ -1626,7 +1567,7 @@ const handleSubmit = async () => {
                     className="shadow-sm"
                     style={{ 
                       backgroundColor: formData.moralCorrectOptionIndex === index ? COLORS.pink : COLORS.light,
-                      color: formData.moralCorrectOptionIndex === index ? 'white' : COLORS.dark,
+                      color: formData.moralCorrectOptionIndex === index ? 'white' :COLORS.dark,
                       borderRadius: "0 12px 12px 0",
                       borderColor: COLORS.pink,
                       fontWeight: '500',
@@ -1642,7 +1583,7 @@ const handleSubmit = async () => {
           ))}
         </Row>
         
-        {formErrors.moralLesson && !formData.moralQuestion.trim() && ( 
+        {formErrors.moralLesson && !formData.moralQuestion.trim() && (
           <Form.Text className="text-danger d-block mt-3">
             {formErrors.moralLesson}
           </Form.Text>
@@ -1815,7 +1756,7 @@ const handleSubmit = async () => {
               <Button
                 className="w-100"
                 onClick={handleSubmit}
-                disabled={isSubmitting || (!isEditing && !formData.pdfFile)}
+                disabled={isSubmitting}
                 style={{
                   backgroundColor: COLORS.pink,
                   border: "none",
@@ -1887,4 +1828,3 @@ const handleSubmit = async () => {
 };
 
 export default ManageStories;
-          

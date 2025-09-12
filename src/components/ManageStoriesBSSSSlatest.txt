@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import SideMenuTeacher from "./SideMenuTeacher";
 import TopNavbar from "./TopNavbar";
 import { useNavigate } from "react-router-dom";
-import Tesseract from "tesseract.js";
 import {
   Table,
   Button,
@@ -40,10 +39,12 @@ import {
   deleteDoc,
   doc,
   serverTimestamp,
-  writeBatch,
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import * as pdfjsLib from "pdfjs-dist";
+
+const functions = getFunctions(firebaseApp);
+const extractTextWithOCR = httpsCallable(functions, "extractTextWithOCR");
 
 // Converts PDF to images, uploads to Firebase Storage, returns array of URLs
 export async function convertAndUploadPdfPages(pdfFile, storyId, storage) {
@@ -85,19 +86,7 @@ export async function convertAndUploadPdfPages(pdfFile, storyId, storage) {
 
   return pageImageUrls;
 }
-
-// Extracts text from each page of a PDF file and returns an array of strings
-/**
- * Extracts text from a PDF file (browser safe).
- * Cleans kerning, removes duplicates, and can fall back to OCR if enabled.
- * @param {File} pdfFile - PDF file from input
- * @param {Object} [options]
- * @param {boolean} [options.useOcrFallback=false] - Whether to use OCR when no text is found
- * @returns {Promise<string[]>} - Array of page texts
- */
-export async function extractPdfPageTexts(pdfFile, options = {}) {
-  const { useOcrFallback = false } = options;
-
+export async function extractPdfPageTexts(pdfFile, ocrTextResults = []) {
   const arrayBuffer = await pdfFile.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   const pageTexts = [];
@@ -106,73 +95,78 @@ export async function extractPdfPageTexts(pdfFile, options = {}) {
     const page = await pdf.getPage(i);
     const textContent = await page.getTextContent();
 
-    // Join text items
-    let pageText = textContent.items.map(item => item.str).join(" ");
+    // --- 1. Compute median font size ---
+    const fontSizes = textContent.items.map(
+      (item) => Math.abs(item.transform[0]) || 0
+    );
+    const sortedSizes = [...fontSizes].sort((a, b) => a - b);
+    const medianFontSize =
+      sortedSizes.length > 0
+        ? sortedSizes[Math.floor(sortedSizes.length / 2)]
+        : 10;
 
-    // // Cleanup: fix kerning and spaces
-    // pageText = pageText.replace(/\s+/g, " ").trim();
+    let pageText = "";
+    let lastX = null;
 
-    // Cleanup: remove repeated consecutive phrases (basic dedupe)
-    // pageText = pageText.replace(/(\b[\w\s:;,.!?'"-]{3,}\b)(\s*\1)+/gi, "$1");
+    // --- 2. Build styled text ---
+    textContent.items.forEach((item) => {
+      const text = item.str.trim();
+      if (!text) return;
 
-    // Fallback: OCR if no text and option is enabled
-    if (useOcrFallback && (!pageText || pageText.length < 5)) {
-      const viewport = page.getViewport({ scale: 2 });
-      const canvas = document.createElement("canvas");
-      const context = canvas.getContext("2d");
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-      await page.render({ canvasContext: context, viewport }).promise;
+      const fontSize = Math.abs(item.transform[0]) || medianFontSize;
+      let styledText = text;
 
-      try {
-        const ocrResult = await Tesseract.recognize(canvas, "eng");
-        pageText = ocrResult.data.text.trim();
-      } catch (ocrErr) {
-        console.error(`OCR failed on page ${i}:`, ocrErr);
-        pageText = "";
+      if (fontSize > 1.5 * medianFontSize) {
+        styledText = `<BIG>${text}</BIG>`;
+      } else if (fontSize < 0.8 * medianFontSize) {
+        styledText = `<SMALL>${text}</SMALL>`;
       }
-    }
 
-    pageTexts.push(pageText);
+      const x = item.transform[4];
+      if (lastX !== null) {
+        const spacing = Math.abs(x - lastX);
+        if (spacing > item.width * 0.5) {
+          pageText += " ";
+        }
+      }
+
+      pageText += styledText;
+      lastX = x + item.width;
+    });
+
+    // --- 3. Clean up duplicates / spaces ---
+    let cleanText = pageText.replace(/\s+/g, " ").trim();
+    cleanText = cleanText.replace(/\b(\w+)( \1\b)+/gi, "$1");
+
+    const seen = new Set();
+    cleanText = cleanText
+      .split(/(?<=[.?!:])\s+/)
+      .filter((sentence) => {
+        const normalized = sentence.toLowerCase().replace(/\s+/g, " ").trim();
+        if (!normalized) return false;
+        if (seen.has(normalized)) return false;
+        seen.add(normalized);
+        return true;
+      })
+      .join(" ");
+
+    // --- 4. Merge with OCR fallback ---
+    const ocrText = ocrTextResults[i - 1] || "";
+    if (!cleanText || cleanText.split(" ").length < 3) {
+      pageTexts.push(ocrText);
+    } else if (ocrText.length > cleanText.length * 1.5) {
+      // OCR found way more content → prefer it
+      pageTexts.push(ocrText);
+    } else {
+      pageTexts.push(cleanText);
+    }
   }
 
   return pageTexts;
 }
-const functions = getFunctions(firebaseApp);
-const synthesizeSpeechGoogle = httpsCallable(functions, "synthesizeSpeechGoogle");
 
-/**
- * Generates TTS audio for a single question and uploads it.
- * @param {string} text The text of the question.
- * @param {string} languageCode The language for TTS.
- * @param {string} storyId The story ID.
- * @param {string} type 'moral' or 'comprehension'.
- * @param {number} index The question index.
- * @returns {Promise<string|null>} The audio URL or null on failure.
- */
-const generateQuestionTTS = async (text, languageCode, storyId, type, index) => {
-    if (!text || !text.trim()) return null;
 
-    try {
-        const result = await synthesizeSpeechGoogle({ text, languageCode });
 
-        if (!result.data || !result.data.audioData) {
-            throw new Error("Invalid audio data from TTS function.");
-        }
-
-        const byteCharacters = atob(result.data.audioData);
-        const byteNumbers = Array.from(byteCharacters, (char) => char.charCodeAt(0));
-        const byteArray = new Uint8Array(byteNumbers);
-        const audioBlob = new Blob([byteArray], { type: "audio/mp3" });
-
-        const audioRef = ref(storage, `assessment_audio/${storyId}/${type}_${index}.mp3`);
-        await uploadBytes(audioRef, audioBlob);
-        return await getDownloadURL(audioRef);
-    } catch (error) {
-        console.error(`Error generating TTS for ${type} question ${index}:`, error);
-        return null;
-    }
-};
 
 const generateMoralLessonAI = httpsCallable(functions, 'generateMoralLessonFromText');
 const generateStorySynopsis = httpsCallable(functions, 'generateStorySynopsisFromPdf');
@@ -298,10 +292,6 @@ const ManageStories = () => {
 
     if (!formData.category.trim()) {
       errors.category = "Category is required";
-    }
-
-    if (!isEditing && !formData.pdfFile) {
-      errors.pdfFile = "A PDF file is required for a new story.";
     }
 
     if (formData.moralQuestion.trim() &&
@@ -582,6 +572,52 @@ const uploadAssessmentImage = async (file, storyId, type, index) => {
     return getDownloadURL(imageRef);
 };
 
+const cleanOcrText = (rawText = "") => {
+  if (!rawText) return "";
+
+  let text = rawText;
+
+  // Normalize whitespace
+  text = text.replace(/\s+/g, " ").trim();
+
+  // Remove <BIG>/<SMALL> tags
+  text = text.replace(/<\/?BIG>/gi, "").replace(/<\/?SMALL>/gi, "");
+
+  // Remove duplicate consecutive words (This This → This)
+  text = text.replace(/\b(\w+)( \1\b)+/gi, "$1");
+
+  // Remove page numbers (single or pairs)
+  text = text.replace(/\b\d{1,3}\b/g, "");
+
+  // Remove duplicate consecutive sentences
+  const seen = new Set();
+  text = text
+    .split(/(?<=[.?!])\s+/)
+    .filter((sentence) => {
+      if (seen.has(sentence)) return false;
+      seen.add(sentence);
+      return true;
+    })
+    .join(" ");
+
+  // Fix common OCR typos
+  const fixes = {
+    "Barvo": "Bravo",
+    "artowrks": "artworks",
+    "gradnson": "grandson",
+    "won’t": "won't",
+    "Inthe": "In the"
+  };
+
+  Object.entries(fixes).forEach(([wrong, right]) => {
+    const regex = new RegExp(`\\b${wrong}\\b`, "gi");
+    text = text.replace(regex, right);
+  });
+
+  return text;
+};
+
+
 const handleSubmit = async () => {
   if (!validateForm()) {
     showAlert("Please fill in all required fields", "danger");
@@ -593,38 +629,38 @@ const handleSubmit = async () => {
   let finalImageUrl = isEditing && selectedStory ? selectedStory.image || "" : "";
 
   try {
-    const storyId = isEditing && selectedStory 
-      ? selectedStory.id 
-      : doc(collection(db, "stories")).id; // Generate a new ID upfront
+    const storyId = isEditing && selectedStory
+      ? selectedStory.id
+      : doc(collection(db, "stories")).id;
 
+    // Upload image + PDF
     const uploadTasks = [];
-    if (formData.imageFile) {
-      uploadTasks.push(uploadImageAndGetUrl(formData.imageFile, storyId));
-    } else {
-      uploadTasks.push(Promise.resolve(finalImageUrl));
-    }
-    if (formData.pdfFile) {
-      uploadTasks.push(uploadPdfAndGetUrl(formData.pdfFile, storyId));
-    } else {
-      uploadTasks.push(Promise.resolve(finalPdfUrl));
-    }
+    uploadTasks.push(formData.imageFile
+      ? uploadImageAndGetUrl(formData.imageFile, storyId)
+      : Promise.resolve(finalImageUrl));
+    uploadTasks.push(formData.pdfFile
+      ? uploadPdfAndGetUrl(formData.pdfFile, storyId)
+      : Promise.resolve(finalPdfUrl));
 
     let [uploadedImageUrl, uploadedPdfUrl] = await Promise.all(uploadTasks);
     finalImageUrl = uploadedImageUrl;
     finalPdfUrl = uploadedPdfUrl;
 
+    // Base story payload
     const storyDataPayload = {
       title: formData.title,
-      author: formData.author, 
+      author: formData.author,
       category: formData.category,
       pdfUrl: finalPdfUrl,
       image: finalImageUrl,
-      language: formData.language, // Use the new language field
-      comprehensionQuestions: Array.isArray(formData.comprehensionQuestions) && formData.comprehensionQuestions.length === 3
+      language: formData.language,
+      comprehensionQuestions: Array.isArray(formData.comprehensionQuestions) &&
+        formData.comprehensionQuestions.length === 3
         ? formData.comprehensionQuestions
         : [],
     };
 
+    // Moral lesson
     if (
       formData.moralQuestion &&
       formData.moralOptions.every((opt) => opt && opt.trim() !== "") &&
@@ -635,14 +671,13 @@ const handleSubmit = async () => {
         options: formData.moralOptions.map((opt) => opt.trim()),
         correctOptionIndex: formData.moralCorrectOptionIndex,
       };
-    } else {
-      if (isEditing && selectedStory && selectedStory.moralLesson)
-        storyDataPayload.moralLesson = null;
+    } else if (isEditing && selectedStory && selectedStory.moralLesson) {
+      storyDataPayload.moralLesson = null;
     }
 
-    // Handle assessment image uploads
+    // Moral lesson image
     if (formData.moralImageFile) {
-      const url = await uploadAssessmentImage(formData.moralImageFile, storyId, 'moral', 0);
+      const url = await uploadAssessmentImage(formData.moralImageFile, storyId, "moral", 0);
       if (url && storyDataPayload.moralLesson) {
         storyDataPayload.moralLesson.imageUrl = url;
       }
@@ -652,148 +687,146 @@ const handleSubmit = async () => {
       }
     }
 
-    // ---- START: Added Moral Lesson TTS Generation ----
-    if (storyDataPayload.moralLesson) {
-        const moralAudioUrl = await generateQuestionTTS(
-            storyDataPayload.moralLesson.question,
-            formData.language,
-            storyId,
-            'moral',
-            0
-        );
-        if (storyDataPayload.moralLesson) {
-            storyDataPayload.moralLesson.audioUrl = moralAudioUrl;
-        }
-    }
-    // ---- END: Added Moral Lesson TTS Generation ----
-
+    // Comprehension images
     if (Array.isArray(formData.comprehensionQuestions) && formData.comprehensionQuestions.length > 0) {
-        const processedQuestions = await Promise.all(
-            formData.comprehensionQuestions.map(async (q, index) => {
-                let finalImageUrl = q.imageUrl || null; // Keep existing URL by default
-                if (q.imageFile) { // If a new file is uploaded
-                    const newUrl = await uploadAssessmentImage(q.imageFile, storyId, 'comprehension', index);
-                    if (newUrl) finalImageUrl = newUrl;
-                }
-        // Generate TTS for the comprehension question
-        const questionAudioUrl = await generateQuestionTTS(
-            q.question,
-            formData.language,
-            storyId,
-            'comprehension',
-            index
-        );
-                return {
-                    question: q.question,
-                    options: q.options,
-                    correctOptionIndex: q.correctOptionIndex,
-                    imageUrl: finalImageUrl,
-            audioUrl: questionAudioUrl,
-                };
-            })
-        );
-        storyDataPayload.comprehensionQuestions = processedQuestions;
+      const processedQuestions = await Promise.all(
+        formData.comprehensionQuestions.map(async (q, index) => {
+          let finalImageUrl = q.imageUrl || null;
+          if (q.imageFile) {
+            const newUrl = await uploadAssessmentImage(q.imageFile, storyId, "comprehension", index);
+            if (newUrl) finalImageUrl = newUrl;
+          }
+          return {
+            question: q.question,
+            options: q.options,
+            correctOptionIndex: q.correctOptionIndex,
+            imageUrl: finalImageUrl,
+          };
+        })
+      );
+      storyDataPayload.comprehensionQuestions = processedQuestions;
     }
 
+    // Save base story
     let randomStoryId, storyRef;
     if (isEditing && selectedStory) {
       storyRef = doc(db, "stories", selectedStory.id);
-      storyDataPayload.dateModified = serverTimestamp(); // Use server timestamp for modification
+      storyDataPayload.dateModified = serverTimestamp();
       await updateDoc(storyRef, storyDataPayload);
       randomStoryId = selectedStory.id;
     } else {
-      // For new stories
-      storyDataPayload.createdAt = serverTimestamp(); // Use server timestamp for creation
-      storyDataPayload.dateModified = serverTimestamp(); // Initial modification date same as creation
-
+      storyDataPayload.createdAt = serverTimestamp();
+      storyDataPayload.dateModified = serverTimestamp();
       randomStoryId = storyId;
       storyRef = doc(db, "stories", storyId);
       storyDataPayload.storyId = storyId;
-
       await setDoc(storyRef, storyDataPayload);
     }
 
-    // PDF-to-image and text extraction in parallel (if PDF present)
+    // PDF processing
     if (formData.pdfFile && randomStoryId) {
       try {
         showAlert("Splitting PDF into images and extracting text...", "info");
-        const [imageUrls, pageTexts] = await Promise.all([
-          convertAndUploadPdfPages(formData.pdfFile, randomStoryId, storage),
-          extractPdfPageTexts(formData.pdfFile),
-        ]);
 
-        // ---- START: Translation Logic ----
+        // 1️⃣ Convert PDF pages to images
+        const imageUrls = await convertAndUploadPdfPages(formData.pdfFile, randomStoryId, storage);
+
+        // 2️⃣ OCR fallback (Vision API)
+        const ocrTextResults = [];
+        for (let i = 0; i < imageUrls.length; i++) {
+          const pagePath = `story_pages/${randomStoryId}/page_${i + 1}.png`;
+          try {
+            const ocrResult = await extractTextWithOCR({ gcsPath: pagePath });
+            ocrTextResults.push(ocrResult.data.text || "");
+          } catch (err) {
+            console.warn(`OCR failed for page ${i + 1}:`, err);
+            ocrTextResults.push("");
+          }
+        }
+
+        // 3️⃣ Extract raw text (pdf.js + OCR)
+        let rawPageTexts = await extractPdfPageTexts(formData.pdfFile, ocrTextResults);
+
+        // 4️⃣ Clean OCR text
+        const cleanPageTexts = rawPageTexts.map(cleanOcrText);
+
+        // ✅ Save only clean text
+        await updateDoc(doc(db, "stories", randomStoryId), {
+          pageImages: imageUrls,
+          pageTexts: cleanPageTexts,
+        });
+
+        showAlert("PDF processed and cleaned.", "success");
+
+        // ---- Translation ----
         showAlert("Translating page content...", "info");
         const sourceLang = formData.language;
-        const targetLang = sourceLang === 'en-US' ? 'tl' : 'en'; // Target for Google Translate API
-        const targetLangCode = sourceLang === 'en-US' ? 'fil-PH' : 'en-US'; // Target for saving in Firestore
+        const targetLang = sourceLang === "en-US" ? "tl" : "en";
+        const targetLangCode = sourceLang === "en-US" ? "fil-PH" : "en-US";
         let translatedTexts = [];
         try {
           const translationResult = await translatePageTexts({
-            texts: pageTexts,
-            targetLanguage: targetLang
+            texts: cleanPageTexts,
+            targetLanguage: targetLang,
           });
-          translatedTexts = translationResult.data.translatedTexts;
-          
+          translatedTexts = translationResult.data.translatedTexts.map(cleanOcrText);
+
           await updateDoc(doc(db, "stories", randomStoryId), {
-            translations: { [targetLangCode]: translatedTexts }
+            translations: {
+              [targetLangCode]: translatedTexts,
+            },
           });
+
           showAlert("Page content translated successfully!", "success");
         } catch (translationError) {
           console.error("Translation failed:", translationError);
           showAlert(`Translation failed: ${translationError.message}`, "danger");
-          // Continue without translation if it fails
         }
-        // ---- END: Translation Logic ----
-        
-        // ---- START: Bilingual TTS Generation ----
+
+        // ---- TTS ----
         showAlert("Generating audio for all languages...", "info");
-        const ttsPayload = {};
-        
-        // Generate for source language using the single 'language' field
-        const sourceTtsResult = await generateTtsForLanguage(pageTexts, sourceLang, randomStoryId);
-        ttsPayload[sourceLang] = sourceTtsResult.audioData;
+
+        const sourceTtsResult = await generateTtsForLanguage(
+          cleanPageTexts,
+          sourceLang,
+          randomStoryId
+        );
         if (sourceTtsResult.failedPages.length > 0) {
           showAlert(`TTS failed for some pages in ${sourceLang}: ${sourceTtsResult.failedPages.join(", ")}`, "warning");
         }
 
-        // Generate for target language if translation was successful
         if (translatedTexts.length > 0) {
-          // Use targetLangCode for TTS voice selection (e.g., 'fil-PH')
-          const targetTtsResult = await generateTtsForLanguage(translatedTexts, targetLangCode, randomStoryId);
-          ttsPayload[targetLangCode] = targetTtsResult.audioData;
+          const targetTtsResult = await generateTtsForLanguage(
+            translatedTexts,
+            targetLangCode,
+            randomStoryId
+          );
           if (targetTtsResult.failedPages.length > 0) {
             showAlert(`TTS failed for some pages in ${targetLangCode}: ${targetTtsResult.failedPages.join(", ")}`, "warning");
           }
         }
-        
-        const storyUpdate = {
-          pageImages: imageUrls,
-          pageTexts,
-          ttsAudio: ttsPayload,
-        };
-        await updateDoc(doc(db, "stories", randomStoryId), storyUpdate);
+
         showAlert("PDF processed and all audio generated.", "success");
       } catch (err) {
-        showAlert("Failed to split PDF into pages: " + err.message, "danger");
+        showAlert("Failed to process PDF: " + err.message, "danger");
       }
     }
 
-    // Trigger synopsis generation in the background (if PDF present)
+    // Background synopsis
     if (finalPdfUrl && randomStoryId) {
       showAlert("Synopsis generation initiated in the background...", "info");
       await generateStorySynopsis({ storyId: randomStoryId })
         .then(() => {
-          showAlert("Synopsis generation process completed. It will appear in the story details soon.", "success");
+          showAlert("Synopsis generation completed.", "success");
         })
         .catch((error) => {
-          console.error("Error calling generateStorySynopsis function:", error);
-          showAlert(`Synopsis generation failed to start: ${error.message}`, "danger");
+          console.error("Error calling generateStorySynopsis:", error);
+          showAlert(`Synopsis generation failed: ${error.message}`, "danger");
         });
     }
 
     fetchStoriesFromFirestore();
-    resetFormAndCloseModal(); // Use the new reset function
+    resetFormAndCloseModal();
   } catch (error) {
     showAlert("Error saving story: " + error.message, "danger");
     console.error("Error saving story:", error);
@@ -801,6 +834,8 @@ const handleSubmit = async () => {
     setIsSubmitting(false);
   }
 };
+
+
 
   const uploadImageAndGetUrl = async (file, storyId) => {
     if (!file) return "";
@@ -846,34 +881,14 @@ const handleSubmit = async () => {
   };
 
   const confirmDelete = async () => {
-    if (!selectedStory) return;
-    const storyIdToDelete = selectedStory.id;
-
     try {
-      // Delete associated story_engagement records
-      const engagementQuery = collection(db, "story_engagement");
-      const engagementSnapshot = await getDocs(engagementQuery);
-      
-      const batch = writeBatch(db);
-      engagementSnapshot.forEach(docSnapshot => {
-        // Doc ID is in format 'userId_storyId'
-        if (docSnapshot.id.endsWith(`_${storyIdToDelete}`)) {
-          batch.delete(docSnapshot.ref);
-        }
-      });
-      
-      await batch.commit();
-
-      // Now, delete the story document itself
-      await deleteDoc(doc(db, "stories", storyIdToDelete));
-      
+      await deleteDoc(doc(db, "stories", selectedStory.id));
       setShowDeleteModal(false);
-      showAlert("Story and all related student progress/bookmarks deleted successfully!", "success");
+      showAlert("Story deleted successfully!", "success");
       fetchStoriesFromFirestore();
-
     } catch (error) {
-      showAlert("Error deleting story and related data", "danger");
-      console.error("Error during story deletion:", error);
+      showAlert("Error deleting story", "danger");
+      console.error(error);
     }
   };
 
@@ -1815,7 +1830,7 @@ const handleSubmit = async () => {
               <Button
                 className="w-100"
                 onClick={handleSubmit}
-                disabled={isSubmitting || (!isEditing && !formData.pdfFile)}
+                disabled={isSubmitting}
                 style={{
                   backgroundColor: COLORS.pink,
                   border: "none",

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   Container,
   Row,
@@ -237,8 +237,7 @@ const StoryCard = ({ id, title, image, category, author, onBookmarkToggle }) => 
 
 const Stories = () => {
   const [showSidebar, setShowSidebar] = useState(false);
-  const [recentlyViewed, setRecentlyViewed] = useState([]);
-  const [newReleases, setNewReleases] = useState([]);
+  const [allStories, setAllStories] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCategory, setActiveCategory] = useState(""); 
   const [bookmarkedStories, setBookmarkedStories] = useState([]);
@@ -254,46 +253,16 @@ const Stories = () => {
     const fetchStories = async () => {
       try {
         const storiesRef = collection(db, "stories");
-        const allStoriesSnap = await getDocs(storiesRef);
-        const allStories = allStoriesSnap.docs.map((doc) => ({
+        const q = query(storiesRef, orderBy("createdAt", "desc"));
+        const allStoriesSnap = await getDocs(q);
+        const stories = allStoriesSnap.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }));
-
-        setRecentlyViewed(allStories.slice(0, 12));
-
-        const newReleaseQuery = query(
-          storiesRef,
-          orderBy("createdAt", "desc"),
-          limit(12) 
-        );
-        const newReleaseSnap = await getDocs(newReleaseQuery);
-
-        const now = new Date();
-        const threeMonthsAgo = new Date(
-          now.getFullYear(),
-          now.getMonth() - 3,
-          now.getDate()
-        );
-
-        const filtered = newReleaseSnap.docs
-          .map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }))
-          .filter((story) => {
-            if (!story.createdAt) return false;
-            const createdAtDate =
-              story.createdAt.toDate?.() || new Date(story.createdAt);
-            return createdAtDate >= threeMonthsAgo;
-          })
-          .slice(0, 12); 
-
-        setNewReleases(filtered);
+        setAllStories(stories);
       } catch (error) {
         console.error("Error fetching stories:", error);
-        setRecentlyViewed([]);
-        setNewReleases([]);
+        setAllStories([]);
       }
     };
     fetchStories();
@@ -307,17 +276,32 @@ const Stories = () => {
     }
   };
 
-  const filteredRecentlyViewed = recentlyViewed.filter(
-    (story) =>
-      (activeCategory === "" || story.category === activeCategory) &&
+  const storiesByCategory = useMemo(() => {
+    const filtered = allStories.filter(story => 
       story.title?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+    );
 
-  const filteredNewReleases = newReleases.filter(
-    (story) =>
-      (activeCategory === "" || story.category === activeCategory) &&
-      story.title?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+    if (activeCategory && activeCategory !== "All") {
+      return {
+        [activeCategory]: filtered.filter(story => story.category === activeCategory)
+      };
+    }
+
+    return filtered.reduce((acc, story) => {
+      const category = story.category || "Uncategorized";
+      if (!acc[category]) {
+        acc[category] = [];
+      }
+      acc[category].push(story);
+      return acc;
+    }, {});
+  }, [allStories, searchTerm, activeCategory]);
+
+  const displayedCategories = useMemo(() => {
+    return Object.keys(storiesByCategory).filter(
+      category => storiesByCategory[category].length > 0
+    );
+  }, [storiesByCategory]);
 
   return (
     <div
@@ -516,49 +500,36 @@ const Stories = () => {
           </Col>
         </Row>
 
-        {/* Recently Viewed Section */}
-        <div className="mb-4">
-          <div className="d-flex justify-content-center align-items-center mb-3">
-            <h5 className="fw-bold" style={{ color: "#333", fontSize: "1.7rem", marginBottom: 5, marginTop: 10 }}>
-              Recently Viewed
-            </h5>
+        {displayedCategories.length === 0 ? (
+          <div className="text-center" style={{ marginTop: "5rem" }}>
+            <h4 className="text-muted">No stories found for the selected criteria.</h4>
           </div>
-          <Row className="g-3 justify-content-center">
-            {filteredRecentlyViewed.map((story) => (
-              <StoryCard
-                id={story.id}
-                title={story.title}
-                image={story.image}
-                category={story.category}
-                author={story.author}
-                key={story.id}
-                onBookmarkToggle={handleBookmarkToggle}
-              />
+        ) : (
+          <>
+            {displayedCategories.map(category => (
+              <div className="mb-5" key={category}>
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                  <h5 className="fw-bold" style={{ color: "#333", fontSize: "1.8rem", marginBottom: 5 }}>
+                    {category}
+                  </h5>
+                </div>
+                <Row className="g-3">
+                  {storiesByCategory[category].map((story) => (
+                    <StoryCard
+                      id={story.id}
+                      title={story.title}
+                      image={story.image}
+                      category={story.category}
+                      author={story.author}
+                      key={story.id}
+                      onBookmarkToggle={handleBookmarkToggle}
+                    />
+                  ))}
+                </Row>
+              </div>
             ))}
-          </Row>
-        </div>
-
-        {/* New Release Section */}
-        <div className="mb-4">
-          <div className="d-flex justify-content-center align-items-center mb-3">
-            <h5 className="fw-bold" style={{ color: "#333", fontSize: "1.8rem", marginBottom: 5 }}>
-              New Release
-            </h5>
-          </div>
-          <Row className="g-3 justify-content-center">
-            {filteredNewReleases.map((story) => (
-              <StoryCard
-                id={story.id}
-                title={story.title}
-                image={story.image}
-                category={story.category}
-                author={story.author}
-                key={story.id}
-                onBookmarkToggle={handleBookmarkToggle}
-              />
-            ))}
-          </Row>
-        </div>
+          </>
+        )}
       </Container>
     </div>
   );

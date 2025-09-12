@@ -12,6 +12,7 @@ import {
   Alert,
   Badge,
   Spinner,
+  Collapse,
 } from "react-bootstrap";
 import {
   Search,
@@ -24,6 +25,8 @@ import {
   UserCheck,
   GraduationCap,
   BookOpen,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import {
   collection,
@@ -175,6 +178,99 @@ const FilterButton = ({ active, onClick, children, variant = "outline" }) => (
   </Button>
 );
 
+const StudentScores = ({ studentId, isVisible }) => {
+    const [scores, setScores] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+  
+    useEffect(() => {
+      const fetchScores = async () => {
+        if (!studentId || !isVisible) {
+          setScores([]);
+          return;
+        }
+  
+        setLoading(true);
+        setError(null);
+  
+        try {
+          const scoresQuery = query(
+            collection(db, `students/${studentId}/quizScores`)
+          );
+          const querySnapshot = await getDocs(scoresQuery);
+          const scoresList = querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          setScores(scoresList);
+        } catch (err) {
+          console.error("Error fetching scores:", err);
+          setError("Failed to load scores.");
+        } finally {
+          setLoading(false);
+        }
+      };
+  
+      fetchScores();
+    }, [studentId, isVisible]);
+  
+    if (!isVisible) return null;
+  
+    return (
+      <div className="p-3" style={{ backgroundColor: '#f7f2f7' }}>
+        <Card className="shadow-sm border-0" style={{ borderRadius: "10px" }}>
+          <Card.Header className="border-0 py-3" style={{ backgroundColor: COLORS.light, borderRadius: "10px 10px 0 0" }}>
+            <h6 className="mb-0 fw-semibold" style={{ color: COLORS.dark }}>Quiz Scores</h6>
+          </Card.Header>
+          <Card.Body className="p-0">
+            {loading && <div className="text-center p-4"><Spinner size="sm" /></div>}
+            {error && <Alert variant="danger" className="m-3">{error}</Alert>}
+            {!loading && !error && scores.length === 0 && (
+              <div className="text-center p-4 text-muted">No quiz scores found for this student.</div>
+            )}
+            {!loading && !error && scores.length > 0 && (
+              <Table responsive hover className="mb-0">
+                <thead>
+                  <tr style={{ backgroundColor: '#FFF0F5' }}>
+                    <th className="border-0 py-3 fw-semibold" style={{ color: COLORS.pink, paddingLeft: '24px' }}>Story Title</th>
+                    <th className="border-0 py-3 fw-semibold" style={{ color: COLORS.pink }}>Score</th>
+                    <th className="border-0 py-3 fw-semibold" style={{ color: COLORS.pink, paddingRight: '24px' }}>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {scores.map((score, index) => (
+                    <tr key={score.id} style={{ backgroundColor: index % 2 === 0 ? '#FFFFFF' : '#FFF8FA' }}>
+                      <td className="py-3 align-middle" style={{ paddingLeft: '24px' }}>
+                        <div className="d-flex align-items-center">
+                          <BookOpen size={16} className="me-2" style={{ color: COLORS.secondary }} />
+                          <span className="fw-medium text-dark">{score.storyTitle}</span>
+                        </div>
+                      </td>
+                      <td className="py-3 align-middle">
+                        <Badge
+                          style={{
+                            backgroundColor: COLORS.pink,
+                            color: 'white',
+                            fontSize: '0.8rem',
+                            padding: '6px 12px',
+                          }}
+                          pill
+                        >
+                          {score.score} / {score.totalQuestions}
+                        </Badge>
+                      </td>
+                      <td className="py-3 align-middle" style={{ paddingRight: '24px' }}>{score.completedAt?.toDate().toLocaleDateString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            )}
+          </Card.Body>
+        </Card>
+      </div>
+    );
+  };
+
 // Main Component
 const StudentList = () => {
   const navigate = useNavigate();
@@ -189,6 +285,7 @@ const StudentList = () => {
   const [showSidebar, setShowSidebar] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterGrade, setFilterGrade] = useState("all");
+  const [activeStudentId, setActiveStudentId] = useState(null);
 
   const { students, loading: studentsLoading, error: studentsError } = useStudents(currentTeacher, teacherSection, authChecked);
 
@@ -258,6 +355,10 @@ const StudentList = () => {
   const toggleSidebar = useCallback(() => {
     setShowSidebar(prev => !prev);
   }, []);
+
+  const handleToggleScores = (studentId) => {
+    setActiveStudentId(prevId => (prevId === studentId ? null : studentId));
+  };
 
   const formatDate = (timestamp) => {
     if (!timestamp) return "N/A";
@@ -610,18 +711,31 @@ const StudentList = () => {
                       >
                         Enrolled
                       </th>
+                      <th 
+                        className="border-0 py-4 fw-semibold" 
+                        style={{ 
+                          color: COLORS.pink,
+                          width: '5%',
+                          paddingRight: '24px'
+                        }}
+                      >
+                        Scores
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredStudents.map((student, index) => (
+                        <React.Fragment key={student.id}>
                       <tr 
-                        key={student.id}
+                        
                         className="table-row-hover"
                         style={{ 
                           backgroundColor: index % 2 === 0 ? '#FFFFFF' : '#FFF8FA',
                           transition: 'all 0.2s ease',
-                          borderBottom: '1px solid #FFE4E1'
+                          borderBottom: '1px solid #FFE4E1',
+                          cursor: 'pointer'
                         }}
+                        onClick={() => handleToggleScores(student.id)}
                       >
                         <td className="py-4 align-middle" style={{ paddingLeft: '24px' }}>
                           <div className="d-flex align-items-center">
@@ -736,7 +850,29 @@ const StudentList = () => {
                             </span>
                           </div>
                         </td>
+                        <td className="py-4 align-middle text-center">
+                            <Button
+                                variant="link"
+                                size="sm"
+                                onClick={() => handleToggleScores(student.id)}
+                                aria-expanded={activeStudentId === student.id}
+                                aria-controls={`student-scores-${student.id}`}
+                                style={{color: COLORS.pink}}
+                            >
+                                {activeStudentId === student.id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                            </Button>
+                        </td>
                       </tr>
+                      <tr>
+                        <td colSpan="8" className="p-0 border-0">
+                            <Collapse in={activeStudentId === student.id}>
+                                <div id={`student-scores-${student.id}`}>
+                                    <StudentScores studentId={student.id} isVisible={activeStudentId === student.id} />
+                                </div>
+                            </Collapse>
+                        </td>
+                      </tr>
+                      </React.Fragment>
                     ))}
                   </tbody>
                 </Table>

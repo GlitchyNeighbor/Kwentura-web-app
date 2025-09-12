@@ -19,16 +19,34 @@ exports.updateAdminPassword = onCall(async (request) => {
         "You must be authenticated to update a password.");
   }
 
+  // Security Enhancement: Verify the caller is an admin or superAdmin
+  const adminUid = request.auth.uid;
+  try {
+    const adminDoc = await db.collection("admins").doc(adminUid).get();
+    if (!adminDoc.exists) {
+      throw new HttpsError("permission-denied", "Caller is not an admin.");
+    }
+    const adminData = adminDoc.data();
+    if (adminData.role !== "admin" && adminData.role !== "superAdmin") {
+      throw new HttpsError(
+          "permission-denied",
+          "You do not have permission to update passwords.",
+      );
+    }
+  } catch (error) {
+    console.error("Admin role check failed:", error);
+    throw new HttpsError("internal", "Could not verify admin permissions.");
+  }
+
   const {uid, newPassword} = request.data;
   if (!uid || !newPassword) {
-    throw new HttpsError("invalid-argument",
-        "Missing UID or new password.",
-    );
+    throw new HttpsError("invalid-argument", "Missing UID or new password.");
   }
   try {
     await getAuth().updateUser(uid, {password: newPassword});
     return {success: true};
   } catch (error) {
+    console.error(`Failed to update password for UID: ${uid}`, error);
     throw new HttpsError("internal", error.message);
   }
 });
@@ -821,6 +839,7 @@ onDocumentDeleted("stories/{storyId}", async (event) => {
     `story_pages/${storyId}/`,
     `story_tts/${storyId}/`,
     `assessment_images/${storyId}/`,
+    `assessment_audio/${storyId}/`,
   ];
 
   for (const prefix of storagePrefixes) {
@@ -848,6 +867,33 @@ onDocumentDeleted("stories/{storyId}", async (event) => {
     } catch (error) {
       console.error(`Error deleting subcollection ${subcollection.id}:`, error);
     }
+  }
+
+  // 3. Delete associated quiz scores from all students
+  try {
+    console.log(`Searching for quiz scores related to story ${storyId}...`);
+    const studentsSnapshot = await db.collection("students").get();
+    const deletePromises = [];
+
+    for (const studentDoc of studentsSnapshot.docs) {
+      const quizScoresRef = db.collection("students")
+          .doc(studentDoc.id).collection("quizScores");
+      const scoresQuery = quizScoresRef.where("storyId", "==", storyId);
+      const scoresSnapshot = await scoresQuery.get();
+
+      if (!scoresSnapshot.empty) {
+        console.log(`Found ${scoresSnapshot.size}
+            score(s) for student ${studentDoc.id} to delete.`);
+        scoresSnapshot.forEach((doc) => {
+          deletePromises.push(doc.ref.delete());
+        });
+      }
+    }
+    await Promise.all(deletePromises);
+    console.log(`Successfully deleted ${deletePromises.length}
+        quiz score entries for story ${storyId}.`);
+  } catch (error) {
+    console.error(`Error deleting quiz scores for story ${storyId}:`, error);
   }
 
   console.log(`Cleanup finished for story: ${storyId}`);

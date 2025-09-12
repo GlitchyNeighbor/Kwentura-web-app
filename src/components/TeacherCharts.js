@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
-import { Container, Row, Col, Card, Button, Spinner, Alert } from "react-bootstrap";
+import { Container, Row, Col, Card, Button, Spinner, Alert, Badge } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeftCircleFill } from "react-bootstrap-icons";
-import { FaDownload, FaExclamationTriangle } from "react-icons/fa";
+import { FaDownload, FaExclamationTriangle, FaBookmark } from "react-icons/fa";
 import {
   BarChart,
   Bar,
@@ -22,6 +22,7 @@ import { collection, getDocs, query, orderBy, where, doc, getDoc } from "firebas
 import { db } from "../config/FirebaseConfig.js";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import SidebarMenuTeacher from "./SideMenuTeacher";
+import { FaBook, FaUserGraduate, FaChartBar, FaClipboardCheck } from "react-icons/fa";
 import TopNavbar from "./TopNavbar";
 import "../scss/custom.scss";
 
@@ -38,15 +39,55 @@ const COLORS = {
   pink: "#FF69B4",
   lightPink: "#FFE4E1",
   softPink: "#FFF0F5",
+  bookmarks: "#FFD700",
 };
 
 const STUDENT_GRADE_COLORS = ["#FF69B4", "#FFB6C1", "#98FB98", "#FFE4E1", "#DDA0DD"];
+
+const CARD_STYLES = {
+  stories: { bg: "#FFF0F5", icon: "#FF69B4" },
+  students: { bg: "#FFE4E1", icon: "#98FB98" },
+  grades: { bg: "#FFF0F5", icon: "#FFB6C1" },
+  approval: { bg: "#FFE4E1", icon: "#FF69B4" },
+  quizzes: { bg: "#F0FFF0", icon: "#28a745" },
+  bookmarks: { bg: "#FFFACD", icon: "#FFD700" },
+};
+
+const MetricCard = ({ title, value, icon: IconComponent, style, loading }) => (
+  <Card className="shadow-sm h-100 border-0" style={{ borderRadius: "12px" }}>
+    <Card.Body className="p-4">
+      <div className="d-flex justify-content-between align-items-start">
+        <div className="flex-grow-1">
+          <div className="text-muted mb-2 fs-6">{title}</div>
+          <h3 className="mb-0 fw-bold text-dark">
+            {loading ? <Spinner animation="grow" size="sm" /> : value.toLocaleString()}
+          </h3>
+        </div>
+        <div
+          className="p-3 rounded-circle"
+          style={{ backgroundColor: `${style.icon}15`, color: style.icon }}
+        >
+          <IconComponent size={24} />
+        </div>
+      </div>
+    </Card.Body>
+  </Card>
+);
 
 const TeacherCharts = () => {
   const [showSidebar, setShowSidebar] = useState(false);
   const [storiesData, setStoriesData] = useState([]);
   const [studentsByGradeInSectionData, setStudentsByGradeInSectionData] = useState([]);
+  const [studentApprovalData, setStudentApprovalData] = useState([]);
+  const [dashboardStats, setDashboardStats] = useState({
+    totalStories: 0,
+    totalStudents: 0,
+    totalBookmarks: 0,
+    approvalCategories: 0,
+    quizPerformance: 0,
+  });
   const [averageScorePerStoryData, setAverageScorePerStoryData] = useState([]);
+  const [bookmarkedStoriesData, setBookmarkedStoriesData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
@@ -56,6 +97,7 @@ const TeacherCharts = () => {
 
   const storiesChartRef = useRef();
   const studentsGradeChartRef = useRef();
+  const bookmarkedChartRef = useRef();
   const chartsRef = useRef();
 
   const toggleSidebar = () => {
@@ -117,6 +159,35 @@ const TeacherCharts = () => {
     }
   };
 
+  const fetchStoryBookmarkCounts = async () => {
+    try {
+      const storiesRef = collection(db, "stories");
+      const storiesSnapshot = await getDocs(storiesRef);
+      const stories = storiesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), bookmarks: 0 }));
+
+      const studentsRef = collection(db, "students");
+      const studentsSnapshot = await getDocs(studentsRef);
+
+      for (const studentDoc of studentsSnapshot.docs) {
+        const bookmarksRef = collection(db, "students", studentDoc.id, "bookmarks");
+        const bookmarksSnapshot = await getDocs(bookmarksRef);
+        bookmarksSnapshot.forEach(favDoc => {
+          const story = stories.find(s => s.id === favDoc.id);
+          if (story) {
+            story.bookmarks++;
+          }
+        });
+      }
+
+      const sortedStories = stories.sort((a, b) => b.bookmarks - a.bookmarks).slice(0, 10);
+      setBookmarkedStoriesData(sortedStories);
+
+    } catch (error) {
+      console.error("Error fetching story bookmark counts:", error);
+      throw error;
+    }
+  };
+
   const fetchStudentsByGradeData = async () => {
     if (!teacherSection) return;
     try {
@@ -140,6 +211,7 @@ const TeacherCharts = () => {
         percentage: `${((gradeCounts[grade] / Object.values(gradeCounts).reduce((sum, count) => sum + count, 0)) * 100).toFixed(1)}%`,
       }));
       setStudentsByGradeInSectionData(chartData);
+      setDashboardStats(prev => ({ ...prev, totalStudents: studentsSnapshot.size, approvalCategories: Object.keys(gradeCounts).length }));
     } catch (error) {
       console.error("Error fetching students by grade data:", error);
       throw error;
@@ -186,6 +258,7 @@ const TeacherCharts = () => {
       })).map(d => ({ ...d, averageScore: parseFloat(d.averageScore.toFixed(1)) }));
 
       setAverageScorePerStoryData(chartData);
+      setDashboardStats(prev => ({ ...prev, quizPerformance: (Object.values(storyScores).reduce((acc, s) => acc + s.totalScore, 0) / Object.values(storyScores).reduce((acc, s) => acc + s.totalQuestions, 1) * 100).toFixed(1) + '%' }));
 
     } catch (error) {
       console.error("Error fetching average score data:", error);
@@ -199,10 +272,14 @@ const TeacherCharts = () => {
         try {
           setLoading(true);
           setError(null);
+          const storiesSnapshot = await getDocs(collection(db, "stories"));
+          setDashboardStats(prev => ({ ...prev, totalStories: storiesSnapshot.size }));
           await Promise.all([
             fetchPopularStoriesData(), 
             fetchStudentsByGradeData(),
-            fetchAverageScorePerStory()
+            fetchAverageScorePerStory(),
+            fetchStoryBookmarkCounts(),
+            fetchStudentApprovalData(),
           ]);
         } catch (err) {
           console.error("Error loading charts data:", err);
@@ -214,6 +291,34 @@ const TeacherCharts = () => {
       fetchData();
     }
   }, [teacherSection]);
+
+  const fetchStudentApprovalData = async () => {
+    if (!teacherSection) return;
+    try {
+      const studentsQuery = query(
+        collection(db, "students"),
+        where("section", "==", teacherSection)
+      );
+      const studentsSnapshot = await getDocs(studentsQuery);
+
+      const approvalStatusCounts = {};
+      studentsSnapshot.forEach((doc) => {
+        const student = doc.data();
+        const status = student.status || "unknown";
+        approvalStatusCounts[status] = (approvalStatusCounts[status] || 0) + 1;
+      });
+
+      const chartData = Object.keys(approvalStatusCounts).map((status, idx) => ({
+        name: status.charAt(0).toUpperCase() + status.slice(1).replace("_", " "),
+        value: approvalStatusCounts[status],
+        color: STUDENT_GRADE_COLORS[idx % STUDENT_GRADE_COLORS.length],
+      }));
+      setStudentApprovalData(chartData);
+    } catch (error) {
+      console.error("Error fetching student approval data:", error);
+      throw error;
+    }
+  };
 
   // Custom tooltip component matching Charts.js
   const CustomTooltip = ({ active, payload, label }) => {
@@ -427,6 +532,46 @@ const TeacherCharts = () => {
             </Alert>
           )}
 
+          {/* Metric Cards */}
+          <Row className="g-4 mb-4">
+            <Col lg={2} md={4}>
+              <MetricCard
+                title="Total Stories"
+                value={dashboardStats.totalStories}
+                icon={FaBook}
+                style={CARD_STYLES.stories}
+                loading={loading}
+              />
+            </Col>
+            <Col lg={2} md={4}>
+              <MetricCard
+                title="Students in Section"
+                value={dashboardStats.totalStudents}
+                icon={FaUserGraduate}
+                style={CARD_STYLES.students}
+                loading={loading}
+              />
+            </Col>
+            <Col lg={2} md={4}>
+              <MetricCard
+                title="Total Bookmarks"
+                value={bookmarkedStoriesData.reduce((sum, story) => sum + story.bookmarks, 0)}
+                icon={FaBookmark}
+                style={CARD_STYLES.bookmarks}
+                loading={loading}
+              />
+            </Col>
+            <Col lg={3} md={6}>
+              <MetricCard
+                title="Quiz Performance"
+                value={dashboardStats.quizPerformance}
+                icon={FaClipboardCheck}
+                style={CARD_STYLES.quizzes}
+                loading={loading}
+              />
+            </Col>
+          </Row>
+
           <div ref={chartsRef}>
             <Row className="g-4">
               <Col xl={6} lg={12} className="mb-4">
@@ -487,6 +632,63 @@ const TeacherCharts = () => {
                 </div>
               </Col>
               <Col xl={6} lg={12} className="mb-4">
+                <div ref={bookmarkedChartRef}>
+                  <ChartCard 
+                    title="Most Bookmarked Stories" 
+                    loading={loading}
+                    onDownload={() => handleDownloadChartPdf(bookmarkedChartRef, "bookmarked_stories_chart.pdf")}
+                  >
+                    {bookmarkedStoriesData.length > 0 ? (
+                      <div className="chart-container">
+                        <ResponsiveContainer width="100%" height={300}>
+                          <BarChart data={bookmarkedStoriesData} margin={{ top: 5, right: 30, left: 20, bottom: 60 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#FFE4E1" />
+                            <XAxis
+                              dataKey="title"
+                              angle={-45}
+                              textAnchor="end"
+                              height={80}
+                              interval={0}
+                              tick={{ fontSize: 11 }}
+                              stroke="#2D2D2D"
+                              tickLine={false}
+                              axisLine={false}
+                            />
+                            <YAxis
+                              allowDecimals={false}
+                              stroke="#2D2D2D"
+                              fontSize={12}
+                              tickLine={false}
+                              axisLine={false}
+                              label={{
+                                value: "Number of Bookmarks",
+                                angle: -90,
+                                position: "insideLeft",
+                                style: { textAnchor: "middle", fill: "#2D2D2D" },
+                              }}
+                            />
+                            <Tooltip content={<CustomTooltip />} />
+                            <Bar
+                              dataKey="bookmarks"
+                              name="Total Bookmarks"
+                              fill={COLORS.bookmarks}
+                              radius={[6, 6, 0, 0]}
+                            />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    ) : (
+                      <div className="d-flex align-items-center justify-content-center" style={{ height: 300 }}>
+                        <div className="text-center">
+                          <FaExclamationTriangle size={48} className="text-muted mb-3" style={{ opacity: 0.3 }} />
+                          <p className="text-muted mb-0">No story bookmark data available</p>
+                        </div>
+                      </div>
+                    )}
+                  </ChartCard>
+                </div>
+              </Col>
+              <Col xl={6} lg={12} className="mb-4">
                 <div ref={studentsGradeChartRef}>
                   <ChartCard 
                     title="Students Per Grade (My Section)" 
@@ -523,7 +725,45 @@ const TeacherCharts = () => {
                       </div>
                     )}
                   </ChartCard>
+
                 </div>
+              </Col>
+              <Col xl={6} lg={12} className="mb-4">
+                <ChartCard 
+                  title="Student Approval Status" 
+                  loading={loading}
+                  onDownload={() => handleDownloadChartPdf(studentsGradeChartRef, "student_approval_chart.pdf")}
+                >
+                  {studentApprovalData.length > 0 && studentApprovalData.some((s) => s.value > 0) ? (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <PieChart>
+                        <Pie
+                          data={studentApprovalData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          outerRadius={100}
+                          fill="#8884d8"
+                          dataKey="value"
+                          label={({ name, value }) => `${name}: ${value}`}
+                        >
+                          {studentApprovalData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip content={<CustomTooltip />} />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="d-flex align-items-center justify-content-center" style={{ height: 300 }}>
+                      <div className="text-center">
+                        <FaExclamationTriangle size={48} className="text-muted mb-3" style={{ opacity: 0.3 }} />
+                        <p className="text-muted mb-0">No approval status data available</p>
+                      </div>
+                    </div>
+                  )}
+                </ChartCard>
               </Col>
               <Col xl={12} lg={12}>
                 <ChartCard 
@@ -531,47 +771,47 @@ const TeacherCharts = () => {
                   title="Average Score Per Story" 
                   loading={false}
                   onDownload={() => handleDownloadChartPdf(storiesChartRef, "average_score_chart.pdf")}
-                >
-                  {averageScorePerStoryData.length > 0 ? (
-                    <div className="chart-container">
-                      <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={averageScorePerStoryData} margin={{ top: 5, right: 30, left: 20, bottom: 60 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#FFE4E1" />
-                          <XAxis
-                            dataKey="name"
-                            angle={-45}
-                            textAnchor="end"
-                            height={80}
-                            interval={0}
-                            tick={{ fontSize: 11 }}
-                            stroke="#2D2D2D"
-                          />
-                          <YAxis
-                            stroke="#2D2D2D"
-                            fontSize={12}
-                            domain={[0, 100]}
-                            label={{
-                              value: "Average Score (%)",
-                              angle: -90,
-                              position: "insideLeft",
-                              style: { textAnchor: "middle", fill: "#2D2D2D" },
-                            }}
-                          />
-                          <Tooltip content={<CustomTooltip />} />
-                          <Bar dataKey="averageScore" name="Average Score" fill={COLORS.success} radius={[6, 6, 0, 0]} unit="%" />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  ) : (
-                    <div className="d-flex align-items-center justify-content-center" style={{ height: 300 }}>
-                      <div className="text-center">
-                        <FaExclamationTriangle size={48} className="text-muted mb-3" style={{ opacity: 0.3 }} />
-                        <p className="text-muted mb-0">{noQuizData ? "No quiz data available for your section" : "Loading data..."}</p>
+                  >
+                    {averageScorePerStoryData.length > 0 ? (
+                      <div className="chart-container">
+                        <ResponsiveContainer width="100%" height={300}>
+                          <BarChart data={averageScorePerStoryData} margin={{ top: 5, right: 30, left: 20, bottom: 60 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#FFE4E1" />
+                            <XAxis
+                              dataKey="name"
+                              angle={-45}
+                              textAnchor="end"
+                              height={80}
+                              interval={0}
+                              tick={{ fontSize: 11 }}
+                              stroke="#2D2D2D"
+                            />
+                            <YAxis
+                              stroke="#2D2D2D"
+                              fontSize={12}
+                              domain={[0, 100]}
+                              label={{
+                                value: "Average Score (%)",
+                                angle: -90,
+                                position: "insideLeft",
+                                style: { textAnchor: "middle", fill: "#2D2D2D" },
+                              }}
+                            />
+                            <Tooltip content={<CustomTooltip />} />
+                            <Bar dataKey="averageScore" name="Average Score" fill={COLORS.success} radius={[6, 6, 0, 0]} unit="%" />
+                          </BarChart>
+                        </ResponsiveContainer>
                       </div>
-                    </div>
-                  )}
-                </ChartCard>
-              </Col>
+                    ) : (
+                      <div className="d-flex align-items-center justify-content-center" style={{ height: 300 }}>
+                        <div className="text-center">
+                          <FaExclamationTriangle size={48} className="text-muted mb-3" style={{ opacity: 0.3 }} />
+                          <p className="text-muted mb-0">{noQuizData ? "No quiz data available for your section" : "Loading data..."}</p>
+                        </div>
+                      </div>
+                    )}
+                  </ChartCard>
+                </Col>
             </Row>
           </div>
         </Container>

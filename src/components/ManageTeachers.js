@@ -59,6 +59,12 @@ import "../scss/custom.scss";
 const functions = getFunctions(app);
 const logAdminUiActionCallable = httpsCallable(functions, 'logAdminUiAction');
 
+// Function to call the Firebase Cloud Function for updating passwords
+async function updateTeacherPassword(uid, newPassword) {
+  const updatePasswordFn = httpsCallable(functions, "updateAdminPassword");
+  return updatePasswordFn({ uid, newPassword });
+}
+
 // Constants
 const COLORS = {
   primary: "#FF69B4",
@@ -450,7 +456,7 @@ const TeacherModal = ({
           </Col>
         </Row>
 
-        {!isEditMode && formData.password && (
+        {formData.password && (
           <div className="mb-3">
             <Card className="border-0" style={{ backgroundColor: "#f8f9fa" }}>
               <Card.Body className="p-3">
@@ -646,7 +652,7 @@ const ManageTeachers = () => {
       ...prev,
       [name]: value,
     }));
-    if (name === "password" && !isEditMode) {
+    if (name === "password") {
       setPasswordRequirements(validatePassword(value));
     }
   }, [isEditMode]);
@@ -726,12 +732,12 @@ const ManageTeachers = () => {
       return;
     }
 
-    if (!isEditMode && formData.password !== confirmPassword) {
-      showAlert("Passwords do not match.", "warning");
-      return;
-    }
+    if (formData.password || !isEditMode) {
+      if (formData.password !== confirmPassword) {
+        showAlert("Passwords do not match.", "warning");
+        return;
+      }
 
-    if (!isEditMode) {
       const requirements = validatePassword(formData.password);
       if (!Object.values(requirements).every((req) => req)) {
         showAlert("Please ensure the password meets all requirements.", "danger");
@@ -760,6 +766,17 @@ const ManageTeachers = () => {
         // Update existing teacher
         const teacherRef = doc(db, "teachers", selectedTeacher.id);
         await updateDoc(teacherRef, teacherData);
+
+        // --- START: Added Password Update Logic ---
+        if (formData.password && formData.password.length >= 6) {
+          try {
+            await updateTeacherPassword(selectedTeacher.uid, formData.password);
+            showAlert("Password updated successfully in Authentication!", "success");
+          } catch (err) {
+            showAlert(`Failed to update password: ${err.message}`, "danger");
+          }
+        }
+        // --- END: Added Password Update Logic ---
 
         setTeachers((prevTeachers) =>
           prevTeachers.map((teacher) =>

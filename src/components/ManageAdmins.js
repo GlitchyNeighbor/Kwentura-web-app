@@ -138,7 +138,7 @@ const ManageAdmins = () => {
       [name]: value,
     });
     
-    if (name === "password" && !isEditMode) {
+    if (name === "password") {
       validatePassword(value);
     }
   };
@@ -1124,7 +1124,7 @@ const ManageAdmins = () => {
               </Col>
             </Row>
 
-            {!isEditMode && formData.password && (
+            {formData.password && (
               <div className="mb-3">
                 <Card className="border-0" style={{ backgroundColor: "#f8f9fa" }}>
                   <Card.Body className="p-3">
