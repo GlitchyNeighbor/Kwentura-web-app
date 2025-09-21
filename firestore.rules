@@ -1,18 +1,91 @@
-// rules_version = '2';
-
-// service cloud.firestore {
-//   match /databases/{database}/documents {
-//     match /{document=**} {
-//       allow read, write: if false;
-//     }
-//   }
-// }
-
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // Helper functions to check user roles
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function isUser(userId) {
+      return isAuth() && request.auth.uid == userId;
+    }
+
+    function getRole() {
+      return get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role
+           || get(/databases/$(database)/documents/teachers/$(request.auth.uid)).data.role
+           || get(/databases/$(database)/documents/students/$(request.auth.uid)).data.role;
+    }
+
+    function isAdmin() {
+      let role = getRole();
+      return isAuth() && (role == 'admin' || role == 'superAdmin');
+    }
+
+    function isSuperAdmin() {
+      return isAuth() && getRole() == 'superAdmin';
+    }
+
+    function isTeacher() {
+      return isAuth() && getRole() == 'teacher';
+    }
+
+    function isStudent() {
+      return isAuth() && getRole() == 'student';
+    }
+
+    // Admins collection
+    match /admins/{adminId} {
+      allow read: if isAuth();
+      allow create: if isSuperAdmin();
+      allow update: if isSuperAdmin() || isUser(adminId);
+      allow delete: if isSuperAdmin();
+    }
+
+    // Teachers collection
+    match /teachers/{teacherId} {
+      allow read: if isAuth();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || isUser(teacherId);
+    }
+
+    // Students collection
+    match /students/{studentId} {
+      allow read: if isAuth();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || isUser(studentId);
+    }
+
+    // Pending Teachers collection
+    match /pendingTeachers/{pendingId} {
+      allow create: if !isAuth(); // Allow anyone to sign up
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Stories collection
+    match /stories/{storyId} {
+      allow read: if isAuth();
+      allow create, update, delete: if isAdmin() || isTeacher();
+    }
+
+    // Story Engagement collection
+    match /story_engagement/{engagementId} {
+      // Engagement ID is expected to be in the format 'userId_storyId'
+      allow read: if isAdmin() || isTeacher() || (isStudent() && request.auth.uid == engagementId.split('_')[0]);
+      allow create, update: if isStudent() && request.auth.uid == engagementId.split('_')[0];
+      allow delete: if isAdmin();
+    }
+
+    // Logs collection (assuming you have one for admin actions)
+    match /logs/{logId} {
+      allow create: if isAdmin();
+      allow read, update, delete: if isSuperAdmin();
+    }
+
+    // Default deny all other access
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
   }
 }

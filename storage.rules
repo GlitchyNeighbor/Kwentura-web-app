@@ -1,18 +1,70 @@
 rules_version = '2';
+
 service firebase.storage {
   match /b/{bucket}/o {
-    
-    function isAuthenticated() {
+
+    // Helper functions
+    function isAuth() {
       return request.auth != null;
     }
 
-    match /tts/{fileName} {
-      allow read: if true;
-      allow write: if isAuthenticated();
+    function isOwner(userId) {
+      return isAuth() && request.auth.uid == userId;
     }
 
+    // Function to check if the user is an admin or teacher from Firestore
+    function isPrivilegedUser() {
+      let adminRole = get(/databases/(default)/documents/admins/$(request.auth.uid)).data.role;
+      let teacherRole = get(/databases/(default)/documents/teachers/$(request.auth.uid)).data.role;
+      return isAuth() && (adminRole == 'admin' || adminRole == 'superAdmin' || teacherRole == 'teacher');
+    }
+
+    // Profile images: Users can only manage their own profile picture.
+    match /profileImages/{userId}_{fileName} {
+      allow read: if true;
+      allow write: if isOwner(userId);
+    }
+
+    // Story cover images
+    match /stories/{storyId}_{fileName} {
+        allow read: if true;
+        allow write: if isPrivilegedUser();
+    }
+
+    // Story PDFs
+    match /story_pdfs/{storyId}_{fileName} {
+        allow read: if true;
+        allow write: if isPrivilegedUser();
+    }
+
+    // Story pages (converted from PDF)
+    match /story_pages/{storyId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isPrivilegedUser();
+    }
+
+    // Story TTS audio files
+    match /story_tts/{storyId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isPrivilegedUser();
+    }
+
+    // Assessment (moral/comprehension) images
+    match /assessment_images/{storyId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isPrivilegedUser();
+    }
+
+    // Assessment (moral/comprehension) audio files
+    match /assessment_audio/{storyId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isPrivilegedUser();
+    }
+
+    // Fallback to deny all other writes, but allow reads if needed.
     match /{allPaths=**} {
-      allow read, write: if isAuthenticated();
+      allow read: if true; // Be cautious with this rule
+      allow write: if false;
     }
   }
 }
