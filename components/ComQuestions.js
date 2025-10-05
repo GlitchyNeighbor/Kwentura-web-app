@@ -226,16 +226,22 @@ const ComQuestions = ({ route, navigation }) => {
 
     if (isCorrect) {
       setScore(score + 1);
-      playSoundSequence([
-        require('../assets/sounds/correct.mp3'),
-      ]);
+      Alert.alert("Correct!", "Well done!");
+      playSoundSequence([require('../assets/sounds/correct.mp3')]);
+      playSoundSequence([require('../assets/sounds/congratulations.mp3')]);
     } else {
-      playSoundSequence([
-        require('../assets/sounds/wrong-answer.mp3'),
-      ]);
+      Alert.alert("Not quite right", "Think about the story again.");
+      playSoundSequence([require('../assets/sounds/wrong-answer.mp3')]);
+      playSoundSequence([require('../assets/sounds/encouragement.mp3')]);
     }
 
-    setSelectedOption(null);
+    // Delay moving to the next question to allow user to see feedback
+    setTimeout(() => {
+      moveToNext();
+    }, 1500); // 1.5 second delay
+  };
+
+  const moveToNext = () => {
     const nextIndex = currentQuestionIndex + 1;
     if (nextIndex < questions.length) {
       setCurrentQuestionIndex(nextIndex);
@@ -250,6 +256,7 @@ const ComQuestions = ({ route, navigation }) => {
     } else {
       setShowResults(true);
     }
+    setSelectedOption(null);
   };
 
   const handleSubmitMoralLesson = () => {
@@ -262,17 +269,17 @@ const ComQuestions = ({ route, navigation }) => {
 
     if (isCorrect) {
       setScore(score + 1);
-      playSoundSequence([
-        require('../assets/sounds/correct.mp3'),
-        require('../assets/sounds/congratulations.mp3')
-      ]);
+      Alert.alert("Correct!", "Well done!");
+      playSoundSequence([require('../assets/sounds/correct.mp3')]);
+      playSoundSequence([require('../assets/sounds/congratulations.mp3')]);
     } else {
-      playSoundSequence([
-        require('../assets/sounds/wrong-answer.mp3'),
-        require('../assets/sounds/encouragement.mp3')
-      ]);
+      Alert.alert("Not quite right", "Think about the story again.");
+      playSoundSequence([require('../assets/sounds/wrong-answer.mp3')]);
+      playSoundSequence([require('../assets/sounds/encouragement.mp3')]);
     }
-    setShowResults(true);
+    setTimeout(() => {
+      setShowResults(true);
+    }, 1500); // 1.5 second delay
   };
 
   const currentQuestion = questions[currentQuestionIndex];

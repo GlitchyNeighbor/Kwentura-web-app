@@ -5,6 +5,7 @@ export const rewardsConfig = [
     title: "Busy Bee", 
     description: "The tiniest story helper", 
     image: require('../images/animals/Bee.png'),
+    sound: require('../assets/sounds/animals/bee.mp3'),
     color: "#FFD700", 
     bgColor: "#FFF9C4" 
   },
@@ -14,6 +15,7 @@ export const rewardsConfig = [
     title: "Cheerful Chicken", 
     description: "Pecks at beginner tales", 
     image: require('../images/animals/Chicken.png'),
+    sound: require('../assets/sounds/animals/chicken.mp3'),
     color: "#FF9800", 
     bgColor: "#FFF3E0" 
   },
@@ -23,6 +25,7 @@ export const rewardsConfig = [
     title: "Steady Snail", 
     description: "Slow but sure storyteller", 
     image: require('../images/animals/Snail.png'),
+    sound: require('../assets/sounds/animals/snail.mp3'),
     color: "#9E9E9E", 
     bgColor: "#F5F5F5" 
   },
@@ -32,6 +35,7 @@ export const rewardsConfig = [
     title: "Playful Parrot", 
     description: "Repeats stories full of color", 
     image: require('../images/animals/Parrot.png'),
+    sound: require('../assets/sounds/animals/parrot.mp3'),
     color: "#4CAF50", 
     bgColor: "#E8F5E8" 
   },
@@ -41,6 +45,7 @@ export const rewardsConfig = [
     title: "Lucky Ladybug", 
     description: "Tiny hero of big tales", 
     image: require('../images/animals/Ladybug.png'),
+    sound: require('../assets/sounds/animals/ladybug.mp3'),
     color: "#F44336", 
     bgColor: "#FFEBEE" 
   },
@@ -50,6 +55,7 @@ export const rewardsConfig = [
     title: "Feisty Fox", 
     description: "Clever with curious stories", 
     image: require('../images/animals/Fox.png'),
+    sound: require('../assets/sounds/animals/fox.mp3'),
     color: "#FF5722", 
     bgColor: "#FBE9E7" 
   },
@@ -59,6 +65,7 @@ export const rewardsConfig = [
     title: "Resourceful Raccoon", 
     description: "Loves tricky tale adventures", 
     image: require('../images/animals/Raccoon.png'),
+    sound: require('../assets/sounds/animals/raccoon.mp3'),
     color: "#607D8B", 
     bgColor: "#ECEFF1" 
   },
@@ -68,6 +75,7 @@ export const rewardsConfig = [
     title: "Smart Squirrel",
     description: "Collector of cozy tales", 
     image: require('../images/animals/Squirrel.png'),
+    sound: require('../assets/sounds/animals/squirrel.mp3'),
     color: "#795548", 
     bgColor: "#EFEBE9" 
   },
@@ -77,6 +85,7 @@ export const rewardsConfig = [
     title: "Calm Capybara", 
     description: "Peaceful guardian of tales", 
     image: require('../images/animals/Capybara.png'),
+    sound: require('../assets/sounds/animals/capybara.mp3'),
     color: "#8BC34A", 
     bgColor: "#F1F8E9" 
   },
@@ -86,6 +95,7 @@ export const rewardsConfig = [
     title: "Kindly Kangaroo", 
     description: "Hops across story lands", 
     image: require('../images/animals/Kangaroo.png'),
+    sound: require('../assets/sounds/animals/kangaroo.mp3'),
     color: "#9C27B0", 
     bgColor: "#F3E5F5" 
   },
@@ -95,6 +105,7 @@ export const rewardsConfig = [
     title: "Friendly Frog", 
     description: "Jumps into fun adventures", 
     image: require('../images/animals/Frog.png'),
+    sound: require('../assets/sounds/animals/frog.mp3'),
     color: "#4CAF50", 
     bgColor: "#E8F5E8" 
   },
@@ -104,6 +115,7 @@ export const rewardsConfig = [
     title: "Loyal Lion", 
     description: "Protector of mighty stories", 
     image: require('../images/animals/Lion.png'),
+    sound: require('../assets/sounds/animals/lion.mp3'),
     color: "#FFD700", 
     bgColor: "#FFFDE7" 
   },
@@ -113,6 +125,7 @@ export const rewardsConfig = [
     title: "Outstanding Ostrich", 
     description: "Runs through thrilling tales", 
     image: require('../images/animals/Ostrich.png'),
+    sound: require('../assets/sounds/animals/ostrich.mp3'),
     color: "#FF9800", 
     bgColor: "#FFF3E0" 
   },
@@ -122,6 +135,7 @@ export const rewardsConfig = [
     title: "Curious Cat", 
     description: "Explorer of magical stories", 
     image: require('../images/animals/Cat.png'),
+    sound: require('../assets/sounds/animals/cat.mp3'),
     color: "#FF6DA8", 
     bgColor: "#FCE4EC" 
   },
@@ -131,6 +145,7 @@ export const rewardsConfig = [
     title: "Daring Dog", 
     description: "The ultimate story legend", 
     image: require('../images/animals/Dog.png'),
+    sound: require('../assets/sounds/animals/dog.mp3'),
     color: "#2196F3", 
     bgColor: "#E3F2FD" 
   },

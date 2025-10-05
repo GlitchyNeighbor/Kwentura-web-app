@@ -14,7 +14,6 @@ import { Audio } from 'expo-av';
 import AppHeader from "./HeaderLanding";
 
 const Landing = ({ navigation }) => {
-  const [sound, setSound] = useState();
 
   // Create animated values for each animal
   const animatedValues = {
@@ -44,32 +43,6 @@ const Landing = ({ navigation }) => {
     ostrichPos: useRef(new Animated.ValueXY({ x: 0, y: 0 })).current,
     snailPos: useRef(new Animated.ValueXY({ x: 0, y: 0 })).current,
   };
-
-  // Load the sound when the component mounts
-  useEffect(() => {
-    const loadSound = async () => {
-      console.log('Loading sound...');
-      try {
-        const { sound } = await Audio.Sound.createAsync(
-           require('../assets/sounds/boink.mp3')
-        );
-        setSound(sound);
-        console.log('Sound loaded successfully');
-      } catch (error) {
-        console.error('Failed to load the sound', error);
-      }
-    };
-
-    loadSound();
-
-    // Unload the sound when the component unmounts
-    return () => {
-      if (sound) {
-        console.log('Unloading sound...');
-        sound.unloadAsync();
-      }
-    };
-  }, []); // The empty dependency array ensures this runs only once
 
   // Function for continuous, random floating animation
   const createFloatingAnimation = (positionValue) => {
@@ -101,13 +74,35 @@ const Landing = ({ navigation }) => {
     });
   }, []);
 
+  // Map animal names to their sound files
+  const animalSounds = {
+    bee: require('../assets/sounds/animals/bee.mp3'),
+    parrot: require('../assets/sounds/animals/parrot.mp3'),
+    ladybug: require('../assets/sounds/animals/ladybug.mp3'),
+    squirrel: require('../assets/sounds/animals/squirrel.mp3'),
+    fox: require('../assets/sounds/animals/fox.mp3'),
+    frog: require('../assets/sounds/animals/frog.mp3'),
+    chicken: require('../assets/sounds/animals/chicken.mp3'),
+    lion: require('../assets/sounds/animals/lion.mp3'),
+    capybara: require('../assets/sounds/animals/capybara.mp3'),
+    ostrich: require('../assets/sounds/animals/ostrich.mp3'),
+    snail: require('../assets/sounds/animals/snail.mp3'),
+  };
+
   // Function to handle animal clicks with bounce animation and sound
   const handleAnimalClick = async (animalName) => {
-    const animatedValue = animatedValues[animalName.toLowerCase()];
+    const lowerCaseAnimalName = animalName.toLowerCase();
+    const animatedValue = animatedValues[lowerCaseAnimalName];
     
-    // Play the sound if it's loaded
-    if (sound) {
-      await sound.replayAsync(); // Replay the sound from the beginning
+    // Play the corresponding animal sound
+    const soundSource = animalSounds[lowerCaseAnimalName];
+    if (soundSource) {
+      try {
+        const { sound } = await Audio.Sound.createAsync(soundSource);
+        await sound.playAsync();
+      } catch (error) {
+        console.error(`Failed to play sound for ${animalName}`, error);
+      }
     }
     
     // Create bounce animation
@@ -129,7 +124,7 @@ const Landing = ({ navigation }) => {
       }),
     ]).start();
     
-    console.log(`Bounced ${animalName} with boink sound!`);
+    console.log(`Bounced ${animalName} with its sound!`);
   };
 
   const renderAnimal = (animalName, imagePath, style) => {

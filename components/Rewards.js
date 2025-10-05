@@ -71,7 +71,6 @@ const Rewards = ({ navigation }) => {
   const [unlockedModalVisible, setUnlockedModalVisible] = useState(false);
   const [unlockedReward, setUnlockedReward] = useState(null);
   const searchTimeoutRef = useRef(null);
-  const [boinkSound, setBoinkSound] = useState();
   const unlockedAvatarScale = useRef(new Animated.Value(1)).current;
   const [clappingSound, setClappingSound] = useState();
 
@@ -127,24 +126,6 @@ const Rewards = ({ navigation }) => {
     return () => {
       Speech.stop();
     };
-  }, []);
-
-  // Load and unload the boink sound for the unlocked modal
-  useEffect(() => {
-    const loadSound = async () => {
-      try {
-        const { sound } = await Audio.Sound.createAsync(
-           require('../assets/sounds/boink.mp3')
-        );
-        setBoinkSound(sound);
-      } catch (error) {
-        console.error('Failed to load the boink sound', error);
-      }
-    };
-
-    loadSound();
-
-    return () => boinkSound?.unloadAsync();
   }, []);
 
   useEffect(() => {
@@ -686,9 +667,15 @@ const Rewards = ({ navigation }) => {
   // Function to handle unlocked animal clicks with bounce animation and sound
   const handleUnlockedAnimalClick = async (rewardId) => {
     const animatedValue = animatedValues.current[rewardId];
+    const reward = rewardsConfig.find(r => r.id === rewardId);
     
     // Play the sound if it's loaded
-    if (boinkSound) {
+    if (reward && reward.sound) {
+      try {
+        const { sound: boinkSound } = await Audio.Sound.createAsync(reward.sound);
+        await boinkSound.replayAsync();
+      } catch (e) { console.error("Failed to play animal sound", e); }
+    } else {
       await boinkSound.replayAsync();
     }
     
@@ -711,7 +698,7 @@ const Rewards = ({ navigation }) => {
       }),
     ]).start();
     
-    console.log(`Bounced unlocked animal ${rewardId} with boink sound!`);
+    console.log(`Bounced unlocked animal ${rewardId} with its sound!`);
   };
   
 // Simple and clear renderAnimalReward function
@@ -906,7 +893,13 @@ const renderAnimalReward = (reward, index) => {
     ]).start();
 
     // Play the sound if it's loaded
-    if (boinkSound) {
+    const reward = rewardsConfig.find(r => r.id === unlockedReward?.id);
+    if (reward && reward.sound) {
+      try {
+        const { sound: boinkSound } = await Audio.Sound.createAsync(reward.sound);
+        await boinkSound.replayAsync();
+      } catch (e) { console.error("Failed to play animal sound", e); }
+    } else {
       await boinkSound.replayAsync();
     }
   };
@@ -924,7 +917,7 @@ const renderAnimalReward = (reward, index) => {
       [
         { text: "Cancel", style: "cancel" },
         { text: "+5 Stars", onPress: () => addStars(5, "demo action") },
-        { text: "+25 Stars", onPress: () => addStars(25, "demo action") },
+        { text: "+500 Stars", onPress: () => addStars(500, "demo action") },
         { text: "+50 Stars", onPress: () => addStars(50, "demo action") },
       ]
     );

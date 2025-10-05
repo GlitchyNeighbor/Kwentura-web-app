@@ -27,7 +27,7 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import AppHeader from "./HeaderProfile";
 import { useProfile } from '../context/ProfileContext';
-import { getUnlockedAnimalAvatars } from "./rewardsConfig";
+import { rewardsConfig, getUnlockedAnimalAvatars } from "./rewardsConfig.js";
 import { Audio } from 'expo-av';
 
 const DAILY_USAGE_LIMIT_MS = 90 * 60 * 1000;
@@ -350,35 +350,27 @@ const RestModeOverlay = ({ onRestart, formatTime }) => {
 
 const AvatarPicker = ({ visible, onClose, onSave, currentAvatar, avatarOptions, navigation }) => {
   const [selectedAvatar, setSelectedAvatar] = useState(null);
-  const [sound, setSound] = useState();
 
-  // Load the sound when the component mounts
-  useEffect(() => {
-    const loadSound = async () => {
-      console.log('Loading boink sound...');
-      try {
-        const { sound } = await Audio.Sound.createAsync(
-           require('../assets/sounds/boink.mp3')
-        );
-        setSound(sound);
-        console.log('Boink sound loaded successfully');
-      } catch (error) {
-        console.error('Failed to load the boink sound', error);
+  // Map avatar images to their sound files
+  const avatarSounds = useMemo(() => {
+    const soundMap = {};
+    rewardsConfig.forEach(reward => {
+      // Assuming reward.image is a require() result with a `uri` or similar identifier
+      // A more robust way might be to use reward.id or reward.title
+      const imagePath = Image.resolveAssetSource(reward.image).uri;
+      const animalName = reward.title.split(' ')[1].toLowerCase();
+      const soundFile = `../assets/sounds/animals/${animalName}.mp3`;
+      
+      // This is a bit of a hack to get the sound file.
+      // A better approach would be to have the sound file in rewardsConfig.
+      // For now, we'll use a switch for known animals.
+      const soundRequire = rewardsConfig.find(r => r.title.toLowerCase().includes(animalName))?.sound;
+      if (soundRequire) {
+        soundMap[imagePath] = soundRequire;
       }
-    };
-
-    if (visible) {
-      loadSound();
-    }
-
-    // Unload the sound when the component unmounts or modal closes
-    return () => {
-      if (sound) {
-        console.log('Unloading boink sound...');
-        sound.unloadAsync();
-      }
-    };
-  }, [visible]);
+    });
+    return soundMap;
+  }, []);
 
   const handleSave = useCallback(async () => {
     if (!selectedAvatar) return;
@@ -437,18 +429,22 @@ const AvatarPicker = ({ visible, onClose, onSave, currentAvatar, avatarOptions, 
     ]).start();
 
     // Play the sound if it's loaded
-    if (sound) {
+    const imagePath = Image.resolveAssetSource(item).uri;
+    const soundSource = avatarSounds[imagePath];
+
+    if (soundSource) {
       try {
-        await sound.replayAsync(); // Replay the sound from the beginning
-        console.log('Played boink sound for avatar click');
+        const { sound } = await Audio.Sound.createAsync(soundSource);
+        await sound.playAsync();
+        console.log('Played animal sound for avatar click');
       } catch (error) {
-        console.error('Failed to play boink sound', error);
+        console.error('Failed to play animal sound', error);
       }
     }
     
     // Set selected avatar
     setSelectedAvatar(item);
-  }, [sound, getAnimatedValue]);
+  }, [getAnimatedValue, avatarSounds]);
 
   const renderAvatarItem = useCallback(({ item, index }) => {
     const isCurrentAvatar = currentAvatar === item;
