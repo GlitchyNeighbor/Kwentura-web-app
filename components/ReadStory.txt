@@ -36,6 +36,30 @@ import AppHeader from "./HeaderReadStory";
 
 const { width, height } = Dimensions.get("window");
 
+// Memoized component for rendering a single story page to optimize FlatList performance.
+const StoryPage = React.memo(({ item, isLandscape, pageText }) => {
+  return (
+    <View style={isLandscape ? styles.landscapePageImageContainer : styles.pageImageContainer}>
+      <Image
+        source={{ uri: item }}
+        style={isLandscape ? styles.landscapePageImage : styles.pageImage}
+        resizeMode="contain"
+      />
+      {pageText ? (
+        <ScrollView 
+          style={isLandscape ? styles.landscapeTextScrollView : styles.textScrollView}
+          contentContainerStyle={styles.textScrollViewContent}
+        >
+          <Text style={isLandscape ? styles.landscapePageText : styles.pageText}>
+            {pageText}
+          </Text>
+        </ScrollView>
+      ) : null}
+    </View>
+  );
+});
+
+
 const ReadStory = ({ route, navigation }) => {
   const storyId = route.params?.storyId;
   const initialPage = route.params?.initialPage || 0; // Get initial page from route params
@@ -275,8 +299,8 @@ const ReadStory = ({ route, navigation }) => {
       let images = [];
       let texts = [];
   
-      // setStoryTitle(data.title || "");
-      // setStoryAuthor(data.author || "");
+      setStoryTitle(data.title || "");
+      setStoryAuthor(data.author || "");
       setStoryData(data); // Store complete story data
   
       // Determine available languages
@@ -637,22 +661,11 @@ const ReadStory = ({ route, navigation }) => {
   );
 
   const renderPage = ({ item, index }) => (
-    <View style={isLandscape ? styles.landscapePageImageContainer : styles.pageImageContainer}>
-      <Image
-        source={{ uri: item }}
-        style={isLandscape ? styles.landscapePageImage : styles.pageImage}
-        resizeMode="contain"
-      />
-      {pageTexts[index] ? (
-        <View style={isLandscape ? styles.landscapeTextContainer : styles.textContainer}>
-          <ScrollView contentContainerStyle={styles.textScrollViewContent}>
-            <Text style={isLandscape ? styles.landscapePageText : styles.pageText}>
-              {pageTexts[index]}
-            </Text>
-          </ScrollView>
-        </View>
-      ) : null}
-    </View>
+    <StoryPage
+      item={item}
+      isLandscape={isLandscape}
+      pageText={pageTexts[index]}
+    />
   );
 
   // Handle scroll to index failure
@@ -672,7 +685,16 @@ const ReadStory = ({ route, navigation }) => {
         style={styles.background}
         resizeMode="cover"
       >
-
+        <SafeAreaView style={styles.centered}>
+          <Animated.View style={[styles.loadingContainer, sparkleAnimatedStyle]}>
+            <Text style={styles.loadingTitle}>✨ Getting Your Story Ready!</Text>
+            <ActivityIndicator size="large" color="#FFD700" />
+            <Text style={styles.loadingText}>
+              {loading ? "📚 Loading magical pages..." : "Preparing the images... ✨"}
+            </Text>
+            <Animated.Text style={[styles.sparkle, starAnimatedStyle]}>⭐</Animated.Text>
+          </Animated.View>
+        </SafeAreaView>
       </ImageBackground>
     );
   }
@@ -714,8 +736,8 @@ const ReadStory = ({ route, navigation }) => {
 
                       {!isLandscape && (
                         <>
-                          {/* <Animated.Text style={[styles.decorativeSparkle, styles.bottomLeft, sparkleAnimatedStyle]}>⭐</Animated.Text>
-                          <Animated.Text style={[styles.decorativeSparkle, styles.bottomRight, sparkleAnimatedStyle]}>✨</Animated.Text> */}
+                          <Animated.Text style={[styles.decorativeSparkle, styles.bottomLeft, sparkleAnimatedStyle]}>⭐</Animated.Text>
+                          <Animated.Text style={[styles.decorativeSparkle, styles.bottomRight, sparkleAnimatedStyle]}>✨</Animated.Text>
                         </>
                       )}
 
@@ -763,7 +785,20 @@ const ReadStory = ({ route, navigation }) => {
                           </Animated.View>
                         </TouchableOpacity>
 
-        
+                        <TouchableOpacity
+                          style={styles.landscapeButton}
+                          onPress={toggleOrientation}
+                          activeOpacity={0.8}
+                        >
+                          <View style={styles.landscapeButtonContent}>
+                            <Text style={styles.landscapeButtonEmoji}>
+                              {isLandscape ? "📱" : "🔄"}
+                            </Text>
+                            <Text style={styles.landscapeButtonText}>
+                              {isLandscape ? "Portrait" : "Landscape"}
+                            </Text>
+                          </View>
+                        </TouchableOpacity>
                       </Animated.View>
 
                       <Animated.View style={[
@@ -854,9 +889,46 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
   },
-
-
-
+  storyHeader: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 15,
+    padding: 10,
+    borderWidth: 2,
+    borderColor: '#FFD700',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 5,
+    marginHorizontal: 20,
+    justifyContent: 'center',
+    marginTop: 90,
+    zIndex: 10,
+  },
+  storyTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FF6B6B',
+    textAlign: 'center',
+    marginBottom: 5,
+  },
+  storyAuthor: {
+    fontSize: 15,
+    color: '#4ECDC4',
+    fontStyle: 'italic',
+    textAlign: 'center',
+  },
+  storyContent: {
+    flex: 1,
+    justifyContent: 'center',
+    marginBottom: 50,
+  },
+  landscapeStoryContent: {
+    flex: 1,
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
   loadingContainer: {
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
     borderRadius: 20,
@@ -980,48 +1052,28 @@ const styles = StyleSheet.create({
   topRight: { top: 120, right: 30 },
   bottomLeft: { bottom: 100, left: 25 },
   bottomRight: { bottom: 120, right: 20 },
-
   pageImageContainer: {
     width: width,
-    height: height * 0.95,
-    justifyContent: "flex-start",
+    flex: 1,
+    height: height * 0.60,
+    justifyContent: "center",
     alignItems: "center",
-    paddingTop: 60,
-    paddingBottom: 0,
+  },
+  landscapePageImageContainer: {
+    width: height, // Use height as width in landscape
+    height: width * 0.85, // Use most of the available height
+    justifyContent: "center",
+    alignItems: "center",
   },
   pageImage: { 
-    width: width * 0.95,
-    height: height * 0.4,
-    borderRadius: 18,
-    marginBottom: 8,
+    width: width,
+    flex: 1, // Take up available vertical space
   },
-  textContainer: {
-    width: width * 0.92,
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
-    borderRadius: 18,
-    padding: 15,
-    marginTop: 0,
-    marginBottom: 10,
+  landscapePageImage: { 
+    width: height * 0.90, // Use most of the height as width in landscape
+    height: width * 0.70, // Use most of the width as height in landscape
+    borderRadius: 10,
   },
-
- 
-
- 
-
-  textScrollViewContent: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pageText: {
-    fontSize: 20,
-    color: 'white',
-    lineHeight: 38,
-    textAlign: 'center',
-    fontWeight: 'bold',
-    letterSpacing: 0.5,
-  },
-
   actionButtons: {
     // Styles for the text container
   textScrollView: {
@@ -1034,19 +1086,31 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     padding: 5,
   },
-
+  landscapeTextScrollView: {
+    position: 'absolute',
+    bottom: 100, // Adjust for landscape
+    left: 20,
+    right: 20,
+    maxHeight: height * 0.2,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderRadius: 15,
+    padding: 5,
+  },
   textScrollViewContent: {
     padding: 10,
   },
   pageText: {
-    fontSize: 20, // Increased for readability
+    fontSize: 16,
     color: 'white',
-    lineHeight: 38,
+    lineHeight: 24,
     textAlign: 'center',
-    fontWeight: 'bold',
-    letterSpacing: 0.5,
   },
-
+  landscapePageText: {
+    fontSize: 14,
+    color: 'white',
+    lineHeight: 20,
+    textAlign: 'center',
+  },
     flexDirection: 'row',
     justifyContent: 'space-around', // Distribute space evenly
     alignItems: 'center',
@@ -1058,36 +1122,80 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     marginRight: 10,
   },
-
+  landscapeActionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around', // Distribute space evenly
+    alignItems: 'center',
+    position: 'absolute',
+    bottom: 60,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    marginBottom: 20,
+    gap: 450
+  },
   listenButton: {
     backgroundColor: '#FF6B6B',
     borderRadius: 20,
     paddingVertical: 12,
-    paddingHorizontal: 30,
+    paddingHorizontal: 25,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3,
     shadowRadius: 5,
     borderWidth: 3,
     borderColor: 'white',
-    marginBottom: 20,
+    flex: 0.45, // Use flex to control width instead of fixed values
+    marginBottom: 10,
     
   },
+  landscapeButton: {
+    backgroundColor: '#4ECDC4',
+    borderRadius: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    borderWidth: 3,
+    borderColor: 'white',
+    flex: 0.45, // Use flex to control width instead of fixed values
+    marginBottom: 10,
 
-  
+    
+  },
   listenButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
 
   },
-
+  landscapeButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    
+  },
+  listenButtonEmoji: {
+    fontSize: 18,
+    marginRight: 10,
+    
+  },
+  landscapeButtonEmoji: {
+    fontSize: 18,
+    marginRight: 10,
+  },
   listenButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
   },
-
+  landscapeButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
   controls: {
     flexDirection: "row",
     justifyContent: "space-between",

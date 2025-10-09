@@ -44,6 +44,58 @@ const Landing = ({ navigation }) => {
     snailPos: useRef(new Animated.ValueXY({ x: 0, y: 0 })).current,
   };
 
+
+useEffect(() => {
+  let isMounted = true;
+
+  const images = [
+    require('../images/Signup.png'),
+    require('../images/Bush.png'),
+    require('../images/Flower1.png'),
+    require('../images/Flower2.png'),
+    require('../images/Flower3.png'),
+    require('../images/Flower4.png'),
+    require('../images/Flower5.png'),
+    require('../images/Star.png'),
+    require('../images/Rainbow.png'),
+    require('../images/Background.png'),
+
+    require('../images/animals/Bee.png'),
+    require('../images/animals/Capybara.png'),
+    require('../images/animals/Cat.png'),
+    require('../images/animals/Dog.png'),
+    require('../images/animals/Chicken.png'),
+    require('../images/animals/Fox.png'),
+    require('../images/animals/Frog.png'),
+    require('../images/animals/Kangaroo.png'),
+    require('../images/animals/Ladybug.png'),
+    require('../images/animals/Lion.png'),
+    require('../images/animals/Ostrich.png'),
+    require('../images/animals/Parrot.png'),
+    require('../images/animals/Raccoon.png'),
+    require('../images/animals/Snail.png'),
+    require('../images/animals/Squirrel.png'),
+  ];
+
+  const preloadImages = async () => {
+    try {
+      const uris = images.map(img => Image.resolveAssetSource(img).uri);
+      await Promise.all(uris.map(uri => Image.prefetch(uri))); // load in parallel
+      if (isMounted) {
+        console.log('✅ All images preloaded successfully');
+      }
+    } catch (error) {
+      console.warn('⚠️ Some images failed to preload:', error);
+    }
+  };
+
+  preloadImages();
+
+  return () => {
+    isMounted = false; // cleanup to avoid setState or log after unmount
+  };
+}, []);
+
   // Function for continuous, random floating animation
   const createFloatingAnimation = (positionValue) => {
     const randomX = Math.random() * 10 - 5; // Random value between -5 and 5

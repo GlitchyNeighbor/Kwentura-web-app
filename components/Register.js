@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useRef } from "react";
 import {
   TextInput,
   View,
@@ -9,6 +9,7 @@ import {
   Image,
   Alert,
   ActivityIndicator,
+  Modal,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
@@ -28,6 +29,7 @@ import {
   setDoc,
   doc,
   serverTimestamp,
+  signInWithEmailAndPassword,
 } from "firebase/firestore";
 import { auth, db } from "../FirebaseConfig"; // Corrected import
 import Ionicons from "react-native-vector-icons/Ionicons";
@@ -63,8 +65,52 @@ const Register = ({ navigation }) => {
   const [passwordError, setPasswordError] = useState("");
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [sessionExpired, setSessionExpired] = useState(false); // New state for session expiry
+  const [countdown, setCountdown] = useState(0); // State for the countdown timer
   const [isCodeSent, setIsCodeSent] = useState(false); // New state for disabling button
+  const [showSessionWarning, setShowSessionWarning] = useState(false);
   const { setIsVerifyingEmail, setRegistrationCompleted } = useAuthFlow();
+  const verificationInterval = useRef(null);
+  const stopVerification = useRef(false);
+  const sessionWarningTimer = useRef(null);
+
+    useEffect(() => {
+    return () => {
+      stopVerification.current = true;
+      if (sessionWarningTimer.current) {
+        clearTimeout(sessionWarningTimer.current);
+      }
+      if (verificationInterval.current) {
+        clearInterval(verificationInterval.current);
+        verificationInterval.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+  const preload = async () => {
+    await Image.prefetch(Image.resolveAssetSource(require('../images/Signup.png')).uri);
+    await Image.prefetch(Image.resolveAssetSource(require('../images/Bush.png')).uri);
+    await Image.prefetch(Image.resolveAssetSource(require('../images/Flower1.png')).uri);
+    await Image.prefetch(Image.resolveAssetSource(require('../images/Flower2.png')).uri);
+    await Image.prefetch(Image.resolveAssetSource(require('../images/Flower3.png')).uri);
+    await Image.prefetch(Image.resolveAssetSource(require('../images/Flower4.png')).uri);
+    await Image.prefetch(Image.resolveAssetSource(require('../images/Flower5.png')).uri);
+    await Image.prefetch(Image.resolveAssetSource(require('../images/Star.png')).uri);
+    await Image.prefetch(Image.resolveAssetSource(require('../images/Rainbow.png')).uri);
+  };
+  preload();
+}, []);
+
+  // Countdown timer effect
+  useEffect(() => {
+    let timer;
+    if (countdown > 0) {
+      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [countdown]);
+
   
   // Effect to check if a user is already signed in (e.g. from a previous attempt)
   useEffect(() => {
@@ -72,6 +118,7 @@ const Register = ({ navigation }) => {
       if (user && user.emailVerified) {
         setEmail(user.email);
         setIsEmailVerified(true);
+        setSessionExpired(false); // Reset on user change
       }
     });
     return () => unsubscribe();
@@ -162,6 +209,10 @@ const Register = ({ navigation }) => {
     });
 
 
+    if (sessionWarningTimer.current) {
+      clearTimeout(sessionWarningTimer.current);
+    }
+
     setIsSigningUp(false);
     setRegistrationCompleted(true);
 
@@ -174,7 +225,16 @@ const Register = ({ navigation }) => {
     if (error.code === "auth/email-already-in-use") {
     Alert.alert("Email Exists", "This email is already registered. Please log in or use 'Forgot Password'.", [{ text: "OK" }]);
     } else if (error.code === "auth/requires-recent-login") {
-    Alert.alert("Session Expired", "For security, please send the verification code again before continuing.");
+      Alert.alert(
+        "Session Expired",
+        "For your security, your registration session has expired. You will be returned to the home screen.",
+        [{
+          text: "OK",
+          onPress: async () => {
+            await handleCancel(true); // Pass true to navigate to Landing
+          }
+        }]
+      );
     } else {
     console.error("Registration error:", error);
     Alert.alert("Sign Up Failed", getFirebaseAuthErrorMessage(error.code));
@@ -182,78 +242,150 @@ const Register = ({ navigation }) => {
     }
   };
 
-const handleVerifyEmail = async () => {
-  if (!email.trim()) {
-    Alert.alert("Invalid Email", "Please enter an email first.");
-    return;
-  }
-  setIsVerifying(true);
-  setIsCodeSent(true); // Disable the button immediately
-  setIsVerifyingEmail(true); // Signal to RootNavigator to ignore the next auth change
-  try {
-    // Check if a user is already logged in (e.g., from a previous failed attempt)
-    if (auth.currentUser) {
-      // If the email is different, sign out the old user
-      if (auth.currentUser.email.toLowerCase() !== email.trim().toLowerCase()) {
-        await auth.signOut();
-      } else if (auth.currentUser.emailVerified) {
-        // If it's the same user and they are already verified
+  const handleEmailProcess = async () => {
+    if (!email.trim()) {
+      Alert.alert("Invalid Email", "Please enter an email first.");
+      return;
+    }
+
+    if (sessionWarningTimer.current) {
+      clearTimeout(sessionWarningTimer.current);
+    }
+
+    setSessionExpired(false); // Reset session expired state on new verification attempt
+    setIsVerifying(true);
+    setIsVerifyingEmail(true);
+
+    try {
+      let user = auth.currentUser;
+
+      if (!user) {
+        const tempPassword = Math.random().toString(36).slice(-8) + "A1!";
+        const tempUser = await createUserWithEmailAndPassword(auth, email.trim(), tempPassword);
+        await sendEmailVerification(tempUser.user);
+
+        Alert.alert(
+          "Verification Sent",
+          `A verification link has been sent to ${email.trim()}, check your inbox and spam folder.\n\nOnce verified, this will automatically detect.`
+        );
+
+        user = tempUser.user;
+        global._tempAuth = { email: email.trim(), password: tempPassword };
+
+        // Start a 4.5-minute timer to warn about session expiry
+        sessionWarningTimer.current = setTimeout(() => {
+          setShowSessionWarning(true);
+        }, 270000); // 4.5 minutes in ms
+      } else if (user.emailVerified) {
         setIsEmailVerified(true);
-        Alert.alert("Already Verified", "Your email is already verified. You can now continue.");
-        setIsVerifyingEmail(false); // Reset the flag
-        setIsVerifying(false);
+        setIsVerifyingEmail(false);
+        Alert.alert("Already Verified", "Your email is already verified!");
         return;
+      } else {
+        await sendEmailVerification(user);
+        Alert.alert("Verification Resent", `A verification link has been sent to ${email.trim()}, check your inbox and spam folder.\n\nOnce verified, this will automatically detect`);
       }
+
+      setIsVerifying(false); // Stop loading indicator to show countdown
+      setCountdown(60); // Start 60-second countdown
+
+      stopVerification.current = false; // reset flag
+
+      verificationInterval.current = setInterval(async () => {
+        if (stopVerification.current) return; // stop immediately if cancelled
+
+        try {
+          await user.reload();
+          const refreshed = auth.currentUser;
+          if (refreshed && refreshed.emailVerified) {
+            clearInterval(verificationInterval.current);
+            verificationInterval.current = null;
+            setIsEmailVerified(true);
+            setIsVerifying(false);
+            setIsVerifyingEmail(false);
+            Alert.alert("Success", "Your email has been verified! You can now continue.");
+          }
+        } catch (error) {
+          if (stopVerification.current) return; // suppress any late reloads
+
+          if (error.code === "auth/user-token-expired" && global._tempAuth) {
+            console.warn("Reauthenticating temporary user...");
+            const { email, password } = global._tempAuth;
+            await auth.signInWithEmailAndPassword(email, password).catch(() => {});
+          } else {
+            console.error("Reload error:", error);
+          }
+        }
+      }, 3000);
+    } catch (err) {
+      console.error("Email verification process error:", err);
+      Alert.alert("Error", getFirebaseAuthErrorMessage(err.code));
+      setIsVerifyingEmail(false);
+      setIsVerifying(false);
     }
-
-    // Create a temporary user with a secure, random password to send the verification email
-    const tempPassword = Math.random().toString(36).slice(-8) + "A1!";
-    const tempUser = await createUserWithEmailAndPassword(auth, email.trim(), tempPassword);
-    await sendEmailVerification(tempUser.user);
-
-    Alert.alert(
-      "Verification Sent",
-      `A verification link has been sent to ${email.trim()}. Please check your email (and spam folder), then return here and press "Check Verification".`
-    );
-  } catch (err) {
-    console.error("Email verification error:", err);
-    Alert.alert("Error", getFirebaseAuthErrorMessage(err.code));
-    setIsCodeSent(false); // Re-enable button on error
-  } finally {
-    setIsVerifying(false);
-    setIsVerifyingEmail(false); // IMPORTANT: Always reset the flag
-  }
-};
-
-const checkIfVerified = async () => {
-  const user = auth.currentUser;
-  if (!user) {
-    Alert.alert("Verification Error", "Please send the verification email first.");
-    return;
-  }
-  await user.reload();
-  if (user.emailVerified) {
-    setIsEmailVerified(true);
-    Alert.alert("Success!", "Your email has been verified. You can now fill out the rest of the form and continue.");
-  } else {
-    Alert.alert("Not Verified Yet", "Please click the link in the email we sent you, then try again.");
-  }
-};
-
-  const handleCancel = async () => {
-    const user = auth.currentUser;
-    // Only delete if there's a temporary, unverified user.
-    if (user && !user.emailVerified) {
-      try {
-        await deleteUser(user);
-        console.log("Temporary user deleted on cancel.");
-      } catch (error) {
-        console.error("Failed to delete temporary user on cancel:", error);
-        // Don't block navigation, but the user might need to sign out manually if they come back.
-      }
-    }
-    navigation.goBack();
   };
+
+    const handleCancel = async (navigateToLanding = false) => {
+      try {
+        // Stop verification loop immediately
+        stopVerification.current = true;
+        if (verificationInterval.current) {
+          clearTimeout(sessionWarningTimer.current);
+        }
+        if (sessionWarningTimer.current) {
+          clearInterval(verificationInterval.current);
+          verificationInterval.current = null;
+        }
+
+        const user = auth.currentUser;
+
+        // Delete only if user exists and is unverified
+        if (user && !user.emailVerified) {
+          try {
+            await deleteUser(user);
+            console.log("Temporary user deleted on cancel.");
+          } catch (deleteError) {
+            if (deleteError.code === 'auth/requires-recent-login' && global._tempAuth) {
+              console.log("Re-authenticating to delete temporary user...");
+              try {
+                const { email, password } = global._tempAuth;
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                await deleteUser(userCredential.user);
+                console.log("Temporary user deleted after re-authentication.");
+              } catch (reauthDeleteError) {
+                console.error("Failed to delete user even after re-authentication:", reauthDeleteError);
+                // Fallback to just signing out if deletion fails again
+                await auth.signOut();
+              }
+            } else {
+              console.error("Failed to delete temporary user on cancel:", deleteError);
+              // Fallback for other errors
+              await auth.signOut();
+            }
+            await auth.signOut(); // fallback
+          }
+        }
+
+        // Reset context and states
+        setIsVerifyingEmail(false);
+        setIsVerifying(false);
+        setIsEmailVerified(false);
+        global._tempAuth = null;
+
+        // Navigate back
+        if (navigateToLanding) {
+          navigation.navigate("Landing");
+        } else {
+          navigation.goBack();
+        }
+
+      } catch (error) {
+        console.error("Cancel cleanup error:", error);
+        Alert.alert("Error", "Failed to cancel properly. Please try again.");
+      }
+    };
+
+
 
   return (
     <ImageBackground
@@ -295,6 +427,25 @@ const checkIfVerified = async () => {
         >
           {/* Header */}
 
+          <Modal
+            transparent={true}
+            animationType="fade"
+            visible={showSessionWarning}
+            onRequestClose={() => setShowSessionWarning(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Session Expiring Soon</Text>
+                <Text style={styles.modalMessage}>
+                  For your security, your registration session will expire in about 30 seconds. Please complete your registration to avoid starting over.
+                </Text>
+                <TouchableOpacity style={styles.modalButton} onPress={() => setShowSessionWarning(false)}>
+                  <Text style={styles.modalButtonText}>OK</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+
           <Text style={styles.heading}>Start reading with us</Text>
           <Text style={styles.subheading}>
             Please fill the information that is needed.
@@ -323,24 +474,23 @@ const checkIfVerified = async () => {
           />
           <View style={styles.verificationRow}>
             <TouchableOpacity
-              style={[styles.verifyButton, (isVerifying || isEmailVerified || isCodeSent) && styles.disabledButton]}
-              onPress={handleVerifyEmail}
-              disabled={isVerifying || isEmailVerified || isCodeSent}
+              style={[styles.verifyButton, (isVerifying || (isEmailVerified && !sessionExpired) || countdown > 0) && styles.disabledButton]}
+              onPress={handleEmailProcess}
+              disabled={isVerifying || (isEmailVerified && !sessionExpired) || countdown > 0}
             >
               {isVerifying ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <View style={styles.buttonContent}>
+                  <ActivityIndicator size="small" color="#fff" />
+                </View>
+              ) : countdown > 0 ? (
+                <Text style={styles.verifyButtonText}>
+                  Resend in {countdown}s
+                </Text>
               ) : (
-                <Text style={styles.verifyButtonText}>{isCodeSent ? "Code Sent" : "Send Code"}</Text>
+                <Text style={styles.verifyButtonText}>
+                  {isEmailVerified ? "Email Verified" : "Verify Email"}
+                </Text>
               )}
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.checkVerifyButton, isEmailVerified && styles.disabledButton]}
-              onPress={checkIfVerified}
-              disabled={isEmailVerified}
-            >
-              <Text style={styles.verifyButtonText}>
-                {isEmailVerified ? "Verified" : "Check Verification"}
-              </Text>
             </TouchableOpacity>
           </View>
           <TextInput
@@ -706,9 +856,9 @@ const styles = StyleSheet.create({
     bottom: '-15%',
   },
   flower4: {
-    width: 100, // Reduce width
-    height: 100, // Reduce height
-    right: '5%', // Adjusts the horizontal position of the flower
+    width: 100,
+    height: 100,
+    right: '5%',
     bottom: '-11.5%'
   },
   flower5: {
@@ -728,14 +878,14 @@ const styles = StyleSheet.create({
   bush1: {
     width: 200,
     height: 100,
-    bottom: '-20%', // Adjusts the vertical position of the flower
-    left: '-10%' // Adjusts the horizontal position of the flower
+    bottom: '-20%',
+    left: '-10%'
   },
   bush2: {
     width: 200,
     height: 100,
-    bottom: '-20%', // Adjusts the vertical position of the flower
-    left: '-20%', // Adjusts the horizontal position of the flower
+    bottom: '-20%',
+    left: '-20%',
   },
   bush3: {
     width: 200,
@@ -780,7 +930,7 @@ verifyButton: {
 checkVerifyButton: {
   flex: 1,
   marginLeft: 5,
-  backgroundColor: "#4CAF50", // A different color to distinguish
+  backgroundColor: "#4CAF50",
   borderRadius: 15,
   paddingHorizontal: 15,
   height: 50,
@@ -793,6 +943,62 @@ verifyButtonText: {
   fontSize: 14,
   textAlign: 'center',
 },
+buttonContent: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+countdownText: {
+  color: '#fff',
+  fontWeight: 'bold',
+  marginLeft: 8,
+},
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 15,
+    padding: 25,
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 350,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  modalMessage: {
+    fontSize: 16,
+    color: '#555',
+    textAlign: 'center',
+    marginBottom: 25,
+    lineHeight: 24,
+  },
+  modalButton: {
+    backgroundColor: '#FFCF2D',
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 40,
+  },
+  modalButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
 
 });
 
