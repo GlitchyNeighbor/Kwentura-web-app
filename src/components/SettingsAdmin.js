@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { User, ChevronLeft, Eye, EyeOff, Camera, Trash2, Upload, Check, RefreshCw } from "lucide-react";
 import { Row, Button, Form, Alert } from "react-bootstrap";
 import SidebarSettingsAdmin from "./SidebarSettingsAdmin";
@@ -33,7 +33,7 @@ import { useAuth } from "../context/AuthContext.js";
 const db = getFirestore(app);
 
 const SettingsAdmin = () => {
-  const { userData, loading: authLoading, error: authError, refetchUserData } = useAuth();
+  const { userData, loading: authLoading, refetchUserData } = useAuth();
   const [activeTab, setActiveTab] = useState("about");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   

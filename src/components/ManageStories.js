@@ -23,7 +23,6 @@ import {
   PlusCircleFill,
   Search,
   ArrowLeftCircleFill,
-  ThreeDotsVertical,
   Camera,
   PencilFill,
   TrashFill,
@@ -138,7 +137,7 @@ export async function extractPdfPageTexts(pdfFile, options = {}) {
 
   return pageTexts;
 }
-const functions = getFunctions(firebaseApp);
+const functions = getFunctions(firebaseApp, "asia-southeast1");
 const synthesizeSpeechGoogle = httpsCallable(functions, "synthesizeSpeechGoogle");
 
 /**
@@ -177,7 +176,9 @@ const generateQuestionTTS = async (text, languageCode, storyId, type, index) => 
 const generateMoralLessonAI = httpsCallable(functions, 'generateMoralLessonFromText');
 const generateStorySynopsis = httpsCallable(functions, 'generateStorySynopsisFromPdf');
 const generateQuestions = httpsCallable(functions, 'generateComprehensionQuestionsFromText');
+const evaluateAiContent = httpsCallable(functions, 'evaluateAiContent');
 const translatePageTexts = httpsCallable(functions, 'translatePageTexts');
+const validateTranslation = httpsCallable(functions, 'validateTranslation');
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `${process.env.PUBLIC_URL}/pdf.worker.min.js`;
 
@@ -220,6 +221,9 @@ const ManageStories = () => {
 
   const [isGeneratingMoral, setIsGeneratingMoral] = useState(false);
   const [stories, setStories] = useState([]);
+  const [isEvaluatingSynopsis, setIsEvaluatingSynopsis] = useState(false);
+  const [isEvaluatingComprehension, setIsEvaluatingComprehension] = useState(false);
+  const [isEvaluatingTranslation, setIsEvaluatingTranslation] = useState(false);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -234,6 +238,8 @@ const ManageStories = () => {
     moralCorrectOptionIndex: null,
     moralImageFile: null,
     moralImagePreviewUrl: "", // For moral lesson image
+    generatedSynopsis: "",
+    aiFeedback: {},
     comprehensionQuestions: [], // To hold comprehension questions
     language: "en-US", // Changed from languageCode
   });
@@ -329,6 +335,8 @@ const ManageStories = () => {
       moralCorrectOptionIndex: null,
       moralImageFile: null,
       moralImagePreviewUrl: "", // For moral lesson image
+      generatedSynopsis: "",
+      aiFeedback: {},
       comprehensionQuestions: [], // To hold comprehension questions
       language: "en-US", // Changed from languageCode
     });
@@ -352,6 +360,8 @@ const ManageStories = () => {
       moralCorrectOptionIndex: null,
       moralImageFile: null,
       moralImagePreviewUrl: "",
+      generatedSynopsis: "",
+      aiFeedback: {},
       language: "en-US",
     });
     setFormErrors({});
@@ -802,6 +812,60 @@ const handleSubmit = async () => {
   }
 };
 
+  const handleAiEvaluation = async (contentType) => {
+    if (!selectedStory || !selectedStory.id) {
+      showAlert("Please save the story before evaluating AI content.", "warning");
+      return;
+    }
+
+    if (contentType === 'synopsis') {
+      setIsEvaluatingSynopsis(true);
+    } else {
+      setIsEvaluatingComprehension(true);
+    }
+
+    showAlert(`Requesting AI evaluation for ${contentType}...`, "info");
+    const friendlyContentType = contentType === 'synopsis' ? 'synopsis' : 'comprehension questions';
+    try {
+      const result = await evaluateAiContent({ storyId: selectedStory.id, contentType });
+      const { rating, justification } = result.data;
+
+      setFormData(prev => ({ ...prev, aiFeedback: { ...prev.aiFeedback, [contentType]: { rating, justification } } }));
+      showAlert(`AI evaluation for ${friendlyContentType} complete.`, "success");
+      fetchStoriesFromFirestore(); // Refetch to get the latest data
+    } catch (error) {
+      showAlert(`AI evaluation failed: ${error.message}`, "danger");
+    } finally {
+      if (contentType === 'synopsis') {
+        setIsEvaluatingSynopsis(false);
+      } else {
+        setIsEvaluatingComprehension(false);
+      }
+    }
+  };
+
+  const handleTranslationValidation = async () => {
+    if (!selectedStory || !selectedStory.id) {
+      showAlert("Please save the story before validating the translation.", "warning");
+      return;
+    }
+
+    setIsEvaluatingTranslation(true);
+    showAlert("Requesting AI validation for translation...", "info");
+    try {
+      const result = await validateTranslation({ storyId: selectedStory.id });
+      const { rating, feedback } = result.data;
+
+      setFormData(prev => ({ ...prev, aiFeedback: { ...prev.aiFeedback, translation: { rating, feedback } } }));
+      showAlert("AI validation for translation complete.", "success");
+      fetchStoriesFromFirestore();
+    } catch (error) {
+      showAlert(`AI validation for translation failed: ${error.message}`, "danger");
+    } finally {
+      setIsEvaluatingTranslation(false);
+    }
+  };
+
   const uploadImageAndGetUrl = async (file, storyId) => {
     if (!file) return "";
     const imageRef = ref(storage, `stories/${storyId}_${file.name}`);
@@ -830,6 +894,8 @@ const handleSubmit = async () => {
         ? story.moralLesson.options
         : ["", "", ""],
       moralImagePreviewUrl: story.moralLesson?.imageUrl || "", // Populate image preview
+      generatedSynopsis: story.generatedSynopsis || "",
+      aiFeedback: story.aiFeedback || {},
       moralCorrectOptionIndex: story.moralLesson?.correctOptionIndex !== undefined ? story.moralLesson.correctOptionIndex : null,
       comprehensionQuestions: story.comprehensionQuestions || [],
       language: story.language || "en-US",
@@ -1548,6 +1614,101 @@ const handleSubmit = async () => {
           )}
         </Form.Group>
       </Form>
+
+      {isEditing && (
+        <>
+          <hr />
+          <h5 className="fw-bold mt-4 mb-3">AI Content Evaluation</h5>
+          {/* Synopsis Evaluation */}
+          <Card className="mb-3 border-0 shadow-sm" style={{ borderRadius: "12px", backgroundColor: '#fdf7fd' }}>
+            <Card.Body>
+              <div className="d-flex justify-content-between align-items-center">
+                <h6 className="fw-semibold mb-0">Synopsis</h6>
+                    <Button size="sm"
+                            variant="outline-primary"
+                            style={{ borderColor: COLORS.pink, color: COLORS.pink, borderRadius: "20px" }}
+                            onClick={() => handleAiEvaluation('synopsis')}
+                            disabled={isEvaluatingSynopsis}
+                    >
+                      {isEvaluatingSynopsis ? (
+                        <>
+                          <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
+                          Evaluating...
+                        </>
+                      ) : (
+                        "Evaluate with AI"
+                      )}
+                    </Button>
+              </div>
+              {formData.aiFeedback?.synopsis && (
+                <div className="mt-2 text-muted small">
+                  <strong>Rating:</strong> {formData.aiFeedback.synopsis.rating}/5 <br />
+                  <strong>Justification:</strong> {formData.aiFeedback.synopsis.justification}
+                </div>
+              )}
+            </Card.Body>
+          </Card>
+          {/* Comprehension Questions Evaluation */}
+          <Card className="border-0 shadow-sm" style={{ borderRadius: "12px", backgroundColor: '#fdf7fd' }}>
+            <Card.Body>
+              <div className="d-flex justify-content-between align-items-center">
+                <h6 className="fw-semibold mb-0">Comprehension Questions</h6>
+                <Button
+                  size="sm"
+                  variant="outline-primary"
+                  style={{ borderColor: COLORS.pink, color: COLORS.pink, borderRadius: "20px" }}
+                  onClick={() => handleAiEvaluation('comprehensionQuestions')}
+                  disabled={isEvaluatingComprehension}
+                >
+                  {isEvaluatingComprehension ? (
+                    <>
+                      <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
+                      Evaluating...
+                    </>
+                  ) : (
+                    "Evaluate with AI"
+                  )}
+                </Button>
+              </div>
+              {formData.aiFeedback?.comprehensionQuestions && (
+                <div className="mt-2 text-muted small">
+                  <strong>Rating:</strong> {formData.aiFeedback.comprehensionQuestions.rating}/5 <br />
+                  <strong>Justification:</strong> {formData.aiFeedback.comprehensionQuestions.justification}
+                </div>
+              )}
+            </Card.Body>
+          </Card>
+          {/* Translation Validation */}
+          <Card className="mt-3 border-0 shadow-sm" style={{ borderRadius: "12px", backgroundColor: '#fdf7fd' }}>
+            <Card.Body>
+              <div className="d-flex justify-content-between align-items-center">
+                <h6 className="fw-semibold mb-0">Translation Validation</h6>
+                <Button size="sm"
+                  variant="outline-primary"
+                  style={{ borderColor: COLORS.pink, color: COLORS.pink, borderRadius: "20px" }}
+                  onClick={handleTranslationValidation}
+                  disabled={isEvaluatingTranslation}
+                >
+                  {isEvaluatingTranslation ? (
+                    <>
+                      <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
+                      Validating...
+                    </>
+                  ) : (
+                    "Validate with AI"
+                  )}
+                </Button>
+              </div>
+              {formData.aiFeedback?.translation && (
+                <div className="mt-2 text-muted small">
+                  <strong>Rating:</strong> {formData.aiFeedback.translation.rating}/5 <br />
+                  <strong>Feedback:</strong> {formData.aiFeedback.translation.feedback}
+                </div>
+              )}
+            </Card.Body>
+          </Card>
+        </>
+      )}
     </Col>
   </Row>
 

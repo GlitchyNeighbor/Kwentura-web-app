@@ -5,6 +5,7 @@ import { Container, Row, Col, Card, Button, Spinner, Alert, Badge } from "react-
 import { useNavigate } from "react-router-dom";
 import { ArrowLeftCircleFill } from "react-bootstrap-icons";
 import { FaDownload, FaExclamationTriangle, FaBookmark } from "react-icons/fa";
+import autoTable from "jspdf-autotable";
 import {
   BarChart,
   Bar,
@@ -53,15 +54,25 @@ const CARD_STYLES = {
   bookmarks: { bg: "#FFFACD", icon: "#FFD700" },
 };
 
+const TABLE_LABELS = {
+  storiesData: { title: "Story Title", reads: "Number of Readers" },
+  bookmarkedStoriesData: { title: "Story Title", bookmarks: "Number of Bookmarks" },
+  studentsByGradeInSectionData: { name: "Grade Level", value: "Number of Students", percentage: "Percentage" },
+  studentApprovalData: { name: "Approval Status", value: "Count" }, // no 'color'
+  averageScorePerStoryData: { name: "Story Title", averageScore: "Average Score (%)" },
+};
+
+
+
 const MetricCard = ({ title, value, icon: IconComponent, style, loading }) => (
   <Card className="shadow-sm h-100 border-0" style={{ borderRadius: "12px" }}>
     <Card.Body className="p-4">
       <div className="d-flex justify-content-between align-items-start">
         <div className="flex-grow-1">
           <div className="text-muted mb-2 fs-6">{title}</div>
-          <h3 className="mb-0 fw-bold text-dark">
-            {loading ? <Spinner animation="grow" size="sm" /> : value.toLocaleString()}
-          </h3>
+            <h3 className="mb-0 fw-bold text-dark">
+              {loading ? <Spinner animation="grow" size="sm" /> : ((value !== undefined && value !== null && typeof value === 'number') ? value.toLocaleString() : String(value ?? '0'))}
+            </h3>
         </div>
         <div
           className="p-3 rounded-circle"
@@ -145,6 +156,7 @@ const TeacherCharts = () => {
           id: doc.id,
           title: storyData.title,
           reads: storyData.usersRead || 0,
+          genre: storyData.genre || 'Unknown',
         });
       });
 
@@ -237,10 +249,18 @@ const TeacherCharts = () => {
       for (const studentDoc of studentsSnapshot.docs) {
         const quizScoresQuery = collection(db, "students", studentDoc.id, "quizScores");
         const quizScoresSnapshot = await getDocs(quizScoresQuery);
+
         quizScoresSnapshot.forEach(quizDoc => {
           const data = quizDoc.data();
           if (!storyScores[data.storyId]) {
-            storyScores[data.storyId] = { title: data.storyTitle, totalScore: 0, totalQuestions: 0, count: 0 };
+
+            storyScores[data.storyId] = { 
+              title: data.storyTitle, 
+              totalScore: 0, 
+              totalQuestions: 0, 
+              genre: data.genre || 'Unknown',
+              count: 0 
+            };
           }
           storyScores[data.storyId].totalScore += data.score;
           storyScores[data.storyId].totalQuestions += data.totalQuestions;
@@ -255,6 +275,7 @@ const TeacherCharts = () => {
       const chartData = Object.values(storyScores).map(story => ({
         name: story.title,
         averageScore: story.totalQuestions > 0 ? (story.totalScore / story.totalQuestions) * 100 : 0,
+        genre: story.genre,
       })).map(d => ({ ...d, averageScore: parseFloat(d.averageScore.toFixed(1)) }));
 
       setAverageScorePerStoryData(chartData);
@@ -337,40 +358,155 @@ const TeacherCharts = () => {
     return null;
   };
 
-  const handleDownloadChartPdf = async (ref, filename) => {
-    if (!ref.current) return;
+  // Generates a textual interpretation for a given dataset.
+  const generateInterpretation = (labelKey, data) => {
+    if (!data || data.length === 0) {
+      return "No data available to generate an interpretation.";
+    }
+
     try {
-      const canvas = await html2canvas(ref.current, { scale: 2 });
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF({
-        orientation: "landscape",
-        unit: "pt",
-        format: [canvas.width, canvas.height],
-      });
-      pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
-      pdf.save(filename);
+      switch (labelKey) {
+        case "storiesData": {
+          const topStory = data[0] || {};
+          return `The story "${topStory.title}" is the most read with ${topStory.reads} views. This high engagement suggests that stories with an '${topStory.genre}' theme are effective for these readers. Consider recommending more stories from this genre.`;
+        }
+        case "bookmarkedStoriesData": {
+          const topStory = data[0] || {};
+          const totalBookmarks = data.reduce((sum, story) => sum + story.bookmarks, 0);
+          return `With ${totalBookmarks} total bookmarks, students are actively saving stories for future reference. The most bookmarked story, "${topStory.title}" (genre: ${topStory.genre}), is clearly valued. This indicates a strong interest in this type of content.`;
+        }
+        case "studentsByGradeInSectionData": {
+          const sortedData = [...data].sort((a, b) => b.value - a.value);
+          const topGrade = sortedData[0] || {};
+          return `The section is composed of students from ${data.length} different grade levels. The largest group is ${topGrade.name}, comprising ${topGrade.percentage} of the class.`;
+        }
+        case "studentApprovalData": {
+          const pending = data.find(d => d.name.toLowerCase().includes('pending'));
+          if (pending && pending.value > 0) {
+            return `There are currently ${pending.value} student(s) with a "Pending Approval" status. Reviewing these accounts is necessary to grant them full platform access.`;
+          }
+          return "All students in this section have an approved status. No pending actions are required.";
+        }
+        case "averageScorePerStoryData": {
+          const sortedByScore = [...data].sort((a, b) => b.averageScore - a.averageScore);
+          const topScoring = sortedByScore[0] || {};
+          const lowestScoring = sortedByScore[sortedByScore.length - 1] || {};
+
+          if (data.length === 0) return "No quiz score data available.";
+
+          let interpretation = `Students performed best on the quiz for "${topScoring.name}" (Genre: ${topScoring.genre}), with an average score of ${topScoring.averageScore}%. This suggests strong comprehension of this material.`;
+          if (data.length > 1 && topScoring.name !== lowestScoring.name) {
+            interpretation += ` Conversely, the story "${lowestScoring.name}" had the lowest average score (${lowestScoring.averageScore}%), which may highlight a topic for review.`;
+          }
+          return interpretation;
+        }
+        default:
+          return "Interpretation for this data is not available.";
+      }
     } catch (error) {
-      console.error("Error downloading chart:", error);
+      console.error("Error generating interpretation:", error);
+      return "An error occurred while generating the interpretation.";
     }
   };
 
-  const handleDownloadPdf = async () => {
-    const input = chartsRef.current;
-    if (!input) return;
-    try {
-      const canvas = await html2canvas(input, { scale: 2 });
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF({
-        orientation: "landscape",
-        unit: "pt",
-        format: [canvas.width, canvas.height],
-      });
-      pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
-      pdf.save("teacher_charts.pdf");
-    } catch (error) {
-      console.error("Error downloading charts:", error);
-    }
+  const addInterpretationToPdf = (pdf, interpretation) => {
+    const finalY = (pdf.lastAutoTable && pdf.lastAutoTable.finalY) ? pdf.lastAutoTable.finalY : 420;
+    pdf.setFontSize(10);
+    pdf.setFont("helvetica", "italic");
+    pdf.setTextColor(100);
+    const splitText = pdf.splitTextToSize(interpretation, pdf.internal.pageSize.getWidth() - 80);
+    pdf.text(splitText, 40, finalY + 20);
+    pdf.setFont("helvetica", "normal"); // Reset font
+    pdf.setTextColor(0);
   };
+
+const handleDownloadChartPdf = async (ref, filename, chartData, labelMapKey, existingPdf = null) => {
+  if ((!ref || !ref.current) && !existingPdf) {
+    console.error("A ref is required to create a new PDF from a chart.");
+    return;
+  }
+  if (!chartData || chartData.length === 0) return;
+
+  const isNewPdf = !existingPdf;
+  const pdf = isNewPdf ? new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" }) : existingPdf;
+  let startY = 40;
+
+  try {
+    // Add chart image only if a ref is provided
+    if (ref && ref.current) {
+      const canvas = await html2canvas(ref.current, { scale: 2 });
+      const imgData = canvas.toDataURL("image/png");
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const imgWidth = pdfWidth - 80; // with margin
+      const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+      
+      pdf.addImage(imgData, "PNG", 40, 40, imgWidth, Math.min(imgHeight, 350));
+      startY = Math.min(imgHeight, 350) + 60;
+    }
+
+    const labels = TABLE_LABELS[labelMapKey] || {};
+    const keys = Object.keys(labels);
+
+    const tableHead = [keys.map(key => labels[key] || key)];
+    const tableBody = chartData.map(row => keys.map(key => row[key] !== undefined ? row[key] : 'N/A'));
+
+    autoTable(pdf, {
+      head: tableHead,
+      body: tableBody,
+      startY: startY,
+      margin: { left: 40, right: 40 },
+      styles: { fontSize: 10 },
+    });
+
+    const interpretation = generateInterpretation(labelMapKey, chartData);
+    addInterpretationToPdf(pdf, interpretation);
+
+    if (isNewPdf) {
+      pdf.save(filename);
+    }
+
+  } catch (error) {
+    console.error("Error downloading chart with data:", error);
+  }
+};
+
+const handleDownloadPdf = async () => {
+  if (!chartsRef.current) { // This ref isn't strictly needed anymore but good to keep
+    console.error("Charts container ref is not available.");
+    return;
+  }
+
+  try {
+    const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+
+    // List of charts with their refs, data, and table labels
+    const charts = [
+      { ref: storiesChartRef, title: "Most Read Stories", data: storiesData, labelKey: "storiesData" },
+      { ref: bookmarkedChartRef, title: "Most Bookmarked Stories", data: bookmarkedStoriesData, labelKey: "bookmarkedStoriesData" },
+      { ref: studentsGradeChartRef, title: "Students Per Grade (My Section)", data: studentsByGradeInSectionData, labelKey: "studentsByGradeInSectionData" },
+      { ref: studentsGradeChartRef, title: "Student Approval Status", data: studentApprovalData, labelKey: "studentApprovalData" }, // Re-using a ref for the pie chart
+      { ref: storiesChartRef, title: "Average Score Per Story", data: averageScorePerStoryData, labelKey: "averageScorePerStoryData" } // Re-using a ref for the bar chart
+    ];
+
+    for (let i = 0; i < charts.length; i++) {
+      const { ref, title, data, labelKey } = charts[i];
+      if (!data || data.length === 0) continue;
+
+      if (i > 0) pdf.addPage(); // new page per chart
+
+      pdf.setFontSize(18);
+      pdf.text(title, 40, 40);
+
+      await handleDownloadChartPdf(ref, null, data, labelKey, pdf); // Pass the existing PDF
+    }
+
+    pdf.save("All Charts.pdf");
+  } catch (error) {
+    console.error("Error downloading all charts with tables:", error);
+  }
+};
+
 
   // Component for chart cards with loading and error states - matching Charts.js
   const ChartCard = ({ title, loading, error, children, height = 300, onDownload }) => (
@@ -577,9 +713,9 @@ const TeacherCharts = () => {
               <Col xl={6} lg={12} className="mb-4">
                 <div ref={storiesChartRef}>
                   <ChartCard 
-                    title="Most Read Stories" 
+                    title="Most Read Stories"
                     loading={false}
-                    onDownload={() => handleDownloadChartPdf(storiesChartRef, "stories_chart.pdf")}
+                    onDownload={() => handleDownloadChartPdf(storiesChartRef, "stories_chart.pdf", storiesData, "storiesData")}
                   >
                     {storiesData.length > 0 ? (
                       <div className="chart-container">
@@ -633,11 +769,11 @@ const TeacherCharts = () => {
               </Col>
               <Col xl={6} lg={12} className="mb-4">
                 <div ref={bookmarkedChartRef}>
-                  <ChartCard 
-                    title="Most Bookmarked Stories" 
-                    loading={loading}
-                    onDownload={() => handleDownloadChartPdf(bookmarkedChartRef, "bookmarked_stories_chart.pdf")}
-                  >
+                    <ChartCard 
+                      title="Most Bookmarked Stories"
+                      loading={loading}
+                      onDownload={() => handleDownloadChartPdf(bookmarkedChartRef, "bookmarked_stories_chart.pdf", bookmarkedStoriesData, "bookmarkedStoriesData")}
+                    >
                     {bookmarkedStoriesData.length > 0 ? (
                       <div className="chart-container">
                         <ResponsiveContainer width="100%" height={300}>
@@ -690,11 +826,11 @@ const TeacherCharts = () => {
               </Col>
               <Col xl={6} lg={12} className="mb-4">
                 <div ref={studentsGradeChartRef}>
-                  <ChartCard 
-                    title="Students Per Grade (My Section)" 
-                    loading={false}
-                    onDownload={() => handleDownloadChartPdf(studentsGradeChartRef, "students_grade_chart.pdf")}
-                  >
+                    <ChartCard 
+                      title="Students Per Grade (My Section)"
+                      loading={false}
+                      onDownload={() => handleDownloadChartPdf(studentsGradeChartRef, "students_grade_chart.pdf", studentsByGradeInSectionData, "studentsByGradeInSectionData")}
+                    >
                     {studentsByGradeInSectionData.length > 0 && studentsByGradeInSectionData.some((s) => s.value > 0) ? (
                       <ResponsiveContainer width="100%" height={300}>
                         <PieChart>
@@ -730,9 +866,9 @@ const TeacherCharts = () => {
               </Col>
               <Col xl={6} lg={12} className="mb-4">
                 <ChartCard 
-                  title="Student Approval Status" 
+                  title="Student Approval Status"
                   loading={loading}
-                  onDownload={() => handleDownloadChartPdf(studentsGradeChartRef, "student_approval_chart.pdf")}
+                  onDownload={() => handleDownloadChartPdf(studentsGradeChartRef, "student_approval_chart.pdf", studentApprovalData, "studentApprovalData")}
                 >
                   {studentApprovalData.length > 0 && studentApprovalData.some((s) => s.value > 0) ? (
                     <ResponsiveContainer width="100%" height={300}>
@@ -766,11 +902,10 @@ const TeacherCharts = () => {
                 </ChartCard>
               </Col>
               <Col xl={12} lg={12}>
-                <ChartCard 
-                  ref={storiesChartRef}
-                  title="Average Score Per Story" 
-                  loading={false}
-                  onDownload={() => handleDownloadChartPdf(storiesChartRef, "average_score_chart.pdf")}
+                  <ChartCard 
+                    title="Average Score Per Story"
+                    loading={false}
+                    onDownload={() => handleDownloadChartPdf(storiesChartRef, "average_score_chart.pdf", averageScorePerStoryData, "averageScorePerStoryData")}
                   >
                     {averageScorePerStoryData.length > 0 ? (
                       <div className="chart-container">

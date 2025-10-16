@@ -1,35 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
-import {
-  Container,
-  Form,
-  Button,
-  Row,
-  Col,
-  Spinner,
-  Table,
-  Alert,
-  Modal,
-} from "react-bootstrap";
+import { Container, Button, Spinner, Table, Alert, Modal } from "react-bootstrap";
 import SideMenuAdmin from "./SidebarMenuAdmin";
 import TopNavbar from "./TopNavbar";
 import { useNavigate } from "react-router-dom";
-import {
-  doc,
-  getDocs,
-  collection,
-  updateDoc,
-  query,
-  where,
-  serverTimestamp,
-  getDoc,
-  deleteDoc,
-} from "firebase/firestore";
-import {
-  CheckCircleFill,
-  XCircleFill,
-  ArrowLeftCircleFill,
-  PersonBadgeFill, // <-- Add this import
-} from "react-bootstrap-icons";
+import { doc, getDocs, collection, query, where, getDoc } from "firebase/firestore";
+import { CheckCircleFill, XCircleFill, ArrowLeftCircleFill, PersonBadgeFill } from "react-bootstrap-icons";
 import "../scss/custom.scss";
 import { db, app } from "../config/FirebaseConfig.js"; // Import app
 import { getAuth } from "firebase/auth";

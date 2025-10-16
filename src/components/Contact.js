@@ -254,16 +254,7 @@ const Contact = () => {
   const [alert, setAlert] = useState({ show: false, variant: "", message: "" });
 
   useEffect(() => {
-    // Load FontAwesome if not already loaded
-    if (!document.querySelector('link[href*="font-awesome"]')) {
-      const link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css';
-      link.integrity = 'sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==';
-      link.crossOrigin = 'anonymous';
-      link.referrerPolicy = 'no-referrer';
-      document.head.appendChild(link);
-    }
+    // FontAwesome is imported centrally in src/index.js
   }, []);
 
   const handleSubmit = (e) => {
@@ -894,14 +885,7 @@ const Contact = () => {
 
       <Footer />
 
-      {/* FontAwesome CDN */}
-      <link 
-        rel="stylesheet" 
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
-        integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg=="
-        crossOrigin="anonymous"
-        referrerPolicy="no-referrer"
-      />
+      {/* FontAwesome is loaded from local package via import in src/index.js */}
 
       <style jsx>{`
         @keyframes float {

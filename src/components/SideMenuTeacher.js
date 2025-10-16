@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { Nav, Navbar, Badge, Tooltip, OverlayTrigger } from "react-bootstrap";
 import { 
   Home, 
   Book, 
   GraduationCap, 
   Settings, 
-  LogOut, 
   BarChart3,
   UserCheck,
   Users,

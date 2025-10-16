@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { Container, Row, Col, Card, Button, Spinner, Alert } from "react-bootstrap";
+import autoTable from "jspdf-autotable";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeftCircleFill } from "react-bootstrap-icons";
 import { FaDownload, FaExclamationTriangle } from "react-icons/fa";
@@ -41,6 +42,13 @@ const COLORS = {
 };
 
 const USER_ROLE_COLORS = ["#FF69B4", "#FFB6C1", "#98FB98"];
+
+const TABLE_LABELS = {
+  storiesData: { month: "Month", stories: "Stories Added" },
+  usersData: { name: "User Role", value: "Count", percentage: "Percentage" },
+  studentsPerSectionData: { name: "Section Name", students: "Number of Students" },
+};
+
 
 const Charts = () => {
   const [showSidebar, setShowSidebar] = useState(false);
@@ -224,39 +232,115 @@ const Charts = () => {
     return null;
   };
 
-  // Download handler for a specific chart
-  const handleDownloadChartPdf = async (ref, filename) => {
-    if (!ref.current) return;
+  const generateInterpretation = (labelKey, data) => {
+    if (!data || data.length === 0) {
+      return "No data available to generate an interpretation.";
+    }
+
     try {
-      const canvas = await html2canvas(ref.current, { scale: 2 });
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF({
-        orientation: "landscape",
-        unit: "pt",
-        format: [canvas.width, canvas.height],
-      });
-      pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
-      pdf.save(filename);
+      switch (labelKey) {
+        case "storiesData": {
+          const totalStories = data.reduce((sum, item) => sum + item.stories, 0);
+          const latestMonth = data[data.length - 1];
+          return `A total of ${totalStories} stories have been added over time. The most recent activity shows ${latestMonth.stories} stories added in ${latestMonth.month}. This trend helps visualize platform growth.`;
+        }
+        case "usersData": {
+          const studentData = data.find(d => d.name === "Students");
+          const totalUsers = data.reduce((sum, item) => sum + item.value, 0);
+          return `The platform currently has ${totalUsers} active users. Students make up the largest group, accounting for ${studentData ? studentData.percentage : 'N/A'} of the user base.`;
+        }
+        case "studentsPerSectionData": {
+          const sortedData = [...data].sort((a, b) => b.students - a.students);
+          const topSection = sortedData[0];
+          return `The student population is distributed across ${data.length} sections. The section with the most students is "${topSection.name}" with ${topSection.students} students.`;
+        }
+        default:
+          return "Interpretation for this data is not available.";
+      }
     } catch (error) {
-      console.error("Error downloading chart:", error);
+      console.error("Error generating interpretation:", error);
+      return "An error occurred while generating the interpretation.";
+    }
+  };
+
+  const addInterpretationToPdf = (pdf, interpretation) => {
+    const finalY = (pdf.lastAutoTable && pdf.lastAutoTable.finalY) ? pdf.lastAutoTable.finalY : 420;
+    pdf.setFontSize(10);
+    pdf.setFont("helvetica", "italic");
+    pdf.setTextColor(100);
+    const splitText = pdf.splitTextToSize(interpretation, pdf.internal.pageSize.getWidth() - 80);
+    pdf.text(splitText, 40, finalY + 20);
+    pdf.setFont("helvetica", "normal"); // Reset font
+    pdf.setTextColor(0);
+  };
+
+  // Download handler for a specific chart
+  const handleDownloadChartPdf = async (ref, filename, chartData, labelMapKey, existingPdf = null) => {
+    if ((!ref || !ref.current) && !existingPdf) return;
+    if (!chartData || chartData.length === 0) return;
+
+    const isNewPdf = !existingPdf;
+    const pdf = isNewPdf ? new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" }) : existingPdf;
+    let startY = 40;
+
+    try {
+      if (ref && ref.current) {
+        const canvas = await html2canvas(ref.current, { scale: 2 });
+        const imgData = canvas.toDataURL("image/png");
+        const imgProps = pdf.getImageProperties(imgData);
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const imgWidth = pdfWidth - 80;
+        const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+        pdf.addImage(imgData, "PNG", 40, 40, imgWidth, Math.min(imgHeight, 350));
+        startY = Math.min(imgHeight, 350) + 60;
+      }
+
+      const labels = TABLE_LABELS[labelMapKey] || {};
+      const keys = Object.keys(labels);
+      const tableHead = [keys.map(key => labels[key] || key)];
+      const tableBody = chartData.map(row => keys.map(key => row[key] !== undefined ? row[key] : 'N/A'));
+
+      autoTable(pdf, {
+        head: tableHead,
+        body: tableBody,
+        startY: startY,
+        margin: { left: 40, right: 40 },
+        styles: { fontSize: 10 },
+      });
+
+      const interpretation = generateInterpretation(labelMapKey, chartData);
+      addInterpretationToPdf(pdf, interpretation);
+
+      if (isNewPdf) {
+        pdf.save(filename);
+      }
+    } catch (error) {
+      console.error("Error downloading chart with data:", error);
     }
   };
 
   const handleDownloadPdf = async () => {
-    const input = chartsRef.current;
-    if (!input) return;
+    if (!chartsRef.current) return;
+
     try {
-      const canvas = await html2canvas(input, { scale: 2 });
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF({
-        orientation: "landscape",
-        unit: "pt",
-        format: [canvas.width, canvas.height],
-      });
-      pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
-      pdf.save("charts.pdf");
+      const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+      const charts = [
+        { ref: storiesChartRef, title: "Stories Added Over Time", data: storiesData, labelKey: "storiesData" },
+        { ref: usersChartRef, title: "User Distribution", data: usersData, labelKey: "usersData" },
+        { ref: sectionsChartRef, title: "Students per Section", data: studentsPerSectionData, labelKey: "studentsPerSectionData" },
+      ];
+
+      for (let i = 0; i < charts.length; i++) {
+        const { ref, title, data, labelKey } = charts[i];
+        if (!data || data.length === 0) continue;
+        if (i > 0) pdf.addPage();
+        pdf.setFontSize(18);
+        pdf.text(title, 40, 40);
+        await handleDownloadChartPdf(ref, null, data, labelKey, pdf);
+      }
+      pdf.save("Admin Analytics Report.pdf");
     } catch (error) {
-      console.error("Error downloading charts:", error);
+      console.error("Error downloading all charts with tables:", error);
     }
   };
 
@@ -427,7 +511,7 @@ const Charts = () => {
                   <ChartCard 
                     title="Stories Added Over Time" 
                     loading={false}
-                    onDownload={() => handleDownloadChartPdf(storiesChartRef, "stories_chart.pdf")}
+                    onDownload={() => handleDownloadChartPdf(storiesChartRef, "stories_over_time.pdf", storiesData, "storiesData")}
                   >
                     {storiesData.length > 0 ? (
                       <div className="chart-container">
@@ -475,7 +559,7 @@ const Charts = () => {
                   <ChartCard 
                     title="User Distribution" 
                     loading={false}
-                    onDownload={() => handleDownloadChartPdf(usersChartRef, "users_chart.pdf")}
+                    onDownload={() => handleDownloadChartPdf(usersChartRef, "user_distribution.pdf", usersData, "usersData")}
                   >
                     {usersData.length > 0 && usersData.some((item) => item.value > 0) ? (
                       <ResponsiveContainer width="100%" height={300}>
@@ -518,7 +602,7 @@ const Charts = () => {
                   <ChartCard 
                     title="Students per Section" 
                     loading={false}
-                    onDownload={() => handleDownloadChartPdf(sectionsChartRef, "sections_chart.pdf")}
+                    onDownload={() => handleDownloadChartPdf(sectionsChartRef, "students_per_section.pdf", studentsPerSectionData, "studentsPerSectionData")}
                   >
                     {studentsPerSectionData.length > 0 ? (
                       <div className="chart-container">

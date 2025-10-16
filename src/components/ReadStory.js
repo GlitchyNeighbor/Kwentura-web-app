@@ -17,7 +17,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import { getAuth } from "firebase/auth";
 import * as pdfjsLib from "pdfjs-dist";
 import PageFlip from 'react-pageflip';
-import { getFunctions, httpsCallable } from "firebase/functions";
 import { Volume2, BookOpen, Award } from "lucide-react";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `${process.env.PUBLIC_URL}/pdf.worker.min.js`;
@@ -152,16 +151,16 @@ const ReadStory = () => {
   const [statusMessage, setStatusMessage] = useState("");
   const [pdfPagesAsImages, setPdfPagesAsImages] = useState([]);
   const [isLoadingPdfPages, setIsLoadingPdfPages] = useState(true);
-  const [flipbookDimensions, setFlipbookDimensions] = useState({
+  const [flipbookDimensions] = useState({
     width: 800,
     height: 600
   });
   const [showFullscreenModal, setShowFullscreenModal] = useState(false);
   const flipBook = React.useRef();
   const [hasReachedEnd, setHasReachedEnd] = useState(false);
-  const [pdfPagesText, setPdfPagesText] = useState([]);
+  // pdfPagesText was unused; removed to satisfy ESLint
   const [ttsAudio, setTtsAudio] = useState(null);
-  const [ttsLoading, setTtsLoading] = useState(false);
+  const [ttsLoading] = useState(false);
   const [ttsAudioLoading, setTtsAudioLoading] = useState(false);
   const [ttsAudioData, setTtsAudioData] = useState([]);
   const [currentWordIndex, setCurrentWordIndex] = useState(-1);
@@ -181,7 +180,7 @@ const ReadStory = () => {
   const startTime = useRef(null);
   const timeSpent = useRef(0);
   const [completed, setCompleted] = useState(false);
-  const [bookmarked, setBookmarked] = useState(false);
+  const [bookmarked] = useState(false);
   const intervalRef = useRef(null);
   const hasLeftPage = useRef(false);
 
@@ -311,8 +310,7 @@ const ReadStory = () => {
       const renderPdfPagesToImages = async () => {
         setIsLoadingPdfPages(true);
         setStatusMessage("Loading story pages...");
-        setPdfPagesAsImages([]);
-        setPdfPagesText([]);
+          setPdfPagesAsImages([]);
         try {
           const response = await fetch(story.pdfUrl);
           if (!response.ok) throw new Error(`Failed to fetch PDF: ${response.statusText}`);
@@ -343,25 +341,24 @@ const ReadStory = () => {
           const texts = pageResults.map(r => r.pageText);
 
           setPdfPagesAsImages(pages);
-          setPdfPagesText(texts);
+          setDisplayedPageTexts(texts);
           setStatusMessage("Content loaded successfully.");
         } catch (err) {
           setStatusMessage(`Failed to load story content: ${err.message}`);
           setPdfPagesAsImages([]);
-          setPdfPagesText([]);
         } finally {
           setIsLoadingPdfPages(false);
         }
       };
       renderPdfPagesToImages();
-    } else {
+        } else {
       setStatusMessage("No story content available for this story.");
       setPdfPagesAsImages([]);
       setIsLoadingPdfPages(false);
     }
 
     if (Array.isArray(story.pageTexts) && story.pageTexts.length > 0) {
-      setPdfPagesText(story.pageTexts);
+      setDisplayedPageTexts(story.pageTexts);
     }
   }, [story]);
 

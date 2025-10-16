@@ -14,6 +14,9 @@ import { collection, query, where, getDocs, doc, setDoc } from "firebase/firesto
 import { Eye, EyeOff, Mail, RefreshCw, Check, X } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 
+// Regex for checking presence of symbol characters in passwords
+const PASSWORD_SYMBOL_REGEX = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>\/?]/;
+
 // Debounce utility function
 const debounce = (func, delay) => {
   let timeout;
@@ -306,7 +309,7 @@ const Signup = () => {
       minLength: password.length >= 6,
       hasUppercase: /[A-Z]/.test(password),
       hasNumber: /\d/.test(password),
-      hasSymbol: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
+      hasSymbol: PASSWORD_SYMBOL_REGEX.test(password),
     };
     setPasswordRequirements(requirements);
     return requirements;
@@ -1213,10 +1216,7 @@ const Signup = () => {
         </Container>
       </div>
 
-      <link 
-        rel="stylesheet" 
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
-      />
+      {/* FontAwesome is loaded from local package via import in src/index.js */}
 
       <style jsx>{`
         /* Animated circles for background */

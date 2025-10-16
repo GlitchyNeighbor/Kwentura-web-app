@@ -6,7 +6,6 @@ export async function generateContent(promptText) {
     const result = await model.generateContent(promptText);
     const response = result.response;
     const text = response.text();
-    console.log("Generated text:", text);
     return text;
   } catch (error) {
     console.error("Error generating content:", error);

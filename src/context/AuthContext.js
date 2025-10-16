@@ -19,6 +19,7 @@ export const AuthProvider = ({ children }) => {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [pendingStudents, setPendingStudents] = useState([]);
 
   // Use a ref to hold userData to break dependency cycle
   const userDataRef = useRef(userData);
@@ -101,6 +102,29 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
+  const fetchPendingStudents = useCallback(async () => {
+    const currentData = userDataRef.current;
+    if (currentData?.role === 'teacher' && currentData?.section) {
+      try {
+        const studentsRef = collection(db, "students");
+        const q = query(
+          studentsRef,
+          where("section", "==", currentData.section),
+          where("status", "==", "pending_approval")
+        );
+        const querySnapshot = await getDocs(q);
+        const studentsList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setPendingStudents(studentsList);
+      } catch (err) {
+        console.error("AuthContext: Error fetching pending students:", err);
+        // Optionally set an error state here
+      }
+    } else {
+      // If user is not a teacher or has no section, ensure the list is empty
+      setPendingStudents([]);
+    }
+  }, []);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -131,6 +155,10 @@ export const AuthProvider = ({ children }) => {
   // Keep userDataRef updated to avoid dependency cycles
   useEffect(() => {
     userDataRef.current = userData;
+    // When userData is updated (e.g., on login), fetch pending students
+    if (userData?.role === 'teacher') {
+      fetchPendingStudents();
+    }
   }, [userData]);
 
   const logout = useCallback(async () => {
@@ -227,9 +255,11 @@ export const AuthProvider = ({ children }) => {
     userData,
     loading,
     error,
+    pendingStudents,
     logout,
+    fetchPendingStudents,
     refetchUserData: () => user ? fetchUserDataFromFirestore(user) : Promise.resolve(),
-  }), [user, userData, loading, error, logout, fetchUserDataFromFirestore]);
+  }), [user, userData, loading, error, pendingStudents, logout, fetchUserDataFromFirestore, fetchPendingStudents]);
 
   return (
     <AuthContext.Provider value={value}>

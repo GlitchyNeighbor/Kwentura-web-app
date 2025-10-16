@@ -2,23 +2,11 @@ import React, { useState, useEffect, useCallback } from "react";
 import SideMenuTeacher from "./SideMenuTeacher";
 import TopNavbar from "./TopNavbar";
 import { useNavigate } from "react-router-dom";
-import {
-  doc,
-  getDocs,
-  collection,
-  updateDoc,
-  query,
-  where,
-  serverTimestamp,
-  getDoc,
-  deleteDoc,
-} from "firebase/firestore";
+import { doc, updateDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import {
   Table,
   Button,
   Container,
-  Row,
-  Col,
   Alert,
   Spinner,
   Modal,
@@ -31,6 +19,7 @@ import {
 } from "react-bootstrap-icons";
 import "../scss/custom.scss";
 import { db, auth } from "../config/FirebaseConfig.js";
+import { useAuth } from "../context/AuthContext.js";
 
 const COLORS = {
   primary: "#FF69B4",
@@ -50,9 +39,9 @@ const formatDisplayName = (student) =>
   `${student.studentFirstName || ""} ${student.studentLastName || ""}`.trim();
 
 const ApproveStudentAccounts = () => {
+  const { pendingStudents, fetchPendingStudents: refreshPendingStudents } = useAuth();
   const [showSidebar, setShowSidebar] = useState(false);
-  const [pendingStudents, setPendingStudents] = useState([]);
-  const [teacherSection, setTeacherSection] = useState("");
+  const [teacherSection, setTeacherSection] = useState(null);
   const [loading, setLoading] = useState(true);
   const [alert, setAlert] = useState({
     show: false,
@@ -77,33 +66,12 @@ const ApproveStudentAccounts = () => {
     }, duration);
   }, []);
 
-  const fetchPendingStudents = useCallback(async () => {
-    setLoading(true);
-    try {
-      const studentsRef = collection(db, "students");
-      const q = query(
-        studentsRef,
-        where("section", "==", teacherSection),
-        where("status", "==", "pending_approval")
-      );
-      const querySnapshot = await getDocs(q);
-      const studentsList = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setPendingStudents(studentsList);
-    } catch (error) {
-      console.error("Error fetching pending students: ", error);
-      showAlert(`Failed to fetch pending students: ${error.message}`, "danger");
-    }
-    setLoading(false);
-  }, [teacherSection, showAlert]);
+  // fetchTeacherAndStudents removed — not used. Keep logic inline where needed.
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (user) {
         setCurrentTeacher(user);
-        try {
           const teacherDocRef = doc(db, "teachers", user.uid);
           const teacherDocSnap = await getDoc(teacherDocRef);
           if (teacherDocSnap.exists()) {
@@ -111,40 +79,13 @@ const ApproveStudentAccounts = () => {
             if (teacherData.section) {
               setTeacherSection(teacherData.section);
             } else {
-              showAlert(
-                "No section assigned to your teacher profile. Cannot fetch students.",
-                "warning"
-              );
+              showAlert("No section assigned to your teacher profile. Cannot fetch students.", "warning");
               setLoading(false);
             }
           } else {
-            const teachersQuery = query(
-              collection(db, "teachers"),
-              where("uid", "==", user.uid)
-            );
-            const querySnapshot = await getDocs(teachersQuery);
-            if (!querySnapshot.empty) {
-              const teacherData = querySnapshot.docs[0].data();
-              if (teacherData.section) {
-                setTeacherSection(teacherData.section);
-              } else {
-                showAlert(
-                  "No section assigned. Cannot fetch students.",
-                  "warning"
-                );
-              }
-            } else {
-              showAlert(
-                "Teacher profile not found. Please contact an administrator.",
-                "danger"
-              );
-            }
+            showAlert("Teacher profile not found. Please contact an administrator.", "danger");
             setLoading(false);
           }
-        } catch (error) {
-          showAlert(`Error fetching teacher data: ${error.message}`, "danger");
-          setLoading(false);
-        }
       } else {
         navigate("/login");
       }
@@ -154,11 +95,15 @@ const ApproveStudentAccounts = () => {
 
   useEffect(() => {
     if (teacherSection && currentTeacher) {
-      fetchPendingStudents();
-    } else if (currentTeacher && !teacherSection) {
-      setPendingStudents([]);
+      const fetchData = async () => {
+        setLoading(true);
+        await refreshPendingStudents();
+        setLoading(false);
+      };
+      fetchData();
     }
-  }, [teacherSection, currentTeacher, fetchPendingStudents]);
+  }, [teacherSection, currentTeacher, refreshPendingStudents]);
+
 
   const toggleSidebar = () => {
     setShowSidebar(!showSidebar);
@@ -177,7 +122,7 @@ const ApproveStudentAccounts = () => {
         updatedAt: serverTimestamp(),
       });
       showAlert("Student account approved successfully.", "success");
-      fetchPendingStudents();
+      await refreshPendingStudents();
     } catch (error) {
       showAlert(`Failed to approve student: ${error.message}`, "danger");
     }
@@ -196,7 +141,7 @@ const ApproveStudentAccounts = () => {
         updatedAt: serverTimestamp(),
       });
       showAlert("Student account rejected and archived.", "warning");
-      fetchPendingStudents();
+      await refreshPendingStudents();
     } catch (error) {
       showAlert(`Failed to reject student: ${error.message}`, "danger");
     }

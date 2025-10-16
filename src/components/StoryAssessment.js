@@ -13,11 +13,10 @@ import {
 import { FaArrowLeft, FaCheck, FaTimes } from "react-icons/fa";
 import { db } from "../config/FirebaseConfig.js";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { getAuth } from "firebase/auth";
 import { getFunctions, httpsCallable } from "firebase/functions";
-import { Volume2, Award, BookOpen, CheckCircle } from "lucide-react";
-
+import { Volume2, Award, CheckCircle } from "lucide-react";
 // Enhanced styles matching the main theme
 const cardStyle = {
   border: "none",
@@ -30,7 +29,6 @@ const cardStyle = {
 
 const StoryAssessment = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
   const [story, setStory] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -46,7 +44,7 @@ const StoryAssessment = () => {
   const [questions, setQuestions] = useState([]); // Move to state
   
   // TTS state
-  const [ttsAudio, setTtsAudio] = useState(null);
+  const [, setTtsAudio] = useState(null);
   const [ttsLoading, setTtsLoading] = useState({});
   const ttsAudioRef = useRef(null);
   const [feedbackUrls, setFeedbackUrls] = useState({

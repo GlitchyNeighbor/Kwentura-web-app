@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo } from "react";
 import { Nav, Navbar, Badge, Tooltip, OverlayTrigger } from "react-bootstrap";
-import { Settings, Shield, Info, Mail, LogOut } from "lucide-react";
+import { Settings, Shield, Info, Mail } from "lucide-react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import LogoutConfirmation from "./LogoutConfirmation.js";
 import { useAuth } from "../context/AuthContext.js";

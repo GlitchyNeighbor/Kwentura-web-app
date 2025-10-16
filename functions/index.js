@@ -51,7 +51,8 @@ exports.updateAdminPassword = onCall(async (request) => {
   }
 });
 
-const synthesizeSpeechGoogle = onCall({timeoutSeconds: 3600},
+const synthesizeSpeechGoogle =
+onCall({timeoutSeconds: 3600, region: "asia-southeast1"},
     async (request) => {
       if (!request.auth) {
         throw new HttpsError("unauthenticated", "Authentication required.");
@@ -153,7 +154,8 @@ exports.generateAndStoreTts = onCall(async (request) => {
   }
 });
 
-exports.translatePageTexts = onCall(async (request) => {
+exports.translatePageTexts =
+onCall({region: "asia-southeast1"}, async (request) => {
   const {texts, targetLanguage} = request.data;
 
   if (!request.auth) {
@@ -208,7 +210,7 @@ let model;
 if (API_KEY) {
   try {
     genAI = new GoogleGenerativeAI(API_KEY);
-    model = genAI.getGenerativeModel({model: "gemini-1.5-flash-latest"});
+    model = genAI.getGenerativeModel({model: "gemini-2.5-flash"});
     console.log("GoogleGenerativeAI initialized successfully.");
   } catch (error) {
     console.error("Failed to initialize GoogleGenerativeAI.", error);
@@ -220,7 +222,7 @@ if (API_KEY) {
 }
 
 exports.generateStorySynopsisFromPdf = onCall(
-    {timeoutSeconds: 600}, async (request) => {
+    {timeoutSeconds: 850, region: "asia-southeast1"}, async (request) => {
       if (!genAI || !model) {
         throw new HttpsError(
             "failed-precondition",
@@ -364,7 +366,7 @@ exports.generateStorySynopsisFromPdf = onCall(
 );
 
 exports.generateMoralLessonFromText = onCall(
-    async (request) => {
+    {region: "asia-southeast1"}, async (request) => {
       if (!genAI || !model) {
         throw new HttpsError(
             "failed-precondition",
@@ -484,6 +486,24 @@ exports.deleteUserAccount = onCall(async (request) => {
     if (!uid || !collectionName || !documentId) {
       throw new HttpsError("invalid-argument", "Missing required parameters");
     }
+
+    // If deleting a student, also delete their subcollections
+    if (collectionName === "students") {
+      const studentRef = getFirestore().collection("students").doc(documentId);
+      const subcollectionsToDelete = ["bookmarks", "quizScores"];
+
+      for (const sub of subcollectionsToDelete) {
+        const subcollectionRef = studentRef.collection(sub);
+        const snapshot = await subcollectionRef.get();
+        const batch = getFirestore().batch();
+        snapshot.docs.forEach((doc) => batch.delete(doc.ref));
+        await batch.commit();
+        console.log(`Deleted subcollection 
+            '${sub}' for student ${documentId}.`);
+      }
+    }
+
+    // Delete the main document and the auth user
     await getFirestore().collection(collectionName).doc(documentId).delete();
     await getAuth().deleteUser(uid);
 
@@ -825,7 +845,8 @@ exports.approveTeacher = onCall(async (request) => {
  * Cleans up associated data in Firestore and Storage when a story is deleted.
  */
 exports.onStoryDelete =
-onDocumentDeleted("stories/{storyId}", async (event) => {
+onDocumentDeleted({document: "stories/{storyId}",
+  region: "asia-southeast1"}, async (event) => {
   const storyId = event.params.storyId;
   const db = getFirestore();
   const bucket = admin.storage().bucket();
@@ -900,7 +921,7 @@ onDocumentDeleted("stories/{storyId}", async (event) => {
   return null;
 });
 
-exports.rejectTeacher = onCall(async (request) => {
+exports.rejectTeacher = onCall({region: "asia-southeast1"}, async (request) => {
   if (!request.auth) {
     throw new HttpsError(
         "unauthenticated",
@@ -958,8 +979,59 @@ exports.rejectTeacher = onCall(async (request) => {
   }
 });
 
+// CSP report receiver — lightweight endpoint to collect CSP violation
+// reports. Linted to satisfy functions predeploy checks.
+exports.cspReport = require("firebase-functions").https.onRequest(
+    async (req, res) => {
+      // Allow only POST requests with JSON body
+      if (req.method !== "POST") {
+        res.status(204).send("");
+        return;
+      }
+
+      let report = req.body;
+      // Some user agents send the report in report.report or as raw JSON
+      if (report && report["csp-report"]) {
+        report = report["csp-report"];
+      }
+
+      // Capture some request metadata for triage
+      const metadata = {
+        ip:
+            req.headers["x-forwarded-for"] || req.ip ||
+            req.connection?.remoteAddress || null,
+        userAgent:
+            (req.get ? req.get("User-Agent") : req.headers["user-agent"]) ||
+            null,
+        host: (req.get ? req.get("Host") : req.headers.host) || null,
+        url: req.originalUrl || req.url || null,
+        method: req.method,
+      };
+
+      console.log(
+          "CSP Violation Report:", JSON.stringify(report),
+          "meta:", JSON.stringify(metadata),
+      );
+
+      try {
+        // Write the report to Firestore for later inspection
+        await db.collection("csp_reports").add({
+          report: report || {},
+          metadata,
+          receivedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      } catch (err) {
+        // Log error but do not fail the request
+        console.error("Failed to persist CSP report:", err);
+      }
+
+      // Always return 204 No Content to the reporter
+      res.status(204).send("");
+    },
+);
+
 exports.generateComprehensionQuestionsFromText = onCall(
-    async (request) => {
+    {region: "asia-southeast1"}, async (request) => {
       if (!genAI || !model) {
         throw new HttpsError(
             "failed-precondition",
@@ -1046,6 +1118,229 @@ Example:
         console.error("Error generating comprehension questions:", error);
         throw new HttpsError("internal", error.message ||
         "Internal error generating questions.");
+      }
+    },
+);
+
+exports.evaluateAiContent = onCall(
+    {timeoutSeconds: 850, region: "asia-southeast1"},
+    async (request) => {
+      if (!request.auth) {
+        throw new HttpsError("unauthenticated", "Authentication required.");
+      }
+      if (!genAI || !model) {
+        throw new HttpsError(
+            "failed-precondition",
+            "The Gemini API is not configured.",
+        );
+      }
+
+      const {storyId, contentType} = request.data;
+      if (!storyId || !contentType) {
+        throw new HttpsError(
+            "invalid-argument",
+            "Missing storyId or contentType.",
+        );
+      }
+
+      const validContentTypes = ["synopsis", "comprehensionQuestions"];
+      if (!validContentTypes.includes(contentType)) {
+        throw new HttpsError("invalid-argument", "Invalid content type.");
+      }
+
+      try {
+        const storyRef = db.collection("stories").doc(storyId);
+        const storyDoc = await storyRef.get();
+
+        if (!storyDoc.exists) {
+          throw new HttpsError("not-found", "Story not found.");
+        }
+
+        const storyData = storyDoc.data();
+        const originalText = (storyData.pageTexts || []).join(" ").trim();
+        if (!originalText) {
+          throw new HttpsError(
+              "failed-precondition",
+              "Original story text not found.",
+          );
+        }
+
+        let contentToEvaluate;
+        let evaluationPrompt;
+        const exampleJson = {
+          rating: 4,
+          justification:
+              "The synopsis is mostly accurate but misses a key plot point.",
+        };
+
+        if (contentType === "synopsis") {
+          contentToEvaluate = storyData.generatedSynopsis;
+          if (!contentToEvaluate) {
+            throw new HttpsError("failed-precondition", "Synopsis not found.");
+          }
+          evaluationPrompt = `As an expert evaluator,
+assess the following AI-generated synopsis against
+the original story text. Provide a rating from 1
+(very inaccurate) to 5 (perfectly accurate) and a
+brief justification.
+
+Original Story Text (truncated): "${originalText.substring(0, 8000)}"
+
+Synopsis to Evaluate: "${contentToEvaluate}"
+
+Return ONLY a valid JSON object in the format:
+${JSON.stringify(exampleJson, null, 2)}`;
+        } else { // comprehensionQuestions
+          contentToEvaluate = storyData.comprehensionQuestions;
+          if (!contentToEvaluate || contentToEvaluate.length === 0) {
+            throw new HttpsError("failed-precondition",
+                "Comprehension questions not found.");
+          }
+          evaluationPrompt = `As an expert evaluator,
+assess the following AI-generated comprehension questions
+against the original story text.
+Are they relevant and answerable from the text?
+Provide a rating from 1 (irrelevant/unanswerable)
+to 5 (highly relevant and accurate) and a brief justification.
+
+Original Story Text (truncated): "${originalText.substring(0, 8000)}"
+
+Questions to Evaluate: ${JSON.stringify(contentToEvaluate, null, 2)}
+
+Return ONLY a valid JSON object in the format:
+${JSON.stringify(exampleJson, null, 2)}`;
+        }
+
+        const result = await model.generateContent(evaluationPrompt);
+        const response = result.response;
+        let responseText = response.text().trim();
+
+        // Clean up potential markdown
+        if (responseText.startsWith("```json")) {
+          responseText = responseText.substring(7,
+              responseText.length - 3).trim();
+        } else if (responseText.startsWith("```")) {
+          responseText = responseText.substring(3,
+              responseText.length - 3).trim();
+        }
+
+        const evaluationResult = JSON.parse(responseText);
+
+        if (typeof evaluationResult.rating !== "number" ||
+            !evaluationResult.justification) {
+          throw new Error("AI evaluation result is in an invalid format.");
+        }
+
+        const fieldToUpdate = `aiFeedback.${contentType}`;
+        await storyRef.update({
+          [fieldToUpdate]: {
+            rating: evaluationResult.rating,
+            justification: evaluationResult.justification,
+            evaluatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          },
+        });
+
+        return evaluationResult;
+      } catch (error) {
+        console.error("Error evaluating AI content:", error);
+        throw new HttpsError("internal",
+            `Failed to evaluate content: ${error.message}`,
+        );
+      }
+    },
+);
+
+exports.validateTranslation = onCall(
+    {timeoutSeconds: 850, region: "asia-southeast1"},
+    async (request) => {
+      if (!request.auth) {
+        throw new HttpsError("unauthenticated", "Authentication required.");
+      }
+      if (!genAI || !model) {
+        throw new HttpsError(
+            "failed-precondition",
+            "The Gemini API is not configured.",
+        );
+      }
+
+      const {storyId} = request.data;
+      if (!storyId) {
+        throw new HttpsError(
+            "invalid-argument",
+            "Missing storyId.",
+        );
+      }
+
+      try {
+        const storyRef = db.collection("stories").doc(storyId);
+        const storyDoc = await storyRef.get();
+
+        if (!storyDoc.exists) {
+          throw new HttpsError("not-found", "Story not found.");
+        }
+
+        const storyData = storyDoc.data();
+        const originalTexts = storyData.pageTexts || [];
+        const translations = storyData.translations || {};
+        const targetLangCode = Object.keys(translations)[0];
+        const translatedTexts =
+         targetLangCode ? translations[targetLangCode] : [];
+
+        if (originalTexts.length === 0 || translatedTexts.length === 0) {
+          throw new HttpsError(
+              "failed-precondition",
+              "Original text or translated text not found.",
+          );
+        }
+
+        const exampleJson = {
+          rating: 4,
+          feedback:
+            "The translation is mostly accurate with minor grammatical errors.",
+        };
+
+        const feedbackPrompt = `As an expert language evaluator, review the
+following translation from English to Filipino.
+1. Provide a rating from 1 (very inaccurate) to 5 (perfectly accurate).
+2. Provide concise feedback (under 125 words) on the translation's quality,
+focusing on overall accuracy and grammatical correctness.
+
+Original Texts:
+${originalTexts.map((text, index) => `Page ${index + 1}: ${text}`).join("\n\n")}
+
+Translated Texts:
+${translatedTexts.map((text, index) =>
+    `Page ${index + 1}: ${text}`).join("\n\n")}
+
+Return ONLY a valid JSON object in the format:
+${JSON.stringify(exampleJson, null, 2)}`;
+
+        const result = await model.generateContent(feedbackPrompt);
+        const response = result.response;
+        let responseText = response.text().trim();
+
+        // Clean up potential markdown
+        if (responseText.startsWith("```json")) {
+          responseText = responseText.substring(7,
+              responseText.length - 3).trim();
+        } else if (responseText.startsWith("```")) {
+          responseText = responseText.substring(3,
+              responseText.length - 3).trim();
+        }
+
+        const evaluationResult = JSON.parse(responseText);
+
+        if (typeof evaluationResult.rating !== "number" ||
+            !evaluationResult.feedback) {
+          throw new Error("AI translation validation result is invalid.");
+        }
+
+        return evaluationResult;
+      } catch (error) {
+        console.error("Error validating translation:", error);
+        throw new HttpsError("internal",
+            `Failed to validate translation: ${error.message}`,
+        );
       }
     },
 );

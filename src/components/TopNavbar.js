@@ -1,12 +1,14 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { Navbar, Dropdown, Container } from "react-bootstrap";
 import { Menu, X } from "lucide-react";
-import { User, LogOut } from "lucide-react";
+import { User, LogOut, Bell } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.js";
-import LogoutConfirmation from "./LogoutConfirmation";
+import LogoutConfirmation from "./LogoutConfirmation.js";
+import NotificationsModal from "./NotificationsModal.js"; // This will be updated next
 import "../css/TopNavbar.css";
 import "../css/custom.css";
+// Removed unused Firestore imports (collection, query, where, getDocs) and db
 
 const USER_ROLES = {
   SUPERADMIN: "superAdmin",
@@ -48,11 +50,18 @@ const ProfileToggle = React.forwardRef(({ children, onClick }, ref) => (
 ));
 
 const TopNavbar = ({ toggleSidebar, isSidebarOpen = false }) => {
-  const { userData, loading, error, logout } = useAuth();
+  const { userData, loading, error, logout, pendingStudents, fetchPendingStudents } = useAuth();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    if (userData) {
+      fetchPendingStudents();
+    }
+  }, [userData]);
 
   const displayName = useMemo(() => {
     if (loading) return "Loading...";
@@ -289,6 +298,12 @@ const TopNavbar = ({ toggleSidebar, isSidebarOpen = false }) => {
                         }}
                         loading="lazy"
                       />
+                      {pendingStudents.length > 0 && (
+                        <span className="notification-ping-indicator">
+                          <span className="notification-ping-animation"></span>
+                          <span className="notification-ping-dot"></span>
+                        </span>
+                      )}
                     </div>
                   </Dropdown.Toggle>
 
@@ -321,6 +336,48 @@ const TopNavbar = ({ toggleSidebar, isSidebarOpen = false }) => {
                       >
                         <User size={20} style={{ opacity: 0.8 }} />
                         <span>View Profile</span>
+                      </Dropdown.Item>
+
+                      <Dropdown.Item
+                        onClick={() => setShowNotificationsModal(true)}
+                        className="dropdown-menu-item"
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          padding: "14px 20px",
+                          gap: "12px",
+                          border: "none",
+                          background: "none",
+                          color: "#374151",
+                          borderRadius: "12px",
+                          fontWeight: 500,
+                          fontSize: "1rem",
+                          transition: "background 0.18s, color 0.18s"
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.background = "#E3F0FF";
+                          e.currentTarget.style.color = "#1976F2";
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.background = "none";
+                          e.currentTarget.style.color = "#374151";
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <Bell size={20} style={{ opacity: 0.8 }} />
+                          <span>Notifications</span>
+                        </div>
+                        {pendingStudents.length > 0 && (
+                          <span style={{
+                            width: '10px',
+                            height: '10px',
+                            backgroundColor: '#ef4444',
+                            borderRadius: '50%',
+                            border: '1.5px solid white',
+                            boxShadow: '0 0 0 1px rgba(0,0,0,0.05)'
+                          }}></span>
+                        )}
                       </Dropdown.Item>
 
                       <div style={{
@@ -377,6 +434,13 @@ const TopNavbar = ({ toggleSidebar, isSidebarOpen = false }) => {
         isLoggingOut={isLoggingOut}
       />
 
+      {/* Notifications Modal */}
+      <NotificationsModal
+        show={showNotificationsModal}
+        onHide={() => setShowNotificationsModal(false)}
+        notifications={pendingStudents}
+      />
+
       {/* Add style for logo shadow and brand block and logo hover effect */}
       <style jsx>{`
         .top-navbar {
@@ -389,6 +453,43 @@ const TopNavbar = ({ toggleSidebar, isSidebarOpen = false }) => {
         .logo-hover-parent .logo-hover-block:hover img {
           box-shadow: 0 6px 16px rgba(255,84,154,0.18);
           transform: scale(1.09) rotate(-3deg);
+        }
+      `}</style>
+
+      {/* Styles for Notification Ping */}
+      <style jsx>{`
+        .notification-ping-indicator {
+          position: absolute;
+          top: 0;
+          right: 0;
+          transform: translate(25%, -25%);
+          width: 16px;
+          height: 16px;
+        }
+        .notification-ping-dot {
+          position: absolute;
+          width: 10px;
+          height: 10px;
+          background-color: #ef4444;
+          border-radius: 50%;
+          border: 2px solid white;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+        }
+        .notification-ping-animation {
+          position: absolute;
+          width: 100%;
+          height: 100%;
+          background-color: #ef4444;
+          border-radius: 50%;
+          animation: ping 1.2s cubic-bezier(0, 0, 0.2, 1) infinite;
+        }
+        @keyframes ping {
+          75%, 100% {
+            transform: scale(2.2);
+            opacity: 0;
+          }
         }
       `}</style>
     </>

@@ -11,8 +11,145 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Helper functions to check auth and roles stored in custom claims or in user documents
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Check role via custom claim on the token or fallback to users collection role field
+    function hasRole(role) {
+      return (request.auth.token.role == role) ||
+             (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role);
+    }
+
+    // Allow admins or owner
+    function isAdmin() {
+      return hasRole('admin') || hasRole('superadmin');
+    }
+
+    // Allow teacher role
+    function isTeacher() {
+      return hasRole('teacher');
+    }
+
+    // Allow student role
+    function isStudent() {
+      return hasRole('student');
+    }
+
+    // Public stories: readable by anyone, writable by teachers/admins
+    match /stories/{storyId} {
+      allow read: if true; // public story content
+      allow create, update, delete: if isSignedIn() && (isTeacher() || isAdmin());
+    }
+
+    // Bookmarks: each user may read/write only their own bookmarks
+    match /bookmarks/{bookmarkId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // Users collection: allow reads for login flow (app queries Firestore to authenticate), writes restricted
+    match /users/{userId} {
+      // Allow reads during login (the app appears to query Firestore to validate schoolId/password).
+      // NOTE: this exposes user profile documents to unauthenticated reads. Consider migrating to Firebase Auth
+      // or a dedicated minimal public auth index to avoid exposing full user documents.
+      allow read: if true;
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow delete: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+    }
+
+    // Students collection: allow read for login or listing; writes restricted
+    match /students/{studentId} {
+      // Allow reads so login/listing flows that query students can work before auth is established.
+      allow read: if true;
+      allow create: if isSignedIn() && (isTeacher() || isAdmin());
+      allow update: if isSignedIn() && (isTeacher() || isAdmin() || request.auth.uid == studentId);
+      allow delete: if isSignedIn() && (isAdmin());
+    }
+
+    // Teachers collection: allow read for login flow; writes restricted to admins or the teacher themself
+    match /teachers/{teacherId} {
+      // Admins can list all teachers. Individual teachers can read their own doc.
+      allow get: if isSignedIn() && (isAdmin() || request.auth.uid == teacherId);
+      allow list: if isSignedIn() && isAdmin();
+      allow create: if isSignedIn() && isAdmin();
+      allow update: if isSignedIn() && (isAdmin() || request.auth.uid == teacherId);
+      allow delete: if isSignedIn() && isAdmin();
+    }
+
+    // Admins collection: allow read for login flow; managerial writes limited to superadmin
+    match /admins/{adminId} {
+      // Allow read to support admin login lookup. Writes are still restricted.
+      allow read: if true;
+      allow create, update, delete: if isSignedIn() && hasRole('superadmin');
+    }
+
+    // Admin UI logs: admins only
+    // Admin UI logs (code uses "admin_logs" collection) - allow admins to read/create
+    // Temporarily allow any signed-in user to read admin logs for testing (revert after diagnosis)
+    match /adminLogs/{logId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isAdmin();
+      allow delete: if isSignedIn() && hasRole('superadmin');
+    }
+
+    // Also support underscore-named collection used in some codepaths: admin_logs
+    // Also support underscore-named collection used in some codepaths: admin_logs
+    // Temporarily allow any signed-in user to read admin logs for testing (revert after diagnosis)
+    match /admin_logs/{logId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isAdmin();
+      allow delete: if isSignedIn() && hasRole('superadmin');
+    }
+
+    // Text-to-speech metadata (if stored in firestore) - readable by anyone, write by authenticated
+    match /tts/{file} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    // Retention rates collection used by AdminDashboard
+    match /retention_rates/{docId} {
+      // read by admins and dashboard viewers; if your dashboard is public to any logged-in user adjust accordingly
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSignedIn() && isAdmin();
+    }
+
+    // Story engagement collection used by AdminDashboard
+    match /story_engagement/{docId} {
+      // Readable by signed-in users for dashboard aggregation
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && isAdmin();
+    }
+
+    // Favorites collection used by TeacherLibrary and other parts
+    match /favorites/{favId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // Nested student subcollections: bookmarks and quizScores
+    match /students/{studentId}/bookmarks/{bookmarkId} {
+      allow read: if isSignedIn() && (request.auth.uid == studentId || isAdmin());
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /students/{studentId}/quizScores/{scoreId} {
+      allow read: if isSignedIn() && (request.auth.uid == studentId || isAdmin() || isTeacher());
+      allow create: if isSignedIn() && (isTeacher() || isAdmin());
+      allow update, delete: if isSignedIn() && isAdmin();
+    }
+
+    // Fallback: deny everything else by default
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
   }
 }

@@ -274,8 +274,8 @@ const MetricCard = ({ title, value, icon: IconComponent, style, loading }) => (
         <div className="flex-grow-1">
           <div className="text-muted mb-2 fs-6">{title}</div>
           <h3 className="mb-0 fw-bold text-dark">
-            {loading ? <Spinner animation="grow" size="sm" /> : value.toLocaleString()}
-          </h3>
+                    {loading ? <Spinner animation="grow" size="sm" /> : ((value !== undefined && value !== null && typeof value === 'number') ? value.toLocaleString() : String(value ?? '0'))}
+                  </h3>
         </div>
         <div
           className="p-3 rounded-circle"

@@ -13,12 +13,10 @@ import {
   Alert,
   Badge,
   Spinner,
-  ButtonGroup,
 } from "react-bootstrap";
 import {
   Search,
   ArrowLeftCircleFill,
-  ThreeDotsVertical,
   PersonFill,
   Archive,
   ArrowCounterclockwise,
@@ -49,7 +47,7 @@ import TopNavbar from "./TopNavbar";
 import "../scss/custom.scss";
 
 // Initialize Firebase Functions
-const functions = getFunctions(app); 
+const functions = getFunctions(app, "us-central1"); 
 const logAdminUiActionCallable = httpsCallable(functions, 'logAdminUiAction');
 
 // Constants

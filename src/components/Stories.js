@@ -9,18 +9,13 @@ import {
   Nav,
   InputGroup,
 } from "react-bootstrap";
-import {
-  FaArrowLeft,
-  FaChevronLeft,
-  FaChevronRight,
-} from "react-icons/fa";
+import { FaArrowLeft } from "react-icons/fa";
 import { db } from "../config/FirebaseConfig.js";
 import {
   collection,
   getDocs,
   query,
   orderBy,
-  limit,
   doc,
   setDoc,
   deleteDoc,
@@ -57,7 +52,6 @@ const categories = [
 const StoryCard = ({ id, title, image, category, author, onBookmarkToggle }) => {
   const navigate = useNavigate();
   const [bookmarked, setBookmarked] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
@@ -77,7 +71,6 @@ const StoryCard = ({ id, title, image, category, author, onBookmarkToggle }) => 
   }, [id]);
 
   const handleBookmarkToggle = async () => {
-    setLoading(true);
     if (bookmarked) {
       try {
         const favSnap = await getDocs(collection(db, "favorites"));
@@ -112,7 +105,6 @@ const StoryCard = ({ id, title, image, category, author, onBookmarkToggle }) => 
         alert("Failed to bookmark story.");
       }
     }
-    setLoading(false);
   };
 
   return (
@@ -240,7 +232,7 @@ const Stories = () => {
   const [allStories, setAllStories] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCategory, setActiveCategory] = useState(""); 
-  const [bookmarkedStories, setBookmarkedStories] = useState([]);
+  
   const [isLibraryHovered, setIsLibraryHovered] = useState(false);
 
   const toggleSidebar = () => {
@@ -269,11 +261,8 @@ const Stories = () => {
   }, []);
 
   const handleBookmarkToggle = (storyId, isBookmarked) => {
-    if (isBookmarked) {
-      setBookmarkedStories((prev) => [...prev, storyId]);
-    } else {
-      setBookmarkedStories((prev) => prev.filter((id) => id !== storyId));
-    }
+    // kept for compatibility with StoryCard callback; no local state needed
+    return;
   };
 
   const storiesByCategory = useMemo(() => {

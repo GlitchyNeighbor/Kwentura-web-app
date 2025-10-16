@@ -17,7 +17,6 @@ import {
   Row,
   Col,
   Alert,
-  Spinner,
 } from "react-bootstrap";
 import "../css/custom.css";
 import { Link } from "react-router-dom";
@@ -279,16 +278,7 @@ const Login = () => {
   const location = useLocation();
 
   useEffect(() => {
-    // Load FontAwesome if not already loaded
-    if (!document.querySelector('link[href*="font-awesome"]')) {
-      const link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css';
-      link.integrity = 'sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==';
-      link.crossOrigin = 'anonymous';
-      link.referrerPolicy = 'no-referrer';
-      document.head.appendChild(link);
-    }
+    // FontAwesome is imported centrally in src/index.js
   }, []);
 
   useEffect(() => {
@@ -471,13 +461,11 @@ const Login = () => {
         sessionStorage.setItem('activeSessionId', sessionId);
       }
 
-      if (
-        userRole === "admin" ||
-        userRole === "superAdmin" ||
-        userRole === "superadmin"
-      ) {
+      const isAdmin = ["admin", "superadmin"].includes(userRole?.toLowerCase());
+
+      if (isAdmin) {
         navigate("/admin/dashboard");
-      } else if (userRole === "teacher") {
+      } else if (userRole?.toLowerCase() === "teacher") {
         navigate("/teacher/dashboard");
       } else {
         setIsRedirecting(false); 
@@ -968,14 +956,7 @@ const Login = () => {
         </Container>
       </section>
 
-      {/* FontAwesome CDN */}
-      <link 
-        rel="stylesheet" 
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
-        integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg=="
-        crossOrigin="anonymous"
-        referrerPolicy="no-referrer"
-      />
+      {/* FontAwesome is loaded from local package via import in src/index.js */}
 
       <style jsx>{`
         @keyframes float {

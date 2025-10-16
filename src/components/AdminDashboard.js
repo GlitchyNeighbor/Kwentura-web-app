@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Container, Row, Col, Card, Alert, Badge, Spinner } from "react-bootstrap";
 import {
   FaBook,
@@ -22,8 +22,6 @@ import {
   ResponsiveContainer,
   Tooltip,
   Legend,
-  LineChart,
-  Line,
 } from "recharts";
 import { 
   collection, 
@@ -63,32 +61,7 @@ const CARD_STYLES = {
   students: { bg: "#FFE4E1", icon: "#FF69B4" },
 };
 
-// Custom hooks for data fetching
-const useAsyncData = (fetchFunction, dependencies = []) => {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const fetchData = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const result = await fetchFunction();
-      setData(result);
-    } catch (err) {
-      console.error("Error fetching data:", err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, dependencies);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  return { data, loading, error, refetch: fetchData };
-};
+// ...existing code...
 
 // Utility functions
 const formatActionType = (action) => {
@@ -119,7 +92,7 @@ const MetricCard = ({ title, value, icon: IconComponent, style, trend }) => (
       <div className="d-flex justify-content-between align-items-start">
         <div className="flex-grow-1">
           <div className="text-muted mb-2 fs-6">{title}</div>
-          <h3 className="mb-0 fw-bold text-dark">{value.toLocaleString()}</h3>
+          <h3 className="mb-0 fw-bold text-dark">{(value !== undefined && value !== null && typeof value === 'number') ? value.toLocaleString() : String(value ?? '0')}</h3>
           {trend && (
             <small className={`text-${trend.type}`}>
               {trend.value}% from last month
@@ -448,11 +421,6 @@ const AdminDashboard = () => {
     return null;
   };
 
-  const retentionChartData = useMemo(() => [
-    { name: 'Daily', users: dashboardData.retentionData.dailyActiveUsers, fill: COLORS.primary },
-    { name: 'Weekly', users: dashboardData.retentionData.weeklyActiveUsers, fill: COLORS.secondary },
-    { name: 'Monthly', users: dashboardData.retentionData.monthlyActiveUsers, fill: COLORS.success },
-  ], [dashboardData.retentionData]);
 
   if (loading) {
     return (
@@ -737,7 +705,7 @@ const AdminDashboard = () => {
                   >
                     <FaEye size={24} />
                   </div>
-                  <h3 className="mb-2 fw-bold text-dark">{dashboardData.storyEngagementData.totalCompleted.toLocaleString()}</h3>
+                  <h3 className="mb-2 fw-bold text-dark">{(dashboardData.storyEngagementData.totalCompleted !== undefined && dashboardData.storyEngagementData.totalCompleted !== null) ? String(dashboardData.storyEngagementData.totalCompleted).toLocaleString() : '0'}</h3>
                   <p className="text-muted mb-0">Stories Completed</p>
                 </Card.Body>
               </Card>
@@ -751,7 +719,7 @@ const AdminDashboard = () => {
                   >
                     <FaBookmark size={24} />
                   </div>
-                  <h3 className="mb-2 fw-bold text-dark">{dashboardData.storyEngagementData.totalBookmarked.toLocaleString()}</h3>
+                  <h3 className="mb-2 fw-bold text-dark">{(dashboardData.storyEngagementData.totalBookmarked !== undefined && dashboardData.storyEngagementData.totalBookmarked !== null) ? String(dashboardData.storyEngagementData.totalBookmarked).toLocaleString() : '0'}</h3>
                   <p className="text-muted mb-0">Stories Bookmarked</p>
                 </Card.Body>
               </Card>

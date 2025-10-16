@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Container, Row, Col, Card, Button, Form, InputGroup } from "react-bootstrap";
-import { FaBookmark, FaRegBookmark, FaArrowLeft, FaTrash } from "react-icons/fa";
+import { FaArrowLeft, FaTrash } from "react-icons/fa";
 import { Search } from "react-bootstrap-icons";
 import SidebarMenuTeacher from "./SideMenuTeacher";
 import TopNavbar from "./TopNavbar";

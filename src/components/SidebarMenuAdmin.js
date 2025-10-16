@@ -11,7 +11,6 @@ import {
   LogOut,
   UserCheck,
   Users,
-  UserCog,
   ChevronDown,
   ChevronRight
 } from "lucide-react";
@@ -472,7 +471,6 @@ const SidebarMenuAdmin = ({ isOpen, toggleSidebar }) => {
           minWidth: isOpen ? "250px" : "60px",
           maxWidth: isOpen ? "250px" : "60px",
           flexShrink: 0,
-          overflow: "hidden",
           background: COLORS.white,
           borderRight: `1px solid ${COLORS.border}`,
           boxShadow: '0 0 8px rgba(0, 0, 0, 0.08)',

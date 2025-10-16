@@ -1,5 +1,4 @@
-import { Bookmark } from "lucide-react";
-import { FaBookmark, FaRegBookmark, FaArrowLeft, FaEye, FaHeart } from "react-icons/fa";
+import { FaBookmark, FaRegBookmark, FaArrowLeft, FaEye } from "react-icons/fa";
 import TopNavbar from "./TopNavbar";
 import SidebarMenuTeacher from "./SideMenuTeacher";
 import {
@@ -14,7 +13,7 @@ import {
 } from "react-bootstrap";
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { db, model } from "../config/FirebaseConfig.js";
+import { db } from "../config/FirebaseConfig.js";
 import { 
   doc, 
   getDoc, 
@@ -36,7 +35,6 @@ const StorySynopsis = () => {
   const [bookmarked, setBookmarked] = useState(false);
   const [bookmarkLoading, setBookmarkLoading] = useState(false);
   const [isReadHovered, setIsReadHovered] = useState(false);
-  const [isLibraryHovered, setIsLibraryHovered] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
 
   const toggleSidebar = () => setShowSidebar(!showSidebar);

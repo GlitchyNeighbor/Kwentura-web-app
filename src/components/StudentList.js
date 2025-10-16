@@ -34,6 +34,7 @@ import {
   query,
   where,
   doc,
+  orderBy,
   getDoc,
 } from "firebase/firestore";
 import { db } from "../config/FirebaseConfig.js";
@@ -159,24 +160,7 @@ const StatCard = ({ title, value, icon: IconComponent, color, trend }) => (
   </Card>
 );
 
-const FilterButton = ({ active, onClick, children, variant = "outline" }) => (
-  <Button
-    variant={active ? "primary" : variant + "-primary"}
-    size="sm"
-    onClick={onClick}
-    className="fw-semibold"
-    style={{
-      backgroundColor: active ? COLORS.pink : 'transparent',
-      borderColor: COLORS.pink,
-      color: active ? 'white' : COLORS.pink,
-      borderRadius: "20px",
-      padding: "8px 16px",
-      transition: "all 0.2s ease",
-    }}
-  >
-    {children}
-  </Button>
-);
+// FilterButton helper exists in AccountList.js; avoid duplicate definition here
 
 const StudentScores = ({ studentId, isVisible }) => {
     const [scores, setScores] = useState([]);
@@ -195,7 +179,8 @@ const StudentScores = ({ studentId, isVisible }) => {
   
         try {
           const scoresQuery = query(
-            collection(db, `students/${studentId}/quizScores`)
+            collection(db, `students/${studentId}/quizScores`),
+            orderBy("score", "asc")
           );
           const querySnapshot = await getDocs(scoresQuery);
           const scoresList = querySnapshot.docs.map(doc => ({

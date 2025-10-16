@@ -36,7 +36,6 @@ import {
   PlusCircleFill,
   Search,
   ArrowLeftCircleFill,
-  ThreeDotsVertical,
   PencilFill,
   TrashFill,
 } from "react-bootstrap-icons";
@@ -96,6 +95,10 @@ const ManageAdmins = () => {
     hasNumber: false,
     hasSymbol: false,
   });
+
+  // Regex for checking presence of symbol characters in passwords
+  // Use RegExp constructor to avoid unnecessary-escape ESLint warnings
+  const PASSWORD_SYMBOL_REGEX = new RegExp("[!@#$%^&*()_+\\\-=[\\]{};':\"\\\\|,.<>/?]");
 
   useEffect(() => {
     
@@ -247,7 +250,7 @@ const ManageAdmins = () => {
       minLength: password.length >= 6,
       hasUppercase: /[A-Z]/.test(password),
       hasNumber: /\d/.test(password),
-      hasSymbol: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password),
+  hasSymbol: PASSWORD_SYMBOL_REGEX.test(password),
     };
     setPasswordRequirements(requirements);
     return requirements;

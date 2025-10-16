@@ -26,7 +26,6 @@ import {
 } from "firebase/storage";
 import { app } from "../config/FirebaseConfig.js";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext.js";
 
 const db = getFirestore(app);
 
@@ -66,7 +65,7 @@ const SettingsTeacher = () => {
   const [isEmailVerified, setIsEmailVerified] = useState(false);
 
   const auth = getAuth();
-  const { logout } = useAuth();
+  // logout not used here; keeping auth handling local via firebase auth
   const navigate = useNavigate();
 
   const fetchUserDataFromFirestore = useCallback(async (currentUser) => {
