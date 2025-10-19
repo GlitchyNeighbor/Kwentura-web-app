@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import SidebarMenuAdmin from "./SidebarMenuAdmin";
 import { Card } from "react-bootstrap";
 import { TelephoneFill } from "react-bootstrap-icons";
@@ -83,6 +83,7 @@ const ManageAdmins = () => {
     message: "",
     type: "success",
   });
+  const [schoolIdStatus, setSchoolIdStatus] = useState('idle'); // 'idle', 'checking', 'available', 'taken'
 
   
   const [showPassword, setShowPassword] = useState(false);
@@ -134,6 +135,46 @@ const ManageAdmins = () => {
     setSearchTerm(e.target.value);
   };
 
+  const showAlert = (message, type = "success") => {
+    setAlert({ show: true, message, type });
+    setTimeout(
+      () => setAlert({ show: false, message: "", type: "success" }),
+      3500
+    );
+  };
+
+  const checkSchoolIdExists = useCallback(async (schoolId, excludeId) => {
+    if (!schoolId) {
+      setSchoolIdStatus('idle');
+      return;
+    }
+    setSchoolIdStatus('checking');
+    try {
+      const collectionsToSearch = ["admins", "teachers", "students"];
+      let isTaken = false;
+      for (const collectionName of collectionsToSearch) {
+        const q = query(collection(db, collectionName), where("schoolId", "==", schoolId));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          if (excludeId) {
+            if (querySnapshot.docs.some(doc => doc.id !== excludeId)) {
+              isTaken = true;
+              break;
+            }
+          } else {
+            isTaken = true;
+            break;
+          }
+        }
+      }
+      setSchoolIdStatus(isTaken ? 'taken' : 'available');
+    } catch (error) {
+      console.error("Error checking school ID:", error);
+      showAlert("Error checking school ID availability.", "danger");
+      setSchoolIdStatus('idle');
+    }
+  }, [showAlert]);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData({
@@ -143,6 +184,10 @@ const ManageAdmins = () => {
     
     if (name === "password") {
       validatePassword(value);
+    }
+    if (name === "schoolId") {
+      const excludeId = isEditMode && selectedAdmin ? selectedAdmin.id : null;
+      checkSchoolIdExists(value, excludeId);
     }
   };
 
@@ -161,6 +206,7 @@ const ManageAdmins = () => {
     });
     setConfirmPassword("");
     setShowModal(true);
+    setSchoolIdStatus('idle');
     setAlert({ show: false, message: "", type: "success" }); 
     setPasswordRequirements({
       minLength: false,
@@ -184,6 +230,7 @@ const ManageAdmins = () => {
       password: "",
     });
     setConfirmPassword("");
+    setSchoolIdStatus('idle');
     setPasswordRequirements({
       minLength: false,
       hasUppercase: false,
@@ -192,18 +239,6 @@ const ManageAdmins = () => {
     });
   };
 
-  
-
-  
-  const showAlert = (message, type = "success") => {
-    setAlert({ show: true, message, type });
-    setTimeout(
-      () => setAlert({ show: false, message: "", type: "success" }),
-      3500
-    );
-  };
-
-  
   const checkValueExistsInCollections = async (
     fieldName,
     value,
@@ -294,27 +329,18 @@ const ManageAdmins = () => {
       }
     }
 
+    if (schoolIdStatus === 'taken') {
+      showAlert("This School ID is already taken. Please use a different one.", "danger");
+      setLoading(false);
+      return;
+    }
+
 
     setLoading(true);
     try {
       
       const excludeId = isEditMode && selectedAdmin ? selectedAdmin.id : null;
       const collectionsToSearch = ["admins", "teachers", "students"];
-      const schoolIdExists = await checkValueExistsInCollections(
-        "schoolId", 
-        formData.schoolId,
-        collectionsToSearch,
-        excludeId,
-        "admins" 
-      );
-      if (schoolIdExists) {
-        showAlert(
-          "This School ID is already registered in the system.",
-          "danger"
-        );
-        setLoading(false);
-        return;
-      }
 
       
       const emailExists = await checkValueExistsInCollections(
@@ -453,6 +479,7 @@ const ManageAdmins = () => {
     });
     setConfirmPassword("");
     setShowModal(true);
+    setSchoolIdStatus('idle');
   };
 
   const handleDeletePrompt = (admin) => {
@@ -1034,8 +1061,17 @@ const ManageAdmins = () => {
                     onChange={handleInputChange}
                     required
                     className="border-0 shadow-sm"
-                    style={{ borderRadius: "12px" }}
+                    style={{ borderRadius: "12px", borderColor: schoolIdStatus === 'taken' ? 'red' : '' }}
                   />
+                  {schoolIdStatus === 'checking' && (
+                    <small className="text-muted">Checking availability...</small>
+                  )}
+                  {schoolIdStatus === 'taken' && (
+                    <small className="text-danger">This School ID is already taken.</small>
+                  )}
+                  {schoolIdStatus === 'available' && (
+                    <small className="text-success">School ID is available.</small>
+                  )}
                 </Form.Group>
               </Col>
               <Col md={6}>
@@ -1175,6 +1211,7 @@ const ManageAdmins = () => {
           <Button
             onClick={handleSubmit}
             disabled={loading}
+            // Add a disabled check for schoolIdStatus if needed, e.g., disabled={loading || schoolIdStatus === 'taken'}
             style={{
               backgroundColor: COLORS.pink,
               border: "none",

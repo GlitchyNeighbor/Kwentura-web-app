@@ -44,12 +44,12 @@ import {
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import * as pdfjsLib from "pdfjs-dist";
 
-// Converts PDF to images, uploads to Firebase Storage, returns array of URLs
+
 export async function convertAndUploadPdfPages(pdfFile, storyId, storage) {
   const arrayBuffer = await pdfFile.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 
-  // Create an array of promises for all pages
+  
   const pagePromises = [];
   for (let i = 1; i <= pdf.numPages; i++) {
     pagePromises.push(
@@ -74,10 +74,10 @@ export async function convertAndUploadPdfPages(pdfFile, storyId, storage) {
     );
   }
 
-  // Wait for all pages to finish processing/uploading in parallel
+  
   const pageResults = await Promise.all(pagePromises);
 
-  // Sort by page number to ensure correct order
+  
   const pageImageUrls = pageResults
     .sort((a, b) => a.pageNum - b.pageNum)
     .map((result) => result.url);
@@ -85,7 +85,7 @@ export async function convertAndUploadPdfPages(pdfFile, storyId, storage) {
   return pageImageUrls;
 }
 
-// Extracts text from each page of a PDF file and returns an array of strings
+
 /**
  * Extracts text from a PDF file (browser safe).
  * Cleans kerning, removes duplicates, and can fall back to OCR if enabled.
@@ -105,16 +105,16 @@ export async function extractPdfPageTexts(pdfFile, options = {}) {
     const page = await pdf.getPage(i);
     const textContent = await page.getTextContent();
 
-    // Join text items
+    
     let pageText = textContent.items.map(item => item.str).join(" ");
 
-    // // Cleanup: fix kerning and spaces
-    // pageText = pageText.replace(/\s+/g, " ").trim();
+    
+    
 
-    // Cleanup: remove repeated consecutive phrases (basic dedupe)
-    // pageText = pageText.replace(/(\b[\w\s:;,.!?'"-]{3,}\b)(\s*\1)+/gi, "$1");
+    
+    
 
-    // Fallback: OCR if no text and option is enabled
+    
     if (useOcrFallback && (!pageText || pageText.length < 5)) {
       const viewport = page.getViewport({ scale: 2 });
       const canvas = document.createElement("canvas");
@@ -237,11 +237,11 @@ const ManageStories = () => {
     moralOptions: ["", "", ""],
     moralCorrectOptionIndex: null,
     moralImageFile: null,
-    moralImagePreviewUrl: "", // For moral lesson image
+    moralImagePreviewUrl: "", 
     generatedSynopsis: "",
     aiFeedback: {},
-    comprehensionQuestions: [], // To hold comprehension questions
-    language: "en-US", // Changed from languageCode
+    comprehensionQuestions: [], 
+    language: "en-US", 
   });
 
   const [formErrors, setFormErrors] = useState({});
@@ -334,11 +334,11 @@ const ManageStories = () => {
       moralOptions: ["", "", ""],
       moralCorrectOptionIndex: null,
       moralImageFile: null,
-      moralImagePreviewUrl: "", // For moral lesson image
+      moralImagePreviewUrl: "", 
       generatedSynopsis: "",
       aiFeedback: {},
-      comprehensionQuestions: [], // To hold comprehension questions
-      language: "en-US", // Changed from languageCode
+      comprehensionQuestions: [], 
+      language: "en-US", 
     });
     setFormErrors({});
     setIsEditing(false);
@@ -409,7 +409,7 @@ const ManageStories = () => {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) { // 2MB limit
+    if (file.size > 2 * 1024 * 1024) { 
         showAlert("Image size should not exceed 2MB.", "danger");
         return;
     }
@@ -605,7 +605,7 @@ const handleSubmit = async () => {
   try {
     const storyId = isEditing && selectedStory 
       ? selectedStory.id 
-      : doc(collection(db, "stories")).id; // Generate a new ID upfront
+      : doc(collection(db, "stories")).id; 
 
     const uploadTasks = [];
     if (formData.imageFile) {
@@ -629,7 +629,7 @@ const handleSubmit = async () => {
       category: formData.category,
       pdfUrl: finalPdfUrl,
       image: finalImageUrl,
-      language: formData.language, // Use the new language field
+      language: formData.language, 
       comprehensionQuestions: Array.isArray(formData.comprehensionQuestions) && formData.comprehensionQuestions.length === 3
         ? formData.comprehensionQuestions
         : [],
@@ -650,7 +650,7 @@ const handleSubmit = async () => {
         storyDataPayload.moralLesson = null;
     }
 
-    // Handle assessment image uploads
+    
     if (formData.moralImageFile) {
       const url = await uploadAssessmentImage(formData.moralImageFile, storyId, 'moral', 0);
       if (url && storyDataPayload.moralLesson) {
@@ -662,7 +662,7 @@ const handleSubmit = async () => {
       }
     }
 
-    // ---- START: Added Moral Lesson TTS Generation ----
+    
     if (storyDataPayload.moralLesson) {
         const moralAudioUrl = await generateQuestionTTS(
             storyDataPayload.moralLesson.question,
@@ -675,17 +675,17 @@ const handleSubmit = async () => {
             storyDataPayload.moralLesson.audioUrl = moralAudioUrl;
         }
     }
-    // ---- END: Added Moral Lesson TTS Generation ----
+    
 
     if (Array.isArray(formData.comprehensionQuestions) && formData.comprehensionQuestions.length > 0) {
         const processedQuestions = await Promise.all(
             formData.comprehensionQuestions.map(async (q, index) => {
-                let finalImageUrl = q.imageUrl || null; // Keep existing URL by default
-                if (q.imageFile) { // If a new file is uploaded
+                let finalImageUrl = q.imageUrl || null; 
+                if (q.imageFile) { 
                     const newUrl = await uploadAssessmentImage(q.imageFile, storyId, 'comprehension', index);
                     if (newUrl) finalImageUrl = newUrl;
                 }
-        // Generate TTS for the comprehension question
+        
         const questionAudioUrl = await generateQuestionTTS(
             q.question,
             formData.language,
@@ -708,13 +708,13 @@ const handleSubmit = async () => {
     let randomStoryId, storyRef;
     if (isEditing && selectedStory) {
       storyRef = doc(db, "stories", selectedStory.id);
-      storyDataPayload.dateModified = serverTimestamp(); // Use server timestamp for modification
+      storyDataPayload.dateModified = serverTimestamp(); 
       await updateDoc(storyRef, storyDataPayload);
       randomStoryId = selectedStory.id;
     } else {
-      // For new stories
-      storyDataPayload.createdAt = serverTimestamp(); // Use server timestamp for creation
-      storyDataPayload.dateModified = serverTimestamp(); // Initial modification date same as creation
+      
+      storyDataPayload.createdAt = serverTimestamp(); 
+      storyDataPayload.dateModified = serverTimestamp(); 
 
       randomStoryId = storyId;
       storyRef = doc(db, "stories", storyId);
@@ -723,20 +723,20 @@ const handleSubmit = async () => {
       await setDoc(storyRef, storyDataPayload);
     }
 
-    // PDF-to-image and text extraction in parallel (if PDF present)
+    
     if (formData.pdfFile && randomStoryId) {
       try {
         showAlert("Splitting PDF into images and extracting text...", "info");
         const [imageUrls, pageTexts] = await Promise.all([
           convertAndUploadPdfPages(formData.pdfFile, randomStoryId, storage),
-          extractPdfPageTexts(formData.pdfFile),
+          extractPdfPageTexts(formData.pdfFile, { useOcrFallback: true }),
         ]);
 
-        // ---- START: Translation Logic ----
+        
         showAlert("Translating page content...", "info");
         const sourceLang = formData.language;
-        const targetLang = sourceLang === 'en-US' ? 'tl' : 'en'; // Target for Google Translate API
-        const targetLangCode = sourceLang === 'en-US' ? 'fil-PH' : 'en-US'; // Target for saving in Firestore
+        const targetLang = sourceLang === 'en-US' ? 'tl' : 'en'; 
+        const targetLangCode = sourceLang === 'en-US' ? 'fil-PH' : 'en-US'; 
         let translatedTexts = [];
         try {
           const translationResult = await translatePageTexts({
@@ -752,24 +752,24 @@ const handleSubmit = async () => {
         } catch (translationError) {
           console.error("Translation failed:", translationError);
           showAlert(`Translation failed: ${translationError.message}`, "danger");
-          // Continue without translation if it fails
+          
         }
-        // ---- END: Translation Logic ----
         
-        // ---- START: Bilingual TTS Generation ----
+        
+        
         showAlert("Generating audio for all languages...", "info");
         const ttsPayload = {};
         
-        // Generate for source language using the single 'language' field
+        
         const sourceTtsResult = await generateTtsForLanguage(pageTexts, sourceLang, randomStoryId);
         ttsPayload[sourceLang] = sourceTtsResult.audioData;
         if (sourceTtsResult.failedPages.length > 0) {
           showAlert(`TTS failed for some pages in ${sourceLang}: ${sourceTtsResult.failedPages.join(", ")}`, "warning");
         }
 
-        // Generate for target language if translation was successful
+        
         if (translatedTexts.length > 0) {
-          // Use targetLangCode for TTS voice selection (e.g., 'fil-PH')
+          
           const targetTtsResult = await generateTtsForLanguage(translatedTexts, targetLangCode, randomStoryId);
           ttsPayload[targetLangCode] = targetTtsResult.audioData;
           if (targetTtsResult.failedPages.length > 0) {
@@ -789,7 +789,7 @@ const handleSubmit = async () => {
       }
     }
 
-    // Trigger synopsis generation in the background (if PDF present)
+    
     if (finalPdfUrl && randomStoryId) {
       showAlert("Synopsis generation initiated in the background...", "info");
       await generateStorySynopsis({ storyId: randomStoryId })
@@ -803,7 +803,7 @@ const handleSubmit = async () => {
     }
 
     fetchStoriesFromFirestore();
-    resetFormAndCloseModal(); // Use the new reset function
+    resetFormAndCloseModal(); 
   } catch (error) {
     showAlert("Error saving story: " + error.message, "danger");
     console.error("Error saving story:", error);
@@ -832,7 +832,7 @@ const handleSubmit = async () => {
 
       setFormData(prev => ({ ...prev, aiFeedback: { ...prev.aiFeedback, [contentType]: { rating, justification } } }));
       showAlert(`AI evaluation for ${friendlyContentType} complete.`, "success");
-      fetchStoriesFromFirestore(); // Refetch to get the latest data
+      fetchStoriesFromFirestore(); 
     } catch (error) {
       showAlert(`AI evaluation failed: ${error.message}`, "danger");
     } finally {
@@ -893,7 +893,7 @@ const handleSubmit = async () => {
       moralOptions: (story.moralLesson?.options && story.moralLesson.options.length === 3)
         ? story.moralLesson.options
         : ["", "", ""],
-      moralImagePreviewUrl: story.moralLesson?.imageUrl || "", // Populate image preview
+      moralImagePreviewUrl: story.moralLesson?.imageUrl || "", 
       generatedSynopsis: story.generatedSynopsis || "",
       aiFeedback: story.aiFeedback || {},
       moralCorrectOptionIndex: story.moralLesson?.correctOptionIndex !== undefined ? story.moralLesson.correctOptionIndex : null,
@@ -916,13 +916,13 @@ const handleSubmit = async () => {
     const storyIdToDelete = selectedStory.id;
 
     try {
-      // Delete associated story_engagement records
+      
       const engagementQuery = collection(db, "story_engagement");
       const engagementSnapshot = await getDocs(engagementQuery);
       
       const batch = writeBatch(db);
       engagementSnapshot.forEach(docSnapshot => {
-        // Doc ID is in format 'userId_storyId'
+        
         if (docSnapshot.id.endsWith(`_${storyIdToDelete}`)) {
           batch.delete(docSnapshot.ref);
         }
@@ -930,7 +930,7 @@ const handleSubmit = async () => {
       
       await batch.commit();
 
-      // Now, delete the story document itself
+      
       await deleteDoc(doc(db, "stories", storyIdToDelete));
       
       setShowDeleteModal(false);

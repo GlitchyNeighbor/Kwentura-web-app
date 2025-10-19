@@ -243,6 +243,7 @@ const StudentModal = ({
   showConfirmPassword,
   setShowConfirmPassword,
   passwordRequirements,
+  schoolIdStatus,
   onSubmit,
   loading,
 }) => (
@@ -311,8 +312,17 @@ const StudentModal = ({
                   onChange={onFormDataChange}
                   required
                   className="border-0 shadow-sm"
-                  style={{ borderRadius: "8px" }}
+                  style={{ borderRadius: "8px", borderColor: schoolIdStatus === 'taken' ? 'red' : '' }}
                 />
+                {schoolIdStatus === 'checking' && (
+                  <small className="text-muted">Checking availability...</small>
+                )}
+                {schoolIdStatus === 'taken' && (
+                  <small className="text-danger">This School ID is already taken.</small>
+                )}
+                {schoolIdStatus === 'available' && (
+                  <small className="text-success">School ID is available.</small>
+                )}
               </Form.Group>
             </Col>
             <Col md={6}>
@@ -557,6 +567,7 @@ const StudentModal = ({
       <Button
         onClick={onSubmit}
         disabled={loading}
+        // Add a disabled check for schoolIdStatus if needed, e.g., disabled={loading || schoolIdStatus === 'taken'}
         style={{
           backgroundColor: COLORS.pink,
           border: "none",
@@ -647,6 +658,7 @@ const ManageStudents = () => {
   const [showModal, setShowModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [schoolIdStatus, setSchoolIdStatus] = useState('idle'); // 'idle', 'checking', 'available', 'taken'
   const [loading, setLoading] = useState(false);
 
   // Form State
@@ -700,14 +712,50 @@ const ManageStudents = () => {
     setShowSidebar(prev => !prev);
   }, []);
 
+  const checkSchoolIdExists = useCallback(async (schoolId, excludeId) => {
+    if (!schoolId) {
+      setSchoolIdStatus('idle');
+      return;
+    }
+    setSchoolIdStatus('checking');
+    try {
+      const collectionsToSearch = ["admins", "teachers", "students"];
+      let isTaken = false;
+      for (const collectionName of collectionsToSearch) {
+        const q = query(collection(db, collectionName), where("schoolId", "==", schoolId));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          if (excludeId) {
+            // If we are editing, check if the found ID is not the same as the current student's ID
+            if (querySnapshot.docs.some(doc => doc.id !== excludeId)) {
+              isTaken = true;
+              break;
+            }
+          } else {
+            isTaken = true;
+            break;
+          }
+        }
+      }
+      setSchoolIdStatus(isTaken ? 'taken' : 'available');
+    } catch (error) {
+      console.error("Error checking school ID:", error);
+      showAlert("Error checking school ID availability.", "danger");
+      setSchoolIdStatus('idle');
+    }
+  }, [showAlert]);
   const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value,
-    }));
+     }));
     if (name === "password") setPasswordRequirements(validatePassword(value));
-  }, []);
+    if (name === "schoolId") {
+      const excludeId = isEditMode && selectedStudent ? selectedStudent.id : null;
+      checkSchoolIdExists(value, excludeId);
+    }
+  }, [isEditMode, selectedStudent]);
 
   const resetForm = useCallback(() => {
     setFormData({
@@ -729,6 +777,7 @@ const ManageStudents = () => {
       hasNumber: false,
       hasSymbol: false,
     });
+    setSchoolIdStatus('idle');
     setShowPassword(false);
     setShowConfirmPassword(false);
   }, []);
@@ -737,6 +786,7 @@ const ManageStudents = () => {
     setIsEditMode(false);
     setSelectedStudent(null);
     resetForm();
+    setSchoolIdStatus('idle');
     setShowModal(true);
   }, [resetForm]);
 
@@ -744,6 +794,7 @@ const ManageStudents = () => {
     setShowModal(false);
     setIsEditMode(false);
     setSelectedStudent(null);
+    setSchoolIdStatus('idle');
     resetForm();
   }, [resetForm]);
 
@@ -763,6 +814,7 @@ const ManageStudents = () => {
       password: "",
     });
     setConfirmPassword("");
+    setSchoolIdStatus('idle');
     setShowModal(true);
   }, []);
 
@@ -788,6 +840,12 @@ const ManageStudents = () => {
           (isEditMode ? "" : ", and Password") + ".",
         "warning"
       );
+      return;
+    }
+
+    if (schoolIdStatus === 'taken') {
+      showAlert("This School ID is already taken. Please use a different one.", "danger");
+      setLoading(false);
       return;
     }
 
@@ -1498,6 +1556,7 @@ const ManageStudents = () => {
         setShowPassword={setShowPassword}
         showConfirmPassword={showConfirmPassword}
         setShowConfirmPassword={setShowConfirmPassword}
+        schoolIdStatus={schoolIdStatus}
         passwordRequirements={passwordRequirements}
         onSubmit={handleSubmit}
         loading={loading}

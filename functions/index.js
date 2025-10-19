@@ -1335,6 +1335,15 @@ ${JSON.stringify(exampleJson, null, 2)}`;
           throw new Error("AI translation validation result is invalid.");
         }
 
+        // Store the validation result in Firestore
+        const fieldToUpdate = "aiFeedback.translation";
+        await storyRef.update({
+          [fieldToUpdate]: {
+            rating: evaluationResult.rating,
+            feedback: evaluationResult.feedback,
+            evaluatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          },
+        });
         return evaluationResult;
       } catch (error) {
         console.error("Error validating translation:", error);
