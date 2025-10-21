@@ -61,6 +61,13 @@ const SettingsAdmin = () => {
     type: "",
   });
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [passwordValidation, setPasswordValidation] = useState({
+    length: false,
+    different: false,
+    symbol: false,
+    number: false,
+    match: false,
+  });
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -138,10 +145,20 @@ const SettingsAdmin = () => {
   };
 
   const handlePasswordInputChange = (field, value) => {
-    setPasswordDetails((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setPasswordDetails((prev) => {
+      const next = { ...prev, [field]: value };
+      const newPwd = next.newPassword || "";
+      const curPwd = next.currentPassword || "";
+      const confirmPwd = next.confirmPassword || "";
+      setPasswordValidation({
+        length: newPwd.length >= 6,
+        different: curPwd !== newPwd && newPwd.length > 0,
+        symbol: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(newPwd),
+        number: /[0-9]/.test(newPwd),
+        match: newPwd === confirmPwd,
+      });
+      return next;
+    });
   };
 
   const handleUpdateProfile = async () => {
@@ -204,30 +221,36 @@ const SettingsAdmin = () => {
         return;
       }
 
-      if (passwordDetails.newPassword !== passwordDetails.confirmPassword) {
-        setPasswordUpdateStatus({
-          show: true,
-          message: "New password and confirm password do not match.",
-          type: "danger",
-        });
+      // perform full password validations
+      const newPwd = passwordDetails.newPassword || "";
+      const curPwd = passwordDetails.currentPassword || "";
+      const validations = {
+        length: newPwd.length >= 6,
+        different: curPwd !== newPwd && newPwd.length > 0,
+        symbol: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(newPwd),
+        number: /[0-9]/.test(newPwd),
+        match: newPwd === (passwordDetails.confirmPassword || ""),
+      };
+      setPasswordValidation(validations);
+
+      if (!validations.length) {
+        setPasswordUpdateStatus({ show: true, message: "New password must be at least 6 characters long.", type: "danger" });
         return;
       }
-
-      if (passwordDetails.newPassword.length < 6) {
-        setPasswordUpdateStatus({
-          show: true,
-          message: "New password must be at least 6 characters long.",
-          type: "danger",
-        });
+      if (!validations.different) {
+        setPasswordUpdateStatus({ show: true, message: "New password must be different from current password.", type: "danger" });
         return;
       }
-
-      if (passwordDetails.currentPassword === passwordDetails.newPassword) {
-        setPasswordUpdateStatus({
-          show: true,
-          message: "New password must be different from current password.",
-          type: "danger",
-        });
+      if (!validations.symbol) {
+        setPasswordUpdateStatus({ show: true, message: "New password must include at least one special symbol (e.g. !@#$%).", type: "danger" });
+        return;
+      }
+      if (!validations.number) {
+        setPasswordUpdateStatus({ show: true, message: "New password must include at least one number.", type: "danger" });
+        return;
+      }
+      if (!validations.match) {
+        setPasswordUpdateStatus({ show: true, message: "New password and confirm password do not match.", type: "danger" });
         return;
       }
 
@@ -1245,6 +1268,37 @@ const SettingsAdmin = () => {
                         </Button>
                       </div>
                     </Form.Group>
+                  </div>
+
+                  <div 
+                    style={{ 
+                      background: "linear-gradient(135deg, rgba(255, 84, 154, 0.05), rgba(194, 24, 91, 0.03))",
+                      borderRadius: "15px",
+                      padding: "20px",
+                      marginBottom: "24px",
+                      border: "1px solid rgba(255, 84, 154, 0.1)",
+                    }}
+                  >
+                    <h6 style={{ color: "#2D2D2D", fontWeight: "600", marginBottom: "12px" }}>
+                      Password Requirements:
+                    </h6>
+                    <ul style={{ color: "#666", margin: 0, paddingLeft: "20px" }}>
+                      <li style={{ color: passwordValidation.length ? "#28a745" : "#666" }}>
+                        {passwordValidation.length ? "✓" : "○"} At least 6 characters long
+                      </li>
+                      <li style={{ color: passwordValidation.different ? "#28a745" : "#666" }}>
+                        {passwordValidation.different ? "✓" : "○"} Must be different from your current password
+                      </li>
+                      <li style={{ color: passwordValidation.symbol ? "#28a745" : "#666" }}>
+                        {passwordValidation.symbol ? "✓" : "○"} At least one special symbol (e.g. !@#$%)
+                      </li>
+                      <li style={{ color: passwordValidation.number ? "#28a745" : "#666" }}>
+                        {passwordValidation.number ? "✓" : "○"} At least one number
+                      </li>
+                      <li style={{ color: passwordValidation.match ? "#28a745" : "#666" }}>
+                        {passwordValidation.match ? "✓" : "○"} New password matches confirmation
+                      </li>
+                    </ul>
                   </div>
 
                   <Button

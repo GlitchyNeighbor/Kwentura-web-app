@@ -377,7 +377,7 @@ const ReadStory = () => {
 
   const playTtsForSinglePage = useCallback(async (pageIndex) => { // Restored this function
     if (pageIndex < 0 || !ttsAudioData || pageIndex >= pdfPagesAsImages.length) {
-      console.log("Invalid page index or no audio data.");
+  // invalid page index or missing audio data — silently ignore in production
       return;
     }
 

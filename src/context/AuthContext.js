@@ -20,6 +20,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [pendingStudents, setPendingStudents] = useState([]);
+  const [pendingTeachers, setPendingTeachers] = useState([]);
 
   // Use a ref to hold userData to break dependency cycle
   const userDataRef = useRef(userData);
@@ -67,10 +68,26 @@ export const AuthProvider = ({ children }) => {
         
         if (docSnap) {
           const data = docSnap.data();
+          // Normalize role strings to a canonical set used across the app
+          const rawRole = (data[roleField] || defaultRole || '').toString();
+          const roleLower = rawRole.toLowerCase();
+          let canonicalRole;
+          if (roleLower === 'superadmin' || roleLower === 'super_admin' || roleLower === 'super-admin') {
+            canonicalRole = 'superAdmin';
+          } else if (roleLower === 'admin') {
+            canonicalRole = 'admin';
+          } else if (roleLower === 'teacher') {
+            canonicalRole = 'teacher';
+          } else if (roleLower === 'student') {
+            canonicalRole = 'student';
+          } else {
+            canonicalRole = defaultRole || 'user';
+          }
+
           foundUserData = {
             id: docSnap.id, // Use the actual document ID
             ...data,
-            role: data[roleField] || defaultRole,
+            role: canonicalRole,
           };
           break;
         }
@@ -125,6 +142,30 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
+  const fetchPendingTeachers = useCallback(async () => {
+    // Only admins and superadmins should fetch pending teacher approvals
+    const currentData = userDataRef.current;
+    if (!currentData) {
+      setPendingTeachers([]);
+      return;
+    }
+
+    if (currentData.role === USER_ROLES.ADMIN || currentData.role === USER_ROLES.SUPERADMIN) {
+      try {
+        const teachersRef = collection(db, "pendingTeachers");
+        const q = query(teachersRef); // assuming all docs in this collection are pending
+        const querySnapshot = await getDocs(q);
+        const teachersList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setPendingTeachers(teachersList);
+      } catch (err) {
+        console.error("AuthContext: Error fetching pending teachers:", err);
+        setPendingTeachers([]);
+      }
+    } else {
+      setPendingTeachers([]);
+    }
+  }, []);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -158,8 +199,15 @@ export const AuthProvider = ({ children }) => {
     // When userData is updated (e.g., on login), fetch pending students
     if (userData?.role === 'teacher') {
       fetchPendingStudents();
+    } else if (userData?.role === USER_ROLES.ADMIN || userData?.role === USER_ROLES.SUPERADMIN) {
+      // For admins and super admins, fetch pending teacher approvals
+      fetchPendingTeachers();
+    } else {
+      // Clear lists for other roles
+      setPendingStudents([]);
+      setPendingTeachers([]);
     }
-  }, [userData]);
+  }, [userData, fetchPendingStudents, fetchPendingTeachers]);
 
   const logout = useCallback(async () => {
     const currentUserData = userDataRef.current;
@@ -231,7 +279,10 @@ export const AuthProvider = ({ children }) => {
       return;
     }
 
-    const userDocRef = doc(db, collectionName, user.uid);
+    // Use the Firestore document ID found during profile lookup when available.
+    // Many collections use document IDs that are not the same as the Firebase Auth UID.
+    const targetDocId = userData?.id || user.uid;
+    const userDocRef = doc(db, collectionName, targetDocId);
     const unsubscribe = onSnapshot(userDocRef, (docSnapshot) => {
       if (docSnapshot.exists()) {
         const firestoreData = docSnapshot.data();
@@ -256,10 +307,12 @@ export const AuthProvider = ({ children }) => {
     loading,
     error,
     pendingStudents,
+    pendingTeachers,
     logout,
     fetchPendingStudents,
+    fetchPendingTeachers,
     refetchUserData: () => user ? fetchUserDataFromFirestore(user) : Promise.resolve(),
-  }), [user, userData, loading, error, pendingStudents, logout, fetchUserDataFromFirestore, fetchPendingStudents]);
+  }), [user, userData, loading, error, pendingStudents, pendingTeachers, logout, fetchUserDataFromFirestore, fetchPendingStudents, fetchPendingTeachers]);
 
   return (
     <AuthContext.Provider value={value}>

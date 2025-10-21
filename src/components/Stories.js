@@ -25,6 +25,7 @@ import SidebarMenuTeacher from "./SideMenuTeacher";
 import TopNavbar from "./TopNavbar";
 import { useNavigate } from "react-router-dom";
 import { Search } from "react-bootstrap-icons";
+import { useAuth } from "../context/AuthContext.js";
 
 // --- Enhanced Styles ---
 const cardStyle = {
@@ -53,14 +54,21 @@ const StoryCard = ({ id, title, image, category, author, onBookmarkToggle }) => 
   const navigate = useNavigate();
   const [bookmarked, setBookmarked] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const { userData } = useAuth();
 
   useEffect(() => {
     const checkBookmarked = async () => {
       try {
-        const favSnap = await getDocs(collection(db, "favorites"));
-        const isBookmarked = favSnap.docs.some(
-          (doc) => doc.data().storyId === id
-        );
+        let queryRef;
+        if (userData && userData.id) {
+          const role = (userData.role || "").toLowerCase();
+          const collectionName = role === "teacher" ? "teachers" : role === "admin" || role === "superadmin" ? "admins" : "students";
+          queryRef = collection(db, collectionName, userData.id, "bookmarks");
+        } else {
+          queryRef = collection(db, "favorites");
+        }
+        const favSnap = await getDocs(queryRef);
+        const isBookmarked = favSnap.docs.some((d) => d.data().storyId === id);
         setBookmarked(isBookmarked);
       } catch (error) {
         console.error("Error checking bookmark status:", error);
@@ -73,10 +81,24 @@ const StoryCard = ({ id, title, image, category, author, onBookmarkToggle }) => 
   const handleBookmarkToggle = async () => {
     if (bookmarked) {
       try {
-        const favSnap = await getDocs(collection(db, "favorites"));
-        const favDoc = favSnap.docs.find((doc) => doc.data().storyId === id);
+        let queryRef;
+        if (userData && userData.id) {
+          const role = (userData.role || "").toLowerCase();
+          const collectionName = role === "teacher" ? "teachers" : role === "admin" || role === "superadmin" ? "admins" : "students";
+          queryRef = collection(db, collectionName, userData.id, "bookmarks");
+        } else {
+          queryRef = collection(db, "favorites");
+        }
+        const favSnap = await getDocs(queryRef);
+        const favDoc = favSnap.docs.find((d) => d.data().storyId === id);
         if (favDoc) {
-          await deleteDoc(doc(db, "favorites", favDoc.id));
+          if (userData && userData.id) {
+            const role = (userData.role || "").toLowerCase();
+            const collectionName = role === "teacher" ? "teachers" : role === "admin" || role === "superadmin" ? "admins" : "students";
+            await deleteDoc(doc(db, collectionName, userData.id, "bookmarks", favDoc.id));
+          } else {
+            await deleteDoc(doc(db, "favorites", favDoc.id));
+          }
         }
         setBookmarked(false);
         onBookmarkToggle && onBookmarkToggle(id, false);
@@ -87,17 +109,27 @@ const StoryCard = ({ id, title, image, category, author, onBookmarkToggle }) => 
     } else {
       try {
         const favoriteId = `${id}_${Date.now()}`;
-        await setDoc(
-          doc(db, "favorites", favoriteId),
-          {
+        if (userData && userData.id) {
+          const role = (userData.role || "").toLowerCase();
+          const collectionName = role === "teacher" ? "teachers" : role === "admin" || role === "superadmin" ? "admins" : "students";
+          await setDoc(doc(db, collectionName, userData.id, "bookmarks", favoriteId), {
             storyId: id,
             title: title,
             image: image || "",
             category: "Favorites",
             originalCategory: category,
             createdAt: serverTimestamp(),
-          }
-        );
+          });
+        } else {
+          await setDoc(doc(db, "favorites", favoriteId), {
+            storyId: id,
+            title: title,
+            image: image || "",
+            category: "Favorites",
+            originalCategory: category,
+            createdAt: serverTimestamp(),
+          });
+        }
         setBookmarked(true);
         onBookmarkToggle && onBookmarkToggle(id, true);
       } catch (error) {

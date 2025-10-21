@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Modal, Button, ListGroup, Badge } from 'react-bootstrap';
 import { Bell, UserCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -6,10 +6,27 @@ import { useNavigate } from 'react-router-dom';
 const NotificationsModal = ({ show, onHide, notifications = [] }) => {
   const navigate = useNavigate();
 
-  const handleNotificationClick = () => {
-    navigate('/teacher/approve-students');
+  const handleNotificationClick = (notification) => {
+    if (!notification) return;
+    if (notification.type === 'student_pending') {
+      navigate('/teacher/approve-students');
+    } else if (notification.type === 'teacher_pending') {
+      navigate('/admin/approve-teachers');
+    } else {
+      // default fallback
+      navigate('/home');
+    }
     onHide();
   };
+
+  useEffect(() => {
+    if (show) {
+      // Debug: log notifications when modal opens to help diagnose empty list issues
+      // This will appear in the browser console.
+      // eslint-disable-next-line no-console
+      console.log('NotificationsModal opened. notifications:', notifications);
+    }
+  }, [show, notifications]);
 
   return (
     <Modal show={show} onHide={onHide} centered>
@@ -26,15 +43,20 @@ const NotificationsModal = ({ show, onHide, notifications = [] }) => {
               <ListGroup.Item
                 key={notification.id || index}
                 action
-                onClick={handleNotificationClick}
+                onClick={() => handleNotificationClick(notification)}
                 className="d-flex justify-content-between align-items-start"
               >
                 <div className="ms-2 me-auto">
-                  <div className="fw-bold">
-                    <UserCheck size={16} className="me-2" style={{ color: '#1976D2' }} />
-                    Pending Approval
+                  <div className="fw-bold d-flex align-items-center" style={{ gap: '8px' }}>
+                    <UserCheck size={16} style={{ color: '#1976D2' }} />
+                    {notification.type === 'student_pending' ? 'Student Pending Approval' : 'Teacher Pending Approval'}
                   </div>
-                  {`${notification.studentFirstName || ''} ${notification.studentLastName || ''}`}
+                  <div>
+                    {(notification.type === 'student_pending' && (`${notification.data?.studentFirstName || notification.data?.firstName || ''} ${notification.data?.studentLastName || notification.data?.lastName || ''}`.trim())) ||
+                      (notification.type === 'teacher_pending' && (`${notification.data?.firstName || ''} ${notification.data?.lastName || ''}`.trim())) ||
+                      notification.title ||
+                      'Pending Approval'}
+                  </div>
                 </div>
                 <Badge bg="primary" pill>
                   New

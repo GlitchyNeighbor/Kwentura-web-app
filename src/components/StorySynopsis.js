@@ -14,6 +14,7 @@ import {
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { db } from "../config/FirebaseConfig.js";
+import { useAuth } from "../context/AuthContext.js";
 import { 
   doc, 
   getDoc, 
@@ -38,6 +39,7 @@ const StorySynopsis = () => {
   const [imageLoaded, setImageLoaded] = useState(false);
 
   const toggleSidebar = () => setShowSidebar(!showSidebar);
+  const { userData } = useAuth();
 
   // Check if story is bookmarked
   useEffect(() => {
@@ -45,10 +47,16 @@ const StorySynopsis = () => {
       if (!id) return;
       
       try {
-        const favSnap = await getDocs(collection(db, "favorites"));
-        const isBookmarked = favSnap.docs.some(
-          (doc) => doc.data().storyId === id
-        );
+        let queryRef;
+        if (userData && userData.id) {
+          const role = (userData.role || "").toLowerCase();
+          const collectionName = role === "teacher" ? "teachers" : role === "admin" || role === "superadmin" ? "admins" : "students";
+          queryRef = collection(db, collectionName, userData.id, "bookmarks");
+        } else {
+          queryRef = collection(db, "favorites");
+        }
+        const favSnap = await getDocs(queryRef);
+        const isBookmarked = favSnap.docs.some((d) => d.data().storyId === id);
         setBookmarked(isBookmarked);
       } catch (error) {
         console.error("Error checking bookmark status:", error);
@@ -67,10 +75,24 @@ const StorySynopsis = () => {
     if (bookmarked) {
       // Remove bookmark
       try {
-        const favSnap = await getDocs(collection(db, "favorites"));
-        const favDoc = favSnap.docs.find((doc) => doc.data().storyId === id);
+        let queryRef;
+        if (userData && userData.id) {
+          const role = (userData.role || "").toLowerCase();
+          const collectionName = role === "teacher" ? "teachers" : role === "admin" || role === "superadmin" ? "admins" : "students";
+          queryRef = collection(db, collectionName, userData.id, "bookmarks");
+        } else {
+          queryRef = collection(db, "favorites");
+        }
+        const favSnap = await getDocs(queryRef);
+        const favDoc = favSnap.docs.find((d) => d.data().storyId === id);
         if (favDoc) {
-          await deleteDoc(doc(db, "favorites", favDoc.id));
+          if (userData && userData.id) {
+            const role = (userData.role || "").toLowerCase();
+            const collectionName = role === "teacher" ? "teachers" : role === "admin" || role === "superadmin" ? "admins" : "students";
+            await deleteDoc(doc(db, collectionName, userData.id, "bookmarks", favDoc.id));
+          } else {
+            await deleteDoc(doc(db, "favorites", favDoc.id));
+          }
         }
         setBookmarked(false);
       } catch (error) {
@@ -81,10 +103,10 @@ const StorySynopsis = () => {
       // Add bookmark
       try {
         const favoriteId = `${id}_${Date.now()}`;
-        
-        await setDoc(
-          doc(db, "favorites", favoriteId),
-          {
+        if (userData && userData.id) {
+          const role = (userData.role || "").toLowerCase();
+          const collectionName = role === "teacher" ? "teachers" : role === "admin" || role === "superadmin" ? "admins" : "students";
+          await setDoc(doc(db, collectionName, userData.id, "bookmarks", favoriteId), {
             storyId: id,
             title: story.title,
             image: story.image || "",
@@ -92,8 +114,18 @@ const StorySynopsis = () => {
             originalCategory: story.category,
             author: story.author,
             createdAt: serverTimestamp(),
-          }
-        );
+          });
+        } else {
+          await setDoc(doc(db, "favorites", favoriteId), {
+            storyId: id,
+            title: story.title,
+            image: story.image || "",
+            category: "Favorites",
+            originalCategory: story.category,
+            author: story.author,
+            createdAt: serverTimestamp(),
+          });
+        }
         setBookmarked(true);
       } catch (error) {
         console.error("Error adding bookmark:", error);

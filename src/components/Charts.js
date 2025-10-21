@@ -69,7 +69,7 @@ const Charts = () => {
     setShowSidebar(!showSidebar);
   };
 
-  const fetchStoriesData = async () => {
+  const fetchStoriesData = React.useCallback(async () => {
     try {
       const storiesRef = collection(db, "stories");
       const q = query(storiesRef, orderBy("createdAt", "asc"));
@@ -110,9 +110,31 @@ const Charts = () => {
       console.error("Error fetching stories data:", error);
       throw error;
     }
+  }, []);
+
+  // Helper function to generate colors for sections
+  const generateRandomColor = () => {
+    const colors = ["#FF69B4", "#FFB6C1", "#98FB98", "#FFE4E1", "#DDA0DD"];
+    return colors[Math.floor(Math.random() * colors.length)];
   };
 
-  const fetchUsersData = async () => {
+  const processStudentsPerSection = React.useCallback((allStudentsSnapshot) => {
+    const sectionCounts = {};
+    allStudentsSnapshot.forEach((doc) => {
+      const student = doc.data();
+      if (student.section && !student.isArchived) {
+        sectionCounts[student.section] = (sectionCounts[student.section] || 0) + 1;
+      }
+    });
+    const chartData = Object.entries(sectionCounts).map(([sectionName, count]) => ({ 
+      name: sectionName, 
+      students: count, 
+      fill: generateRandomColor() 
+    }));
+    setStudentsPerSectionData(chartData);
+  }, []);
+
+  const fetchUsersData = React.useCallback(async () => {
     try {
       const adminsRef = collection(db, "admins");
       const teachersRef = collection(db, "teachers");
@@ -174,30 +196,7 @@ const Charts = () => {
       console.error("Error fetching users data:", error);
       throw error;
     }
-  };
-
-  // Helper function to generate colors for sections
-  const generateRandomColor = () => {
-    const colors = ["#FF69B4", "#FFB6C1", "#98FB98", "#FFE4E1", "#DDA0DD"];
-    return colors[Math.floor(Math.random() * colors.length)];
-  };
-
-  const processStudentsPerSection = (allStudentsSnapshot) => {
-    const sectionCounts = {};
-    allStudentsSnapshot.forEach((doc) => {
-      const student = doc.data();
-      if (student.section && !student.isArchived) {
-        sectionCounts[student.section] = (sectionCounts[student.section] || 0) + 1;
-      }
-    });
-    const chartData = Object.entries(sectionCounts).map(([sectionName, count]) => ({ 
-      name: sectionName, 
-      students: count, 
-      fill: generateRandomColor() 
-    }));
-    setStudentsPerSectionData(chartData);
-  };
-
+  }, [processStudentsPerSection]);
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -213,7 +212,7 @@ const Charts = () => {
     };
 
     fetchData();
-  }, []);
+  }, [fetchStoriesData, fetchUsersData]);
 
   // Custom tooltip component
   const CustomTooltip = ({ active, payload, label }) => {

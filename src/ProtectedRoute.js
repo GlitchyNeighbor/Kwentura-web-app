@@ -23,7 +23,17 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
         const adminDocSnap = await getDoc(adminDocRef);
         if (adminDocSnap.exists()) {
           const adminData = adminDocSnap.data();
-          setUserRole(adminData.role || "admin"); // Use the role from Firestore, default to "admin"
+          // Normalize role values coming from Firestore (handle 'superadmin' vs 'superAdmin')
+          const rawRole = (adminData.role || "admin").toString();
+          const normalized = (rawRole || "").toLowerCase();
+          if (normalized === 'superadmin' || normalized === 'super_admin' || normalized === 'super-admin') {
+            setUserRole('superAdmin');
+          } else if (normalized === 'admin') {
+            setUserRole('admin');
+          } else {
+            // fallback to admin when ambiguous
+            setUserRole('admin');
+          }
           setCheckingRole(false);
           return;
         }

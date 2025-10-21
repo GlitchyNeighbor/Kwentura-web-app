@@ -771,7 +771,8 @@ exports.splitPdfToImages = onCall(async (request) => {
   "not supported in this environment."};
 });
 
-exports.approveTeacher = onCall(async (request) => {
+exports.approveTeacher = onCall({
+  region: "asia-southeast1"}, async (request) => {
   if (!request.auth) {
     throw new HttpsError(
         "unauthenticated",
@@ -819,17 +820,30 @@ exports.approveTeacher = onCall(async (request) => {
 
     const teacherData = pendingTeacherDoc.data();
 
+    // Enhance teacher data with approved status and timestamp
+    const teacherRecord = {
+      ...teacherData,
+      status: "approved",
+      approvedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
     // Set custom user claim for role
     await getAuth().setCustomUserClaims(teacherUid, {role: "teacher"});
     console.log(`Custom claim 'teacher' set for user ${teacherUid}`);
 
-    // Move data from pendingTeachers to teachers collection
     await getFirestore().collection("teachers").
-        doc(teacherUid).set(teacherData);
-    console.log(`Teacher data moved to 'teachers'
-        collection for user ${teacherUid}`);
+        doc(teacherUid).set(teacherRecord);
+    console.log(`Teacher data moved to
+        'teachers' collection for user ${teacherUid} with status=approved`);
 
-    // Delete from pendingTeachers collection
+    try {
+      await pendingTeacherRef.update({status: "approved",
+        approvedAt: admin.firestore.FieldValue.serverTimestamp()});
+    } catch (updateErr) {
+      console.warn(`Could not update pendingTeachers/${teacherId}
+          before deletion:`, updateErr.message || updateErr);
+    }
+
     await pendingTeacherRef.delete();
     console.log(`Pending teacher document deleted for user ${teacherId}`);
 

@@ -26,9 +26,11 @@ const analytics = getAnalytics(app);
 const db = getFirestore(app);
 const auth = getAuth(app);
 const storage = getStorage(app);
-const functions = getFunctions(app);
+// Create region-specific functions clients
+const functionsAsia = getFunctions(app, "asia-southeast1");
+const functionsUs = getFunctions(app, "us-central1");
 
 const ai = getAI(app, { backend: new GoogleAIBackend() });
 const model = getGenerativeModel(ai, { model: "gemini-2.0-flash" });
 
-export { app, analytics, ai, model, db, auth, storage, functions, firebaseConfig };
+export { app, analytics, ai, model, db, auth, storage, functionsAsia, functionsUs, firebaseConfig };

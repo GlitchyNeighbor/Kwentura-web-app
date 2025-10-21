@@ -368,6 +368,7 @@ const Login = () => {
       const collectionsToSearch = [
         { name: "admins", defaultRole: "admin" },
         { name: "teachers", defaultRole: "teacher" },
+        { name: "pendingTeachers", defaultRole: "teacher" },
       ];
 
       let userData = null;

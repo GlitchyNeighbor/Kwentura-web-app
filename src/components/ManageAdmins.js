@@ -98,11 +98,15 @@ const ManageAdmins = () => {
   });
 
   // Regex for checking presence of symbol characters in passwords
-  // Use RegExp constructor to avoid unnecessary-escape ESLint warnings
-  const PASSWORD_SYMBOL_REGEX = new RegExp("[!@#$%^&*()_+\\\-=[\\]{};':\"\\\\|,.<>/?]");
+  // Regex for checking presence of symbol characters in passwords
+  // Use RegExp constructor so '/' doesn't need escaping and ESLint won't flag unnecessary escapes
+  const PASSWORD_SYMBOL_REGEX = new RegExp("[-!@#$%^&*()_+=[\\]{};':\"\\\\|,.<>/?]");
+  const showAlert = useCallback((message, type = "success") => {
+    setAlert({ show: true, message, type });
+    setTimeout(() => setAlert({ show: false, message: "", type: "success" }), 3500);
+  }, [setAlert]);
 
   useEffect(() => {
-    
     setCurrentUser(auth.currentUser);
 
     const fetchAdmins = async () => {
@@ -110,7 +114,7 @@ const ManageAdmins = () => {
       try {
         const querySnapshot = await getDocs(
           query(collection(db, "admins"), where("isArchived", "==", false))
-        ); 
+        );
         const adminsList = querySnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
@@ -124,7 +128,7 @@ const ManageAdmins = () => {
     };
 
     fetchAdmins();
-  }, []);
+  }, [showAlert]);
 
 
   const toggleSidebar = () => {
@@ -135,13 +139,6 @@ const ManageAdmins = () => {
     setSearchTerm(e.target.value);
   };
 
-  const showAlert = (message, type = "success") => {
-    setAlert({ show: true, message, type });
-    setTimeout(
-      () => setAlert({ show: false, message: "", type: "success" }),
-      3500
-    );
-  };
 
   const checkSchoolIdExists = useCallback(async (schoolId, excludeId) => {
     if (!schoolId) {

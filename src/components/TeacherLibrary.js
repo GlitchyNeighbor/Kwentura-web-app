@@ -6,6 +6,7 @@ import SidebarMenuTeacher from "./SideMenuTeacher";
 import TopNavbar from "./TopNavbar";
 import { collection, getDocs, doc, deleteDoc } from "firebase/firestore"; 
 import { db } from "../config/FirebaseConfig.js";
+import { useAuth } from "../context/AuthContext.js";
 import { useNavigate } from "react-router-dom";
 import "../scss/custom.scss";
 
@@ -178,6 +179,7 @@ const LibraryStoryCard = ({ story, category, onRemoveBookmark }) => {
 };
 
 const TeacherLibrary = () => {
+  const { userData } = useAuth();
   const [stories, setStories] = useState([]);
   const [search, setSearch] = useState("");
   const [showSidebar, setShowSidebar] = useState(false);
@@ -211,11 +213,16 @@ const TeacherLibrary = () => {
 
   const fetchBookmarkedStories = async () => {
     try {
-      const querySnapshot = await getDocs(collection(db, "favorites"));
-      const bookmarkedStoriesData = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      let queryRef;
+      if (userData && userData.id) {
+        const role = (userData.role || "").toLowerCase();
+        const collectionName = role === "teacher" ? "teachers" : role === "admin" || role === "superadmin" ? "admins" : "students";
+        queryRef = collection(db, collectionName, userData.id, "bookmarks");
+      } else {
+        queryRef = collection(db, "favorites");
+      }
+      const querySnapshot = await getDocs(queryRef);
+      const bookmarkedStoriesData = querySnapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
       setBookmarkedStories(bookmarkedStoriesData);
     } catch (error) {
       console.error("Error fetching bookmarked stories:", error);
@@ -224,17 +231,34 @@ const TeacherLibrary = () => {
   };
 
   useEffect(() => {
+    // refetch when userData becomes available so bookmarks are scoped per-user
     fetchBookmarkedStories();
-  }, []);
+  }, [userData]);
 
   // Remove bookmark function
   const handleRemoveBookmark = async (storyId) => {
     try {
-      const favSnap = await getDocs(collection(db, "favorites"));
-      const favDoc = favSnap.docs.find((doc) => doc.data().storyId === storyId);
-      
+      // delete from the current user's bookmarks collection if available
+      const getBookmarksCollection = () => {
+        if (userData && userData.id) {
+          const role = (userData.role || "").toLowerCase();
+          const collectionName = role === "teacher" ? "teachers" : role === "admin" || role === "superadmin" ? "admins" : "students";
+          return collection(db, collectionName, userData.id, "bookmarks");
+        }
+        return collection(db, "favorites");
+      };
+
+      const favSnap = await getDocs(getBookmarksCollection());
+      const favDoc = favSnap.docs.find((d) => d.data().storyId === storyId);
+
       if (favDoc) {
-        await deleteDoc(doc(db, "favorites", favDoc.id));
+        if (userData && userData.id) {
+          const role = (userData.role || "").toLowerCase();
+          const collectionName = role === "teacher" ? "teachers" : role === "admin" || role === "superadmin" ? "admins" : "students";
+          await deleteDoc(doc(db, collectionName, userData.id, "bookmarks", favDoc.id));
+        } else {
+          await deleteDoc(doc(db, "favorites", favDoc.id));
+        }
         // Refresh the bookmarked stories list
         await fetchBookmarkedStories();
       }

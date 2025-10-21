@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { Container, Row, Col, Card, Button, Spinner, Alert, Badge } from "react-bootstrap";
@@ -144,7 +144,7 @@ const TeacherCharts = () => {
     return () => unsubscribe();
   }, []);
 
-  const fetchPopularStoriesData = async () => {
+  const fetchPopularStoriesData = useCallback(async () => {
     try {
       const storiesRef = collection(db, "stories");
       const storiesSnapshot = await getDocs(storiesRef);
@@ -169,9 +169,9 @@ const TeacherCharts = () => {
       console.error("Error fetching popular stories data:", error);
       throw error;
     }
-  };
+  }, []);
 
-  const fetchStoryBookmarkCounts = async () => {
+  const fetchStoryBookmarkCounts = useCallback(async () => {
     try {
       const storiesRef = collection(db, "stories");
       const storiesSnapshot = await getDocs(storiesRef);
@@ -198,9 +198,9 @@ const TeacherCharts = () => {
       console.error("Error fetching story bookmark counts:", error);
       throw error;
     }
-  };
+  }, []);
 
-  const fetchStudentsByGradeData = async () => {
+  const fetchStudentsByGradeData = useCallback(async () => {
     if (!teacherSection) return;
     try {
       const studentsQuery = query(
@@ -228,9 +228,9 @@ const TeacherCharts = () => {
       console.error("Error fetching students by grade data:", error);
       throw error;
     }
-  };
+  }, [teacherSection]);
 
-  const fetchAverageScorePerStory = async () => {
+  const fetchAverageScorePerStory = useCallback(async () => {
     if (!teacherSection) return;
     try {
       const studentsQuery = query(
@@ -285,35 +285,9 @@ const TeacherCharts = () => {
       console.error("Error fetching average score data:", error);
       throw error;
     }
-  };
-
-  useEffect(() => {
-    if (teacherSection) {
-      const fetchData = async () => {
-        try {
-          setLoading(true);
-          setError(null);
-          const storiesSnapshot = await getDocs(collection(db, "stories"));
-          setDashboardStats(prev => ({ ...prev, totalStories: storiesSnapshot.size }));
-          await Promise.all([
-            fetchPopularStoriesData(), 
-            fetchStudentsByGradeData(),
-            fetchAverageScorePerStory(),
-            fetchStoryBookmarkCounts(),
-            fetchStudentApprovalData(),
-          ]);
-        } catch (err) {
-          console.error("Error loading charts data:", err);
-          setError(err.message);
-        } finally {
-          setLoading(false);
-        }
-      };
-      fetchData();
-    }
   }, [teacherSection]);
 
-  const fetchStudentApprovalData = async () => {
+  const fetchStudentApprovalData = useCallback(async () => {
     if (!teacherSection) return;
     try {
       const studentsQuery = query(
@@ -339,7 +313,35 @@ const TeacherCharts = () => {
       console.error("Error fetching student approval data:", error);
       throw error;
     }
-  };
+  }, [teacherSection]);
+
+  useEffect(() => {
+    if (teacherSection) {
+      const fetchData = async () => {
+        try {
+          setLoading(true);
+          setError(null);
+          const storiesSnapshot = await getDocs(collection(db, "stories"));
+          setDashboardStats(prev => ({ ...prev, totalStories: storiesSnapshot.size }));
+          await Promise.all([
+            fetchPopularStoriesData(), 
+            fetchStudentsByGradeData(),
+            fetchAverageScorePerStory(),
+            fetchStoryBookmarkCounts(),
+            fetchStudentApprovalData(),
+          ]);
+        } catch (err) {
+          console.error("Error loading charts data:", err);
+          setError(err.message);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchData();
+    }
+  }, [teacherSection, fetchPopularStoriesData, fetchStudentsByGradeData, fetchAverageScorePerStory, fetchStoryBookmarkCounts, fetchStudentApprovalData]);
+
+  
 
   // Custom tooltip component matching Charts.js
   const CustomTooltip = ({ active, payload, label }) => {

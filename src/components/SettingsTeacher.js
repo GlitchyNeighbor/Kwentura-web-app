@@ -56,6 +56,13 @@ const SettingsTeacher = () => {
     message: "",
     type: "",
   });
+  const [passwordValidation, setPasswordValidation] = useState({
+    length: false,
+    different: false,
+    symbol: false,
+    number: false,
+    match: false,
+  });
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -200,6 +207,18 @@ const SettingsTeacher = () => {
       ...prev,
       [field]: value,
     }));
+    if (field === "newPassword" || field === "confirmPassword" || field === "currentPassword") {
+      const newPwd = field === "newPassword" ? value : userDetails.newPassword;
+      const confirmPwd = field === "confirmPassword" ? value : userDetails.confirmPassword;
+      const curPwd = field === "currentPassword" ? value : userDetails.currentPassword;
+      setPasswordValidation({
+        length: (newPwd || "").length >= 6,
+        different: (curPwd || "") !== (newPwd || "") && (newPwd || "").length > 0,
+        symbol: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(newPwd || ""),
+        number: /[0-9]/.test(newPwd || ""),
+        match: (newPwd || "") === (confirmPwd || ""),
+      });
+    }
   };
 
   const handleUpdateProfile = async () => {
@@ -268,31 +287,41 @@ const SettingsTeacher = () => {
         });
         return;
       }
+      // validate password requirements
+      const newPwd = userDetails.newPassword || "";
+      const curPwd = userDetails.currentPassword || "";
+      const validations = {
+        length: newPwd.length >= 6,
+        different: curPwd !== newPwd && newPwd.length > 0,
+        symbol: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(newPwd),
+        number: /[0-9]/.test(newPwd),
+        match: newPwd === (userDetails.confirmPassword || ""),
+      };
 
-      if (userDetails.newPassword !== userDetails.confirmPassword) {
-        setPasswordUpdateStatus({
-          show: true,
-          message: "New password and confirm password do not match.",
-          type: "danger",
-        });
+      setPasswordValidation(validations);
+
+      if (!validations.length) {
+        setPasswordUpdateStatus({ show: true, message: "New password must be at least 6 characters long.", type: "danger" });
         return;
       }
 
-      if (userDetails.newPassword.length < 6) {
-        setPasswordUpdateStatus({
-          show: true,
-          message: "New password must be at least 6 characters long.",
-          type: "danger",
-        });
+      if (!validations.different) {
+        setPasswordUpdateStatus({ show: true, message: "New password must be different from current password.", type: "danger" });
         return;
       }
 
-      if (userDetails.currentPassword === userDetails.newPassword) {
-        setPasswordUpdateStatus({
-          show: true,
-          message: "New password must be different from current password.",
-          type: "danger",
-        });
+      if (!validations.symbol) {
+        setPasswordUpdateStatus({ show: true, message: "New password must include at least one special symbol (e.g. !@#$%).", type: "danger" });
+        return;
+      }
+
+      if (!validations.number) {
+        setPasswordUpdateStatus({ show: true, message: "New password must include at least one number.", type: "danger" });
+        return;
+      }
+
+      if (!validations.match) {
+        setPasswordUpdateStatus({ show: true, message: "New password and confirm password do not match.", type: "danger" });
         return;
       }
 
@@ -1324,9 +1353,21 @@ const SettingsTeacher = () => {
                       Password Requirements:
                     </h6>
                     <ul style={{ color: "#666", margin: 0, paddingLeft: "20px" }}>
-                      <li>At least 6 characters long</li>
-                      <li>Must be different from your current password</li>
-                      <li>Should include a mix of letters, numbers, and special characters for better security</li>
+                      <li style={{ color: passwordValidation.length ? "#28a745" : "#666" }}>
+                        {passwordValidation.length ? "✓" : "○"} At least 6 characters long
+                      </li>
+                      <li style={{ color: passwordValidation.different ? "#28a745" : "#666" }}>
+                        {passwordValidation.different ? "✓" : "○"} Must be different from your current password
+                      </li>
+                      <li style={{ color: passwordValidation.symbol ? "#28a745" : "#666" }}>
+                        {passwordValidation.symbol ? "✓" : "○"} At least one special symbol (e.g. !@#$%)
+                      </li>
+                      <li style={{ color: passwordValidation.number ? "#28a745" : "#666" }}>
+                        {passwordValidation.number ? "✓" : "○"} At least one number
+                      </li>
+                      <li style={{ color: passwordValidation.match ? "#28a745" : "#666" }}>
+                        {passwordValidation.match ? "✓" : "○"} New password matches confirmation
+                      </li>
                     </ul>
                   </div>
                   

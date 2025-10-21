@@ -14,9 +14,6 @@ import { collection, query, where, getDocs, doc, setDoc } from "firebase/firesto
 import { Eye, EyeOff, Mail, RefreshCw, Check, X } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 
-// Regex for checking presence of symbol characters in passwords
-const PASSWORD_SYMBOL_REGEX = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>\/?]/;
-
 // Debounce utility function
 const debounce = (func, delay) => {
   let timeout;
@@ -96,7 +93,7 @@ const HomeNavbar = () => {
                   transition: "opacity 0.2s ease"
                 }}
                 onError={(e) => {
-                  console.error("Logo failed to load:", e);
+                  // Logo failed to load: hide the image silently (no console output)
                   e.target.style.display = "none";
                 }}
                 loading="lazy"
@@ -309,7 +306,7 @@ const Signup = () => {
       minLength: password.length >= 6,
       hasUppercase: /[A-Z]/.test(password),
       hasNumber: /\d/.test(password),
-      hasSymbol: PASSWORD_SYMBOL_REGEX.test(password),
+      hasSymbol: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
     };
     setPasswordRequirements(requirements);
     return requirements;
@@ -324,23 +321,62 @@ const Signup = () => {
 
       setSchoolIdStatus('checking');
       try {
-        // Check in 'teachers' collection
-        const teachersQuery = query(collection(db, "teachers"), where("schoolId", "==", schoolId));
-        const teachersSnapshot = await getDocs(teachersQuery);
+        let isTaken = false;
 
-        // Check in 'admins' collection
-        const adminsQuery = query(collection(db, "admins"), where("schoolId", "==", schoolId));
-        const adminsSnapshot = await getDocs(adminsQuery);
+        // Query admins (rules currently allow reads on admins)
+        try {
+          const adminsQuery = query(collection(db, "admins"), where("schoolId", "==", schoolId));
+          const adminsSnapshot = await getDocs(adminsQuery);
+          if (!adminsSnapshot.empty) isTaken = true;
+        } catch (err) {
+          // If admins query is denied for some reason, continue silently
+          if (err.code && err.code !== 'permission-denied') throw err;
+        }
 
-        // Check in 'students' collection
-        const studentsQuery = query(collection(db, "students"), where("schoolId", "==", schoolId));
-        const studentsSnapshot = await getDocs(studentsQuery);
+        // Query teachers
+                try {
+          const teachersQuery = query(collection(db, "teachers"), where("schoolId", "==", schoolId));
+          const teachersSnapshot = await getDocs(teachersQuery);
+          if (!teachersSnapshot.empty) isTaken = true;
+        } catch (err) {
+          // If admins query is denied for some reason, continue silently
+          if (err.code && err.code !== 'permission-denied') throw err;
+        }
 
-        const isTaken = !teachersSnapshot.empty || !adminsSnapshot.empty || !studentsSnapshot.empty;
+        // Query students (rules allow reads on students)
+        try {
+          const studentsQuery = query(collection(db, "students"), where("schoolId", "==", schoolId));
+          const studentsSnapshot = await getDocs(studentsQuery);
+          if (!studentsSnapshot.empty) isTaken = true;
+        } catch (err) {
+          // If students query is denied, continue silently
+          if (err.code && err.code !== 'permission-denied') throw err;
+        }
+
+        // Query teachers only if there's an authenticated user. The `teachers` collection
+        // is restricted in security rules and will throw permission errors for unauthenticated reads.
+        if (auth && auth.currentUser) {
+          try {
+            const teachersQuery = query(collection(db, "teachers"), where("schoolId", "==", schoolId));
+            const teachersSnapshot = await getDocs(teachersQuery);
+            if (!teachersSnapshot.empty) isTaken = true;
+          } catch (err) {
+            // If teachers query fails (e.g., permission-denied), continue silently
+            if (err.code && err.code !== 'permission-denied') throw err;
+          }
+        } else {
+          // No signed-in user; skip teachers query to avoid expected permission-denied error.
+        }
+
         setSchoolIdStatus(isTaken ? 'taken' : 'available');
       } catch (error) {
-        console.error("Error checking school ID:", error);
-        setError("Error checking school ID availability: " + error.message);
+        // Error checking school ID; surface friendly message to UI but avoid console output
+        // Provide a friendly message for permission issues and avoid spamming the console with uncaught errors
+        if (error.code === 'permission-denied') {
+          setError("Unable to verify school ID due to security rules. Please contact support if this persists.");
+        } else {
+          setError("Error checking school ID availability: " + (error.message || error));
+        }
         setSchoolIdStatus('idle'); // Revert to idle on error
       }
     }, 500), // Debounce for 500ms
@@ -409,7 +445,7 @@ const Signup = () => {
       await signOut(auth);
       
     } catch (error) {
-      console.error("Error sending verification email:", error);
+      // Sending verification email failed; avoid logging to console
       let errorMessage = "Failed to send verification email.";
       
       switch (error.code) {
@@ -450,7 +486,7 @@ const Signup = () => {
         setError("Email not verified yet. Please check your inbox and click the verification link.");
       }
     } catch (error) {
-      console.error("Error checking email verification:", error);
+      // Checking email verification failed; avoid console output
       setError("Error checking verification status. Please try again.");
     } finally {
       setVerificationLoading(false);
@@ -532,7 +568,7 @@ const Signup = () => {
       }, 5000); // 5 seconds delay
       
     } catch (error) {
-      console.error("Error creating account:", error);
+      // Creating account failed; avoid console output
       setError("Failed to create account. Please try again: " + error.message);
     } finally {
       setLoading(false);
@@ -1216,7 +1252,10 @@ const Signup = () => {
         </Container>
       </div>
 
-      {/* FontAwesome is loaded from local package via import in src/index.js */}
+      <link 
+        rel="stylesheet" 
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      />
 
       <style jsx>{`
         /* Animated circles for background */

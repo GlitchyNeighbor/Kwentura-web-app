@@ -525,7 +525,7 @@ const AccountList = () => {
           targetUserFullName: accountToDelete.displayName,
         }).catch(console.error);
 
-        showAlert("Account permanently deleted from both database and authentication!", "success");
+        showAlert("Account has been permanently deleted", "success");
         setAccounts((prevAccounts) =>
           prevAccounts.filter((acc) => acc.id !== accountToDelete.id)
         );

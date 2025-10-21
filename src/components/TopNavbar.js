@@ -50,7 +50,7 @@ const ProfileToggle = React.forwardRef(({ children, onClick }, ref) => (
 ));
 
 const TopNavbar = ({ toggleSidebar, isSidebarOpen = false }) => {
-  const { userData, loading, error, logout, pendingStudents, fetchPendingStudents } = useAuth();
+  const { userData, loading, error, logout, pendingStudents, fetchPendingStudents, pendingTeachers, fetchPendingTeachers } = useAuth();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -60,8 +60,9 @@ const TopNavbar = ({ toggleSidebar, isSidebarOpen = false }) => {
   useEffect(() => {
     if (userData) {
       fetchPendingStudents();
+      fetchPendingTeachers();
     }
-  }, [userData]);
+  }, [userData, fetchPendingStudents, fetchPendingTeachers]);
 
   const displayName = useMemo(() => {
     if (loading) return "Loading...";
@@ -76,6 +77,32 @@ const TopNavbar = ({ toggleSidebar, isSidebarOpen = false }) => {
     return userData?.profileImageUrl || require("../assets/images/profile.png");
   }, [userData]);
 
+  // Build notifications array depending on role
+  const notifications = useMemo(() => {
+    if (!userData) return [];
+    if (userData.role === 'teacher') {
+      return pendingStudents.map(s => ({
+        id: s.id,
+        type: 'student_pending',
+        title: `${s.studentFirstName || s.firstName || ''} ${s.studentLastName || s.lastName || ''}`.trim(),
+        message: `Student ${s.studentFirstName || s.firstName || ''} ${s.studentLastName || s.lastName || ''} requires approval for section ${s.section || ''}`,
+        data: s,
+      }));
+    }
+
+    if (userData.role === 'admin' || userData.role === 'superAdmin') {
+      return pendingTeachers.map(t => ({
+        id: t.id,
+        type: 'teacher_pending',
+        title: `${t.firstName || ''} ${t.lastName || ''}`.trim(),
+        message: `Teacher ${t.firstName || ''} ${t.lastName || ''} has requested account approval.`,
+        data: t,
+      }));
+    }
+
+    return [];
+  }, [userData, pendingStudents, pendingTeachers]);
+
   const handleToggleSidebar = useCallback((event) => {
     if (event.type === 'keydown' && event.key !== 'Enter' && event.key !== ' ') {
       return;
@@ -84,8 +111,20 @@ const TopNavbar = ({ toggleSidebar, isSidebarOpen = false }) => {
   }, [toggleSidebar]);
 
   const handleProfileClick = useCallback(() => {
-    navigate('/teacher/settings');
-  }, [navigate]);
+    // Route to the correct settings/profile page depending on role
+    // Debug: log resolved role to help diagnose navigation issues
+    const role = userData?.role;
+  // debug removed
+
+    // Navigate based on role
+    if (role === 'admin' || role === 'superAdmin') {
+      navigate('/admin/settings');
+    } else if (role === 'teacher') {
+      navigate('/teacher/settings');
+    } else {
+      navigate('/teacher/settings');
+    }
+  }, [navigate, userData]);
 
   const handleLogoutClick = useCallback(() => {
     setShowLogoutModal(true);
@@ -298,7 +337,7 @@ const TopNavbar = ({ toggleSidebar, isSidebarOpen = false }) => {
                         }}
                         loading="lazy"
                       />
-                      {pendingStudents.length > 0 && (
+                      {notifications.length > 0 && (
                         <span className="notification-ping-indicator">
                           <span className="notification-ping-animation"></span>
                           <span className="notification-ping-dot"></span>
@@ -365,19 +404,31 @@ const TopNavbar = ({ toggleSidebar, isSidebarOpen = false }) => {
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <Bell size={20} style={{ opacity: 0.8 }} />
-                          <span>Notifications</span>
-                        </div>
-                        {pendingStudents.length > 0 && (
-                          <span style={{
-                            width: '10px',
-                            height: '10px',
-                            backgroundColor: '#ef4444',
-                            borderRadius: '50%',
-                            border: '1.5px solid white',
-                            boxShadow: '0 0 0 1px rgba(0,0,0,0.05)'
-                          }}></span>
-                        )}
+                            <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }} aria-hidden>
+                              <Bell size={20} style={{ opacity: 0.8 }} />
+                              {notifications.length > 0 && (
+                                <span aria-label={`${notifications.length} new notifications`} role="status" style={{
+                                  position: 'absolute',
+                                  top: -6,
+                                  right: -8,
+                                  minWidth: 18,
+                                  height: 18,
+                                  padding: '0 5px',
+                                  backgroundColor: '#ef4444',
+                                  color: 'white',
+                                  borderRadius: 18,
+                                  fontSize: '0.7rem',
+                                  fontWeight: 700,
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+                                  lineHeight: 1
+                                }}>{notifications.length}</span>
+                              )}
+                            </div>
+                            <span>Notifications</span>
+                          </div>
                       </Dropdown.Item>
 
                       <div style={{
@@ -438,7 +489,7 @@ const TopNavbar = ({ toggleSidebar, isSidebarOpen = false }) => {
       <NotificationsModal
         show={showNotificationsModal}
         onHide={() => setShowNotificationsModal(false)}
-        notifications={pendingStudents}
+        notifications={notifications}
       />
 
       {/* Add style for logo shadow and brand block and logo hover effect */}

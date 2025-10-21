@@ -10,7 +10,10 @@ import { db, app } from "../config/FirebaseConfig.js"; // Import app
 import { getAuth } from "firebase/auth";
 import { getFunctions, httpsCallable } from "firebase/functions"; // Import Firebase Functions
 
-const functions = getFunctions(app);
+// Initialize Functions client with the specific region where cloud functions are deployed
+// This ensures callable functions target the regional endpoint (avoids CORS preflight issues)
+const FUNCTIONS_REGION = "asia-southeast1";
+const functions = getFunctions(app, FUNCTIONS_REGION);
 const logAdminUiActionCallable = httpsCallable(functions, 'logAdminUiAction');
 const approveTeacherCallable = httpsCallable(functions, 'approveTeacher');
 const rejectTeacherCallable = httpsCallable(functions, 'rejectTeacher');

@@ -30,7 +30,7 @@ import {
   FileEarmarkPdfFill,
 } from "react-bootstrap-icons";
 import { db, storage, app as firebaseApp } from "../config/FirebaseConfig.js"; 
-import { getFunctions, httpsCallable, } from "firebase/functions"; 
+import { getFunctions, httpsCallable } from "firebase/functions"; 
 import {
   collection,
   getDocs,
@@ -104,17 +104,9 @@ export async function extractPdfPageTexts(pdfFile, options = {}) {
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
     const textContent = await page.getTextContent();
-
     
     let pageText = textContent.items.map(item => item.str).join(" ");
 
-    
-    
-
-    
-    
-
-    
     if (useOcrFallback && (!pageText || pageText.length < 5)) {
       const viewport = page.getViewport({ scale: 2 });
       const canvas = document.createElement("canvas");
@@ -529,7 +521,7 @@ const ManageStories = () => {
  * @returns {Promise<{audioData: object[], failedPages: number[]}>}
  */
 const generateTtsForLanguage = async (texts, languageCode, storyId) => {
-  const synthesizeSpeech = httpsCallable(functions, "synthesizeSpeechGoogle");
+  // reuse existing synthesizeSpeechGoogle httpsCallable defined earlier to avoid duplicate creation
   const audioPromises = [];
   const failedPages = [];
 
@@ -544,7 +536,7 @@ const generateTtsForLanguage = async (texts, languageCode, storyId) => {
 
     const ttsChunks = splitTextForTTS(textToSpeak);
     ttsChunks.forEach((chunk, chunkIdx) => {
-      const promise = synthesizeSpeech({ text: chunk, languageCode })
+      const promise = synthesizeSpeechGoogle({ text: chunk, languageCode })
         .then(async (result) => {
           if (!result.data || !result.data.audioData || typeof result.data.audioData !== "string") {
             console.warn(`Invalid audio data for page ${pageNumber} (lang: ${languageCode}), skipping.`);
