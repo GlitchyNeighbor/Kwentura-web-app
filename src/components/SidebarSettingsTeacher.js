@@ -5,7 +5,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import LogoutConfirmation from "./LogoutConfirmation.js";
 import { useAuth } from "../context/AuthContext.js";
 
-// Constants - Matching SidebarSettingsAdmin
+
 const COLORS = {
   primary: "#FF69B4",
   secondary: "#FFB6C1", 
@@ -23,7 +23,7 @@ const COLORS = {
   border: "#E9ECEF"
 };
 
-// Navigation items for settings
+
 const SETTINGS_NAVIGATION = [
   { 
     id: 'account',
@@ -58,7 +58,7 @@ const SETTINGS_NAVIGATION = [
   }
 ];
 
-// User Profile Component
+
 const UserProfile = React.memo(({ userName, profileImageUrl, userRole, loading }) => {
   const profileTooltip = (
     <Tooltip id="settings-profile-tooltip" className="custom-profile-tooltip">
@@ -154,7 +154,7 @@ const UserProfile = React.memo(({ userName, profileImageUrl, userRole, loading }
   );
 });
 
-// Navigation Item Component
+
 const NavigationItem = React.memo(({ item, isActive, onNavigate }) => {
   const ItemIcon = item.icon;
 
@@ -202,7 +202,7 @@ const NavigationItem = React.memo(({ item, isActive, onNavigate }) => {
   );
 });
 
-// Main Component
+
 const SidebarSettingsTeacher = ({ isOpen, toggleSidebar, profileImageUrl, userRole }) => {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -232,11 +232,11 @@ const SidebarSettingsTeacher = ({ isOpen, toggleSidebar, profileImageUrl, userRo
     setIsLoggingOut(true);
     try {
       await logout();
-      // Navigation will be handled by onAuthStateChanged in AuthContext
+      
     } catch (error) {
       console.error("Error signing out:", error);
       setIsLoggingOut(false);
-      // You might want to show an error toast here
+      
     }
   }, [logout]);
 
@@ -257,7 +257,6 @@ const SidebarSettingsTeacher = ({ isOpen, toggleSidebar, profileImageUrl, userRo
           zIndex: 99,
         }}
       >
-        {/* User Profile Section */}
         <div 
           className="w-100 border-bottom"
           style={{ 
@@ -274,7 +273,7 @@ const SidebarSettingsTeacher = ({ isOpen, toggleSidebar, profileImageUrl, userRo
               loading={loading}
             />
           ) : (
-            // Collapsed profile - just show avatar
+            
             <div className="d-flex justify-content-center">
               <OverlayTrigger
                 placement="right"
@@ -324,7 +323,6 @@ const SidebarSettingsTeacher = ({ isOpen, toggleSidebar, profileImageUrl, userRo
           )}
         </div>
 
-        {/* Navigation */}
         <Nav 
           className="flex-column w-100 flex-grow-1" 
           style={{ 
@@ -335,9 +333,8 @@ const SidebarSettingsTeacher = ({ isOpen, toggleSidebar, profileImageUrl, userRo
           }}
         >
           {isOpen ? (
-            // Full navigation when expanded
+            
             <div className="d-flex flex-column h-100">
-              {/* Settings Section */}
               <div className="sidebar-section">
                 <div 
                   className="sidebar-heading text-uppercase fw-bold small mb-3"
@@ -363,11 +360,10 @@ const SidebarSettingsTeacher = ({ isOpen, toggleSidebar, profileImageUrl, userRo
                 </div>
               </div>
 
-              {/* Spacer */}
               <div className="flex-grow-1"></div>
             </div>
           ) : (
-            // Collapsed navigation - compact icons
+            
             <div className="d-flex flex-column justify-content-center align-items-center h-100" style={{ gap: '8px' }}>
               {SETTINGS_NAVIGATION.map((item, index) => {
                 const ItemIcon = item.icon;
@@ -480,7 +476,7 @@ const SidebarSettingsTeacher = ({ isOpen, toggleSidebar, profileImageUrl, userRo
             border-radius: 12px;
           }
 
-          /* Enhanced Logout Button Styles */
+         
           .logout-link:hover {
             background: linear-gradient(135deg, ${COLORS.danger}, #c62828) !important;
             color: ${COLORS.white} !important;
@@ -522,7 +518,7 @@ const SidebarSettingsTeacher = ({ isOpen, toggleSidebar, profileImageUrl, userRo
             border-right-color: ${COLORS.dark} !important;
           }
 
-          /* Custom scrollbar */
+         
           .sidebar .nav::-webkit-scrollbar {
             width: 8px;
           }
@@ -541,7 +537,7 @@ const SidebarSettingsTeacher = ({ isOpen, toggleSidebar, profileImageUrl, userRo
             background: ${COLORS.primary};
           }
 
-          /* Collapsed Navigation Styles */
+         
           .collapsed-nav-item {
             color: ${COLORS.dark} !important;
             text-decoration: none !important;
@@ -569,7 +565,7 @@ const SidebarSettingsTeacher = ({ isOpen, toggleSidebar, profileImageUrl, userRo
             border-color: ${COLORS.danger} !important;
           }
 
-          /* Mobile Styles */
+         
           @media (max-width: 768px) {
             .sidebar {
               position: fixed !important;
@@ -595,7 +591,7 @@ const SidebarSettingsTeacher = ({ isOpen, toggleSidebar, profileImageUrl, userRo
             }
           }
 
-          /* Desktop Styles */
+         
           @media (min-width: 769px) {
             .sidebar {
               position: relative !important;
@@ -619,7 +615,6 @@ const SidebarSettingsTeacher = ({ isOpen, toggleSidebar, profileImageUrl, userRo
         `}</style>
       </Navbar>
 
-      {/* Mobile Overlay */}
       {typeof window !== 'undefined' && window.innerWidth <= 768 && (
         <div 
           className={`sidebar-overlay ${isOpen ? 'show' : ''}`}
@@ -639,7 +634,6 @@ const SidebarSettingsTeacher = ({ isOpen, toggleSidebar, profileImageUrl, userRo
         />
       )}
 
-      {/* Logout Confirmation Modal */}
       <LogoutConfirmation
         show={showLogoutModal}
         onHide={handleLogoutCancel}

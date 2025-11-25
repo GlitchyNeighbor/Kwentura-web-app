@@ -43,7 +43,7 @@ import SideMenuTeacher from "./SideMenuTeacher.js";
 import TopNavbar from "./TopNavbar";
 import "../scss/custom.scss";
 
-// Constants - Matching AccountList.js color scheme
+
 const COLORS = {
   primary: "#FF69B4",
   secondary: "#FFB6C1", 
@@ -58,7 +58,7 @@ const COLORS = {
   softPink: "#FFF0F5",
 };
 
-// Custom hooks
+
 const useStudents = (currentTeacher, teacherSection, authChecked) => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -77,14 +77,14 @@ const useStudents = (currentTeacher, teacherSection, authChecked) => {
 
       let studentsQuery;
       if (teacherSection) {
-        // Filter by teacher's section
+        
         studentsQuery = query(
           collection(db, "students"),
           where("section", "==", teacherSection),
           where("isArchived", "==", false)
         );
       } else {
-        // Show all active students if no specific section
+        
         studentsQuery = query(
           collection(db, "students"),
           where("isArchived", "==", false)
@@ -135,7 +135,7 @@ const useAlert = () => {
   return { alert, showAlert, hideAlert };
 };
 
-// Components
+
 const StatCard = ({ title, value, icon: IconComponent, color, trend }) => (
   <Card className="shadow-sm h-100 border-0" style={{ borderRadius: "12px" }}>
     <Card.Body className="p-4">
@@ -160,7 +160,7 @@ const StatCard = ({ title, value, icon: IconComponent, color, trend }) => (
   </Card>
 );
 
-// FilterButton helper exists in AccountList.js; avoid duplicate definition here
+
 
 const StudentScores = ({ studentId, isVisible }) => {
     const [scores, setScores] = useState([]);
@@ -256,17 +256,17 @@ const StudentScores = ({ studentId, isVisible }) => {
     );
   };
 
-// Main Component
+
 const StudentList = () => {
   const navigate = useNavigate();
   const { alert, showAlert, hideAlert } = useAlert();
 
-  // Authentication state
+  
   const [currentTeacher, setCurrentTeacher] = useState(null);
   const [teacherSection, setTeacherSection] = useState("");
   const [authChecked, setAuthChecked] = useState(false);
 
-  // UI State
+  
   const [showSidebar, setShowSidebar] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterGrade, setFilterGrade] = useState("all");
@@ -274,7 +274,7 @@ const StudentList = () => {
 
   const { students, loading: studentsLoading, error: studentsError } = useStudents(currentTeacher, teacherSection, authChecked);
 
-  // Authentication effect
+  
   useEffect(() => {
     const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -303,7 +303,7 @@ const StudentList = () => {
     return () => unsubscribe();
   }, [showAlert]);
 
-  // Computed values
+  
   const filteredStudents = useMemo(() => {
     return students.filter((student) => {
       const matchesSearch = searchTerm === "" || 
@@ -336,7 +336,7 @@ const StudentList = () => {
     return [...new Set(students.map(s => s.gradeLevel).filter(Boolean))].sort();
   }, [students]);
 
-  // Event handlers
+  
   const toggleSidebar = useCallback(() => {
     setShowSidebar(prev => !prev);
   }, []);
@@ -463,7 +463,7 @@ const StudentList = () => {
             background: 'linear-gradient(135deg, #FFF5F8 0%, #FFE8F1 50%, #F8E8FF 100%)',
           }}
         >
-          {/* Alert */}
+
           <Alert
             show={alert.show}
             variant={alert.variant}
@@ -483,7 +483,7 @@ const StudentList = () => {
             {alert.message}
           </Alert>
 
-          {/* Header */}
+
           <div className="d-flex justify-content-between align-items-center mb-4">
             <div className="d-flex align-items-center">
               <Button
@@ -506,9 +506,6 @@ const StudentList = () => {
             </div>
             <div className="d-flex align-items-center gap-3">
 
-
-              
-              {/* Search */}
               <InputGroup style={{ width: "300px" }}>
                 <FormControl
                   placeholder="Search students..."
@@ -536,7 +533,6 @@ const StudentList = () => {
             </div>
           </div>
 
-          {/* Stats Cards */}
           <Row className="g-4 mb-4">
             <Col lg={3} md={6}>
               <StatCard
@@ -572,14 +568,12 @@ const StudentList = () => {
             </Col>
           </Row>
 
-          {/* Error State */}
           {studentsError && (
             <Alert variant="danger" className="mb-4">
               <strong>Error loading students:</strong> {studentsError}
             </Alert>
           )}
 
-          {/* Content */}
           <Card className="shadow-sm border-0" style={{ borderRadius: "15px" }}>
             <Card.Header 
               className="border-0 py-4"

@@ -17,7 +17,7 @@ import { useParams } from "react-router-dom";
 import { getAuth } from "firebase/auth";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { Volume2, Award, CheckCircle } from "lucide-react";
-// Enhanced styles matching the main theme
+
 const cardStyle = {
   border: "none",
   borderRadius: "16px",
@@ -33,7 +33,7 @@ const StoryAssessment = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   
-  // Assessment state
+  
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [submitted, setSubmitted] = useState({});
@@ -41,9 +41,9 @@ const StoryAssessment = () => {
   const [assessmentComplete, setAssessmentComplete] = useState(false);
   const [score, setScore] = useState(0);
   const [totalQuestions, setTotalQuestions] = useState(0);
-  const [questions, setQuestions] = useState([]); // Move to state
+  const [questions, setQuestions] = useState([]); 
   
-  // TTS state
+  
   const [, setTtsAudio] = useState(null);
   const [ttsLoading, setTtsLoading] = useState({});
   const ttsAudioRef = useRef(null);
@@ -52,11 +52,11 @@ const StoryAssessment = () => {
     encouragement: '',
   });
 
-  // Build questions array function
+  
 const buildQuestions = (storyData) => {
   const questionsList = [];
 
-  // Moral lesson (single question)
+  
   if (storyData.moralLesson?.question && Array.isArray(storyData.moralLesson.options) && storyData.moralLesson.options.length === 3) {
     questionsList.push({
       id: "moral",
@@ -69,7 +69,7 @@ const buildQuestions = (storyData) => {
     });
   }
 
-  // Comprehension questions (array of 3 questions)
+  
   if (Array.isArray(storyData.comprehensionQuestions) && storyData.comprehensionQuestions.length > 0) {
     storyData.comprehensionQuestions.forEach((q, index) => {
       questionsList.push({
@@ -107,7 +107,7 @@ const buildQuestions = (storyData) => {
           
           setStory(storyData);
           
-          // Build questions array
+          
           const questionsList = buildQuestions(storyData);
           
           setQuestions(questionsList);
@@ -120,7 +120,7 @@ const buildQuestions = (storyData) => {
           setError("Story not found.");
         }
       } catch (err) {
-        console.error("Error fetching story:", err); // Debug log
+        console.error("Error fetching story:", err); 
         setError("Failed to fetch story: " + err.message);
       } finally {
         setLoading(false);
@@ -248,13 +248,13 @@ const buildQuestions = (storyData) => {
         }
     }
 
-    // Auto advance after 2 seconds if correct
+    
     if (isCorrect && currentQuestionIndex < questions.length - 1) {
       setTimeout(() => {
         setCurrentQuestionIndex(currentQuestionIndex + 1);
       }, 2000);
     } else if (currentQuestionIndex === questions.length - 1) {
-      // Calculate final score
+      
       setTimeout(() => {
         const finalScore = Object.values(correct).filter(Boolean).length + (isCorrect ? 1 : 0);
         setScore(finalScore);
@@ -374,7 +374,6 @@ const buildQuestions = (storyData) => {
       }}
     >
       <Container fluid style={{ maxWidth: "900px" }}>
-        {/* Header */}
         <Row className="align-items-center mb-4">
           <Col xs="auto">
             <Button
@@ -432,7 +431,6 @@ const buildQuestions = (storyData) => {
 
         {!assessmentComplete ? (
           <>
-            {/* Progress Section */}
             <Row className="mb-4">
               <Col>
                 <Card style={cardStyle} className="p-3">
@@ -456,7 +454,6 @@ const buildQuestions = (storyData) => {
               </Col>
             </Row>
 
-            {/* Question Card */}
             <Row className="mb-4">
               <Col>
                 <Card style={{
@@ -488,7 +485,6 @@ const buildQuestions = (storyData) => {
                     </div>
                   </Card.Header>
                   <Card.Body className="p-4">
-                    {/* Image for the question */}
                     {currentQuestion.imageUrl && (
                       <div className="mb-4 text-center">
                         <img 
@@ -580,7 +576,6 @@ const buildQuestions = (storyData) => {
                       ))}
                     </Form>
 
-                    {/* Feedback Alert */}
                     {submitted[currentQuestion.id] && (
                       <Alert 
                         variant={correct[currentQuestion.id] ? "success" : "danger"} 
@@ -609,7 +604,6 @@ const buildQuestions = (storyData) => {
               </Col>
             </Row>
 
-            {/* Navigation Buttons */}
             <Row>
               <Col className="d-flex justify-content-between">
                 <Button
@@ -647,7 +641,7 @@ const buildQuestions = (storyData) => {
             </Row>
           </>
         ) : (
-          /* Assessment Complete Screen */
+         
           <Row className="justify-content-center">
             <Col xs={12} lg={8}>
               <Card style={{

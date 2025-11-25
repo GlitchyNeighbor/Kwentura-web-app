@@ -44,7 +44,6 @@ const HomeNavbar = () => {
           alignItems: 'center'
         }}
       >
-        {/* Logo Section */}
         <div className="d-flex align-items-center" style={{gap: '1rem'}}>
           <div 
             className="logo"
@@ -63,7 +62,6 @@ const HomeNavbar = () => {
             onMouseEnter={(e) => e.target.style.transform = 'scale(1.1) rotate(5deg)'}
             onMouseLeave={(e) => e.target.style.transform = 'scale(1) rotate(0deg)'}
           >
-            {/* Logo */}
             <div className="logo-container" >
               <img
                 src={require("../assets/images/KLogo.png")}
@@ -105,7 +103,6 @@ const HomeNavbar = () => {
           </div>
         </div>
         
-        {/* Desktop Navigation */}
         <nav className="d-none d-lg-flex align-items-center" style={{gap: '2rem'}}>
           <a 
             href="/" 
@@ -210,7 +207,6 @@ const HomeNavbar = () => {
           </a>
         </nav>
         
-        {/* Mobile Menu Button */}
         <button 
           className="d-lg-none btn btn-link p-0"
           style={{
@@ -225,7 +221,6 @@ const HomeNavbar = () => {
         </button>
       </div>
       
-      {/* Mobile Menu */}
       {isMobileMenuOpen && (
         <div 
           className="d-lg-none"
@@ -254,7 +249,7 @@ const Contact = () => {
   const [alert, setAlert] = useState({ show: false, variant: "", message: "" });
 
   useEffect(() => {
-    // FontAwesome is imported centrally in src/index.js
+    
   }, []);
 
   const handleSubmit = (e) => {
@@ -293,7 +288,6 @@ const Contact = () => {
     <div className="min-vh-100 d-flex flex-column">
       <HomeNavbar />
 
-      {/* Hero Section */}
       <section 
         className="d-flex align-items-center justify-content-center"
         style={{
@@ -305,7 +299,6 @@ const Contact = () => {
           overflow: 'hidden'
         }}
       >
-        {/* Background decorative elements */}
         <div 
           className="position-absolute"
           style={{
@@ -382,12 +375,9 @@ const Contact = () => {
           </div>
         </Container>
       </section>
-
-      {/* Main Contact Section */}
       <section style={{ padding: '4rem 0', backgroundColor: 'white' }}>
         <Container style={{ maxWidth: '1200px' }}>
           <Row className="g-5 align-items-start">
-            {/* Contact Info Section */}
             <Col lg={5}>
               <div className="pe-lg-4">
                 <h2 
@@ -412,7 +402,6 @@ const Contact = () => {
                   or just curious about our platform, we're here to help answer your questions.
                 </p>
 
-                {/* Contact Details */}
                 <div className="d-flex flex-column gap-4">
                   <div 
                     className="d-flex align-items-start p-3"
@@ -577,7 +566,6 @@ const Contact = () => {
               </div>
             </Col>
 
-            {/* Form Section */}
             <Col lg={7}>
               <div
                 style={{
@@ -589,7 +577,6 @@ const Contact = () => {
                   position: 'relative'
                 }}
               >
-                {/* Form Header */}
                 <div className="text-center mb-4">
                   <div 
                     style={{
@@ -884,9 +871,6 @@ const Contact = () => {
       </section>
 
       <Footer />
-
-      {/* FontAwesome is loaded from local package via import in src/index.js */}
-
       <style jsx>{`
         @keyframes float {
           0%, 100% { transform: translateY(0px) rotate(0deg); }

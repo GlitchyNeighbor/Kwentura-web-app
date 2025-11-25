@@ -13,7 +13,7 @@ const NotificationsModal = ({ show, onHide, notifications = [] }) => {
     } else if (notification.type === 'teacher_pending') {
       navigate('/admin/approve-teachers');
     } else {
-      // default fallback
+      
       navigate('/home');
     }
     onHide();
@@ -21,9 +21,9 @@ const NotificationsModal = ({ show, onHide, notifications = [] }) => {
 
   useEffect(() => {
     if (show) {
-      // Debug: log notifications when modal opens to help diagnose empty list issues
-      // This will appear in the browser console.
-      // eslint-disable-next-line no-console
+      
+      
+      
       console.log('NotificationsModal opened. notifications:', notifications);
     }
   }, [show, notifications]);

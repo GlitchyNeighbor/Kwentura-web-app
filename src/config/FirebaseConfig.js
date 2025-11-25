@@ -6,11 +6,6 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getFunctions } from "firebase/functions";
 
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyBySBosjKeJ4l-iQ5Ll1OOo40RaPCeBlwo",
   authDomain: "kwentura-39597.firebaseapp.com",
@@ -26,7 +21,7 @@ const analytics = getAnalytics(app);
 const db = getFirestore(app);
 const auth = getAuth(app);
 const storage = getStorage(app);
-// Create region-specific functions clients
+
 const functionsAsia = getFunctions(app, "asia-southeast1");
 const functionsUs = getFunctions(app, "us-central1");
 

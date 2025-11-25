@@ -14,9 +14,7 @@ const Footer = () => {
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 2rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '2rem' }}>
           <div style={{ flex: '1', minWidth: '300px', marginBottom: '2rem' }}>
-            {/* Logo Section */}
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem', gap: '1rem' }}>
-              {/* Replace the gradient div with actual logo */}
               <div style={{ display: 'flex', alignItems: 'center' }}>
                 <img
                   src={require("../assets/images/KLogo.png")}
@@ -31,18 +29,17 @@ const Footer = () => {
                   }}
                   onError={(e) => {
                     console.error("KLogo failed to load in footer:", e);
-                    // Fallback to the original gradient design
+                    
                     e.target.style.display = 'none';
                     e.target.nextSibling.style.display = 'flex';
                   }}
                   onLoad={(e) => {
-                    // Hide fallback if logo loads successfully
+                    
                     if (e.target.nextSibling) {
                       e.target.nextSibling.style.display = 'none';
                     }
                   }}
                 />
-                {/* Fallback gradient logo (hidden by default) */}
                 <div 
                   style={{
                     width: '50px',

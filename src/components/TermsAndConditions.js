@@ -36,7 +36,6 @@ const HomeNavbar = () => {
           alignItems: 'center'
         }}
       >
-        {/* Logo Section */}
         <div className="d-flex align-items-center" style={{gap: '1rem'}}>
           <div 
             className="logo"
@@ -55,7 +54,6 @@ const HomeNavbar = () => {
             onMouseEnter={(e) => e.target.style.transform = 'scale(1.1) rotate(5deg)'}
             onMouseLeave={(e) => e.target.style.transform = 'scale(1) rotate(0deg)'}
           >
-            {/* Logo */}
             <div className="logo-container" >
               <img
                 src={require("../assets/images/KLogo.png")}
@@ -97,7 +95,6 @@ const HomeNavbar = () => {
           </div>
         </div>
         
-        {/* Desktop Navigation */}
         <nav className="d-none d-lg-flex align-items-center" style={{gap: '2rem'}}>
           <a 
             href="/" 
@@ -204,7 +201,6 @@ const HomeNavbar = () => {
           </a>
         </nav>
         
-        {/* Mobile Menu Button */}
         <button 
           className="d-lg-none btn btn-link p-0"
           style={{
@@ -219,7 +215,6 @@ const HomeNavbar = () => {
         </button>
       </div>
       
-      {/* Mobile Menu */}
       {isMobileMenuOpen && (
         <div 
           className="d-lg-none"
@@ -246,9 +241,9 @@ const TermsAndConditions = () => {
   const [, setActiveSection] = useState("");
 
   useEffect(() => {
-    // FontAwesome is imported centrally in src/index.js
+    
 
-    // Handle scroll spy for table of contents
+    
     const handleScroll = () => {
       const sections = document.querySelectorAll('[data-section]');
       const scrollPosition = window.scrollY + 150;
@@ -296,7 +291,6 @@ const TermsAndConditions = () => {
     <div style={{minHeight: '100vh', display: 'flex', flexDirection: 'column'}}>
       <HomeNavbar />
 
-      {/* Hero Section */}
       <section 
         style={{
           display: 'flex',
@@ -310,7 +304,6 @@ const TermsAndConditions = () => {
           overflow: 'hidden'
         }}
       >
-        {/* Background decorative elements */}
         <div 
           style={{
             position: 'absolute',
@@ -412,7 +405,6 @@ const TermsAndConditions = () => {
         </div>
       </section>
 
-      {/* Main Content Section */}
       <section 
         style={{ 
           backgroundColor: 'white',
@@ -427,7 +419,6 @@ const TermsAndConditions = () => {
             backgroundColor: 'white',
         }}>
           <div>
-            {/* Main Content */}
             <div>
               <div
                 style={{
@@ -440,7 +431,6 @@ const TermsAndConditions = () => {
                   margin: '0 auto'
                 }}
               >
-                {/* Introduction */}
                 <div style={{marginBottom: '3rem'}}>
                   <div 
                     style={{
@@ -483,7 +473,6 @@ const TermsAndConditions = () => {
                   </div>
                 </div>
 
-                {/* Terms Sections */}
                 <div className="terms-content">
                   <section data-section="acceptance" style={{marginBottom: '3rem'}}>
                     <div 
@@ -927,7 +916,6 @@ const TermsAndConditions = () => {
                       If you have any questions or concerns about these Terms, please contact us at:
                     </p>
                     
-                    {/* Contact Information Container */}
                     <div 
                       style={{
                         background: 'rgba(255, 255, 255, 0.95)',
@@ -1072,7 +1060,6 @@ const TermsAndConditions = () => {
                     </div>
                   </section>
 
-                  {/* Final Agreement */}
                   <section style={{marginBottom: '3rem'}}>
                     <div 
                       style={{
@@ -1152,7 +1139,6 @@ const TermsAndConditions = () => {
         </div>
       </section>
 
-      {/* Back to Top Button */}
       <button
         onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
         style={{
@@ -1182,8 +1168,6 @@ const TermsAndConditions = () => {
       >
         <i className="fas fa-arrow-up"></i>
       </button>
-
-      {/* FontAwesome is loaded from local package via import in src/index.js */}
 
       <style jsx>{`
         @keyframes float {

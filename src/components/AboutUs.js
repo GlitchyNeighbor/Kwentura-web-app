@@ -18,13 +18,13 @@ const AboutUsNavbar = () => {
   }, []);
 
   const handleNavigation = (path) => {
-    // Add fade out effect
+    
     document.body.style.opacity = '0';
     document.body.style.transition = 'opacity 0.3s ease-out';
     
     setTimeout(() => {
       navigate(path);
-      // Fade back in after navigation
+      
       setTimeout(() => {
         document.body.style.opacity = '1';
       }, 50);
@@ -55,7 +55,7 @@ const AboutUsNavbar = () => {
           alignItems: 'center'
         }}
       >
-        {/* Logo Section */}
+
         <div className="d-flex align-items-center" style={{gap: '1rem'}}>
           <div 
             className="logo"
@@ -74,7 +74,6 @@ const AboutUsNavbar = () => {
             onMouseEnter={(e) => e.target.style.transform = 'scale(1.1) rotate(5deg)'}
             onMouseLeave={(e) => e.target.style.transform = 'scale(1) rotate(0deg)'}
           >
-            {/* Logo */}
             <div className="logo-container" >
               <img
                 src={require("../assets/images/KLogo.png")}
@@ -115,8 +114,7 @@ const AboutUsNavbar = () => {
             </p>
           </div>
         </div>
-        
-        {/* Desktop Navigation */}
+  
         <nav className="d-none d-lg-flex align-items-center" style={{gap: '2rem'}}>
           <button 
             onClick={() => handleNavigation('/')}
@@ -233,8 +231,7 @@ const AboutUsNavbar = () => {
             Sign Up
           </button>
         </nav>
-        
-        {/* Mobile Menu Button */}
+
         <button 
           className="d-lg-none btn btn-link p-0"
           style={{
@@ -249,7 +246,6 @@ const AboutUsNavbar = () => {
         </button>
       </div>
       
-      {/* Mobile Menu */}
       {isMobileMenuOpen && (
         <div 
           className="d-lg-none"
@@ -274,14 +270,13 @@ const AboutUsNavbar = () => {
 
 const AboutUs = () => {
   useEffect(() => {
-    // FontAwesome is imported centrally in src/index.js
+    
   }, []);
 
   return (
     <div className="min-vh-100 d-flex flex-column">
       <AboutUsNavbar />
       
-      {/* Hero Section */}
       <section 
         style={{
           background: 'linear-gradient(135deg, #FFF5F8 0%, #FFE8F1 50%, #F8E8FF 100%)',
@@ -341,11 +336,9 @@ const AboutUs = () => {
         </Container>
       </section>
 
-      {/* Main Content */}
       <section style={{ padding: '4rem 0', backgroundColor: 'white' }}>
         <Container style={{ maxWidth: '1200px' }}>
           <Row className="g-4">
-            {/* System Overview */}
             <Col lg={6} className="mb-4">
               <div 
                 style={{
@@ -388,7 +381,6 @@ const AboutUs = () => {
               </div>
             </Col>
 
-            {/* Target Users */}
             <Col lg={6} className="mb-4">
               <div 
                 style={{
@@ -436,7 +428,6 @@ const AboutUs = () => {
             </Col>
           </Row>
 
-          {/* Key Features */}
           <Row className="mt-5">
             <Col xs={12}>
               <div className="text-center mb-4">
@@ -575,8 +566,6 @@ const AboutUs = () => {
               </Row>
             </Col>
           </Row>
-
-          {/* Goals & Tech Stack */}
           <Row className="g-4 mt-5">
             <Col lg={6}>
               <div 
@@ -668,7 +657,6 @@ const AboutUs = () => {
             </Col>
           </Row>
 
-          {/* Developer Info */}
           <Row className="mt-5">
             <Col xs={12}>
               <div 
@@ -731,8 +719,6 @@ const AboutUs = () => {
 
       <Footer />
       
-      {/* FontAwesome is loaded from local package via import in src/index.js */}
-      
       <style jsx>{`
         .mobile-nav-link:hover {
           background: rgba(255, 84, 154, 0.05) !important;
@@ -743,7 +729,7 @@ const AboutUs = () => {
           scroll-behavior: smooth;
         }
 
-        /* Page transition styles */
+       
         body {
           transition: opacity 0.3s ease-out;
         }

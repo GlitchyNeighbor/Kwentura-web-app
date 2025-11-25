@@ -21,7 +21,7 @@ import { Volume2, BookOpen, Award } from "lucide-react";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `${process.env.PUBLIC_URL}/pdf.worker.min.js`;
 
-// Enhanced styles matching Stories.js theme
+
 const cardStyle = {
   border: "none",
   borderRadius: "16px",
@@ -158,7 +158,7 @@ const ReadStory = () => {
   const [showFullscreenModal, setShowFullscreenModal] = useState(false);
   const flipBook = React.useRef();
   const [hasReachedEnd, setHasReachedEnd] = useState(false);
-  // pdfPagesText was unused; removed to satisfy ESLint
+  
   const [ttsAudio, setTtsAudio] = useState(null);
   const [ttsLoading] = useState(false);
   const [ttsAudioLoading, setTtsAudioLoading] = useState(false);
@@ -172,7 +172,7 @@ const ReadStory = () => {
   const [assessmentHovered, setAssessmentHovered] = useState(false);
 
   const [isFlipbookInitialized, setIsFlipbookInitialized] = useState(false);
-  // --- START: New states for translation ---
+  
   const [currentLanguage, setCurrentLanguage] = useState(null);
   const [displayedPageTexts, setDisplayedPageTexts] = useState([]);
   
@@ -210,7 +210,7 @@ const ReadStory = () => {
         if (docSnap.exists()) {
           const storyData = docSnap.data();
           setStory(storyData);
-          // Set the initial language from the story's language field, with fallback to old field
+          
           const initialLang = storyData.language || storyData.sourceLanguage || 'en-US';
           if (initialLang) {
             setCurrentLanguage(initialLang);
@@ -225,7 +225,7 @@ const ReadStory = () => {
     fetchStory();
   }, [id]);
 
-  // Effect to update the displayed text when the language changes
+  
   useEffect(() => {
     if (!story || !currentLanguage) return;
 
@@ -233,18 +233,18 @@ const ReadStory = () => {
     if (currentLanguage === sourceLang) {
       setDisplayedPageTexts(story.pageTexts || []);
     } else {
-      // Find the translation for the current language
+      
       const translatedTexts = story.translations?.[currentLanguage];
       if (translatedTexts) {
         setDisplayedPageTexts(translatedTexts);
       } else {
-        // Fallback to source language if translation is missing
+        
         setDisplayedPageTexts(story.pageTexts || []);
       }
     }
   }, [story, currentLanguage]);
 
-  // Story engagement tracking
+  
   useEffect(() => {
     const auth = getAuth();
     const user = auth.currentUser;
@@ -363,7 +363,7 @@ const ReadStory = () => {
   }, [story]);
 
   useEffect(() => {
-    // Updated to handle nested TTS data
+    
     if (story?.ttsAudio?.[currentLanguage]?.length > 0) {
       setTtsAudioData(story.ttsAudio[currentLanguage]);
       setTtsAudioLoading(false);
@@ -375,19 +375,19 @@ const ReadStory = () => {
     }
   }, [story, currentLanguage]);
 
-  const playTtsForSinglePage = useCallback(async (pageIndex) => { // Restored this function
+  const playTtsForSinglePage = useCallback(async (pageIndex) => { 
     if (pageIndex < 0 || !ttsAudioData || pageIndex >= pdfPagesAsImages.length) {
-  // invalid page index or missing audio data — silently ignore in production
+  
       return;
     }
 
-    // If this page's audio is already playing, stop it.
+    
     if (isPlaying && currentPageNumber === pageIndex && ttsAudioRef.current) {
       stopTts();
       return;
     }
 
-    stopTts(); // Stop any other audio
+    stopTts(); 
 
     const audioDataForPage = ttsAudioData.find(d => d.pageNumber === pageIndex + 1);
 
@@ -420,7 +420,7 @@ const ReadStory = () => {
     const rightPageIndex = e.data;
     stopTts();
 
-    // Use the new ttsAudioData state which is language-aware
+    
     if (ttsAudioData.length > 0) {
       const leftPageIndex = rightPageIndex - 1;
       setCurrentFlipIndex(rightPageIndex);
@@ -476,7 +476,7 @@ const ReadStory = () => {
   }, [ttsAudioData, pdfPagesAsImages.length, stopTts]);
 
   useEffect(() => {
-    // Use the new ttsAudioData state which is language-aware
+    
     if (showFullscreenModal && ttsAudioData.length > 0 && !ttsAudioLoading) {
       if (!isFlipbookInitialized) {
         const initializeFirstPage = () => {
@@ -490,7 +490,7 @@ const ReadStory = () => {
             setIsPlaying(true);
             setCurrentPageNumber(0);
             audio.play().catch(e => console.error("Error playing initial TTS:", e));
-            // When the first page audio ends, automatically play the second if it exists
+            
             audio.onended = () => stopTts();
           }
         };
@@ -535,12 +535,12 @@ const ReadStory = () => {
   }, [stopTts]);
 
   const handleOpenFullscreen = () => {
-    setIsFlipbookInitialized(false); // Reset on open
+    setIsFlipbookInitialized(false); 
     setShowFullscreenModal(true);
   };
 
   const handleStartAssessment = () => {
-    // Open assessment in new tab
+    
     const assessmentUrl = `/teacher/story-assessment/${id}`;
     window.open(assessmentUrl, '_blank');
   };
@@ -555,7 +555,7 @@ const ReadStory = () => {
     const nextLang = availableLangs[nextLangIndex];
 
     setCurrentLanguage(nextLang);
-    // Stop any playing audio when language is switched
+    
     stopTts();
   };
 
@@ -639,7 +639,6 @@ const ReadStory = () => {
           marginLeft: showSidebar ? "250px" : "0",
         }}
       >
-        {/* Header Section */}
         <Row className="align-items-center mb-4" style={{ paddingTop: "8px" }}>
           <Col xs="auto" className="d-flex align-items-center gap-3">
             <Button
@@ -694,8 +693,6 @@ const ReadStory = () => {
             )}
           </Col>
         </Row>
-
-        {/* Main Content */}
         {isLoadingPdfPages || ttsAudioLoading ? (
           <Row className="justify-content-center align-items-center" style={{ minHeight: "60vh" }}>
             <Col xs={12} className="text-center">
@@ -759,8 +756,6 @@ const ReadStory = () => {
                   <BookOpen size={20} className="me-2" />
                   Start Reading
                 </Button>
-
-                {/* Assessment Button - Shows after completing story */}
                 {hasReachedEnd && (
                   <div className="mt-4">
                     <div className="mb-3">
@@ -807,7 +802,6 @@ const ReadStory = () => {
           </Row>
         )}
 
-        {/* Fullscreen Modal for Reading */}
         <Modal
           show={showFullscreenModal}
           onHide={() => setShowFullscreenModal(false)}
@@ -820,7 +814,7 @@ const ReadStory = () => {
             border: "none"
           }}>
             <Modal.Title style={{ fontWeight: "700" }}>{story?.title || "Story"}</Modal.Title>
-            {/* --- START: Language Toggle Button --- */}
+
             {story?.translations && Object.keys(story.translations).length > 0 && (
               <Button
                 variant="light"
@@ -839,9 +833,7 @@ const ReadStory = () => {
                 {currentLanguage === 'en-US' ? 'Filipino' : 'English'}
               </Button>
             )}
-            {/* --- START: Page-specific TTS Buttons (Restored) --- */}
             <div style={{ position: 'absolute', right: '180px', top: '12px', display: 'flex', gap: '8px' }}>
-              {/* Left Page Button (for the first visible page) */}
               {currentFlipIndex > 0 && currentFlipIndex <= pdfPagesAsImages.length && (
                 <Button
                   variant="light"
@@ -859,7 +851,6 @@ const ReadStory = () => {
                   {currentFlipIndex}
                 </Button>
               )}
-              {/* Right Page Button (for the second visible page) */}
               {currentFlipIndex < pdfPagesAsImages.length && (
                  <Button
                   variant="light"
@@ -878,8 +869,6 @@ const ReadStory = () => {
                 </Button>
               )}
             </div>
-            {/* --- END: Page-specific TTS Buttons (Restored) --- */}
-            {/* --- END: Language Toggle Button --- */}
           </Modal.Header>
           <Modal.Body className="p-0 d-flex flex-column" style={{ background: "#f8f9fa" }}>
             {isLoadingPdfPages && !pdfPagesAsImages.length ? (

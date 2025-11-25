@@ -28,7 +28,7 @@ import {
 } from "react-bootstrap-icons";
 import { Eye, EyeOff, Users, UserCheck, UserPlus } from "lucide-react";
 
-// Firebase imports
+
 import {
   doc,
   getDocs,
@@ -52,21 +52,21 @@ import SidebarMenuAdmin from "./SidebarMenuAdmin";
 import TopNavbar from "./TopNavbar";
 import "../scss/custom.scss";
 
-// Regex for checking presence of symbol characters in passwords
-// Use RegExp constructor to avoid unnecessary-escape ESLint warnings
+
+
 const PASSWORD_SYMBOL_REGEX = new RegExp("[!@#$%^&*()_+\\\-=[\\]{};':\"\\\\|,.<>/?]");
 
-// Initialize Firebase Functions
+
 const functions = getFunctions(app);
 const logAdminUiActionCallable = httpsCallable(functions, 'logAdminUiAction');
 
-// Function to call the Firebase Cloud Function for updating passwords
+
 async function updateTeacherPassword(uid, newPassword) {
   const updatePasswordFn = httpsCallable(functions, "updateAdminPassword");
   return updatePasswordFn({ uid, newPassword });
 }
 
-// Constants
+
 const COLORS = {
   primary: "#FF69B4",
   secondary: "#FFB6C1", 
@@ -93,7 +93,7 @@ const SECTIONS = [
   { value: "INF227", label: "INF227" },
 ];
 
-// Custom hooks
+
 const useTeachers = () => {
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -147,7 +147,7 @@ const useAlert = () => {
   return { alert, showAlert, hideAlert };
 };
 
-// Utility functions
+
 const validatePassword = (password) => {
   const requirements = {
     minLength: password.length >= 6,
@@ -162,7 +162,7 @@ const formatDisplayName = (teacher) => {
   return `${teacher.firstName || ''} ${teacher.lastName || ''}`.trim();
 };
 
-// Components
+
 const StatCard = ({ title, value, icon: IconComponent, color, trend }) => (
   <Card className="shadow-sm h-100 border-0" style={{ borderRadius: "12px" }}>
     <Card.Body className="p-4">
@@ -595,21 +595,21 @@ const DeleteConfirmModal = ({ show, onHide, onConfirm, teacher, loading }) => (
   </Modal>
 );
 
-// Main Component
+
 const ManageTeachers = () => {
   const navigate = useNavigate();
   const { teachers, setTeachers, loading: teachersLoading, error: teachersError, refetch } = useTeachers();
   const { alert, showAlert, hideAlert } = useAlert();
 
-  // UI State
+  
   const [showSidebar, setShowSidebar] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [schoolIdStatus, setSchoolIdStatus] = useState('idle'); // 'idle', 'checking', 'available', 'taken'
+  const [schoolIdStatus, setSchoolIdStatus] = useState('idle'); 
   const [loading, setLoading] = useState(false);
 
-  // Form State
+  
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedTeacher, setSelectedTeacher] = useState(null);
   const [formData, setFormData] = useState({
@@ -634,7 +634,7 @@ const ManageTeachers = () => {
 
   const currentUser = auth.currentUser;
 
-  // Computed values
+  
   const filteredTeachers = useMemo(() => {
     return teachers.filter((teacher) =>
       Object.values(teacher).some((value) =>
@@ -653,7 +653,7 @@ const ManageTeachers = () => {
     }, {}),
   }), [teachers]);
 
-  // Event handlers
+  
   const toggleSidebar = useCallback(() => {
     setShowSidebar(prev => !prev);
   }, []);
@@ -672,7 +672,7 @@ const ManageTeachers = () => {
         const querySnapshot = await getDocs(q);
         if (!querySnapshot.empty) {
           if (excludeId) {
-            // If we are editing, check if the found ID is not the same as the current teacher's ID
+            
             if (querySnapshot.docs.some(doc => doc.id !== excludeId)) {
               isTaken = true;
               break;
@@ -769,7 +769,7 @@ const ManageTeachers = () => {
   }, []);
 
   const handleSubmit = useCallback(async () => {
-    // Validation
+    
     if (
       !formData.firstName ||
       !formData.lastName ||
@@ -822,11 +822,11 @@ const ManageTeachers = () => {
       };
 
       if (isEditMode && selectedTeacher) {
-        // Update existing teacher
+        
         const teacherRef = doc(db, "teachers", selectedTeacher.id);
         await updateDoc(teacherRef, teacherData);
 
-        // --- START: Added Password Update Logic ---
+        
         if (formData.password && formData.password.length >= 6) {
           try {
             await updateTeacherPassword(selectedTeacher.uid, formData.password);
@@ -835,7 +835,7 @@ const ManageTeachers = () => {
             showAlert(`Failed to update password: ${err.message}`, "danger");
           }
         }
-        // --- END: Added Password Update Logic ---
+        
 
         setTeachers((prevTeachers) =>
           prevTeachers.map((teacher) =>
@@ -847,7 +847,7 @@ const ManageTeachers = () => {
 
         showAlert("Teacher updated successfully!", "success");
 
-        // Log admin action
+        
         const teacherFullName = formatDisplayName(teacherData);
         logAdminUiActionCallable({
           actionType: 'teacher_account_updated',
@@ -858,7 +858,7 @@ const ManageTeachers = () => {
           targetUserFullName: teacherFullName,
         }).catch(console.error);
       } else {
-        // Create new teacher
+        
         const secondaryApp = initializeApp(firebaseConfig, `secondary-creation-${Date.now()}`);
         const secondaryAuth = getAuth(secondaryApp);
         const userCredential = await createUserWithEmailAndPassword(
@@ -876,12 +876,12 @@ const ManageTeachers = () => {
         const docRef = doc(db, "teachers", authUser.uid);
         await setDoc(docRef, teacherData);
 
-        // Update local state
+        
         setTeachers(prev => [...prev, { id: authUser.uid, ...teacherData }]);
 
         showAlert("Teacher created successfully!", "success");
 
-        // Log admin action
+        
         const teacherFullName = formatDisplayName(teacherData);
         logAdminUiActionCallable({
           actionType: 'teacher_account_created',
@@ -897,7 +897,7 @@ const ManageTeachers = () => {
     } catch (error) {
       console.error(isEditMode ? "Error updating teacher:" : "Error creating teacher:", error);
 
-      // Cleanup on error
+      
       if (!isEditMode && authUser) {
         try {
           await deleteUser(authUser);
@@ -906,7 +906,7 @@ const ManageTeachers = () => {
         }
       }
 
-      // Error messages
+      
       let errorMessage = error.message;
       if (error.code === "auth/email-already-in-use") {
         errorMessage = "This email address is already registered.";
@@ -939,7 +939,7 @@ const ManageTeachers = () => {
       setTeachers(teachers.filter((teacher) => teacher.id !== selectedTeacher.id));
       showAlert("Teacher archived successfully!", "success");
 
-      // Log admin action
+      
       const teacherFullName = formatDisplayName(selectedTeacher);
       logAdminUiActionCallable({
         actionType: 'teacher_account_archived',
@@ -1040,7 +1040,6 @@ const ManageTeachers = () => {
             background: 'linear-gradient(135deg, #FFF5F8 0%, #FFE8F1 50%, #F8E8FF 100%)',
           }}
         >
-          {/* Alert */}
           <Alert
             show={alert.show}
             variant={alert.variant}
@@ -1060,7 +1059,6 @@ const ManageTeachers = () => {
             {alert.message}
           </Alert>
 
-          {/* Header */}
           <div className="d-flex justify-content-between align-items-center mb-4">
             <div className="d-flex align-items-center">
               <Button
@@ -1119,7 +1117,6 @@ const ManageTeachers = () => {
             </div>
           </div>
 
-          {/* Stats Cards */}
           <Row className="g-4 mb-4">
             <Col lg={3} md={6}>
               <StatCard
@@ -1155,7 +1152,6 @@ const ManageTeachers = () => {
             </Col>
           </Row>
 
-          {/* Error State */}
           {teachersError && (
             <Alert variant="danger" className="mb-4">
               <strong>Error loading teachers:</strong> {teachersError}
@@ -1170,7 +1166,6 @@ const ManageTeachers = () => {
             </Alert>
           )}
 
-          {/* Content */}
           <Card className="shadow-sm border-0" style={{ borderRadius: "15px" }}>
             <Card.Header 
               className="border-0 py-4"
@@ -1352,7 +1347,7 @@ const ManageTeachers = () => {
                           <Badge 
                             className="fw-semibold"
                             style={{ 
-                              backgroundColor: COLORS.pink, // changed from blue to pink
+                              backgroundColor: COLORS.pink, 
                               color: 'white',
                               fontSize: '0.8rem',
                               borderRadius: '20px',
@@ -1368,7 +1363,7 @@ const ManageTeachers = () => {
                           <Badge 
                             className="fw-semibold"
                             style={{   
-                              backgroundColor: COLORS.pink, // changed from blue to pink
+                              backgroundColor: COLORS.pink, 
                               color: 'white',
                               fontSize: '0.8rem',
                               borderRadius: '20px',
@@ -1384,7 +1379,7 @@ const ManageTeachers = () => {
                           <Badge 
                             className="fw-semibold"
                             style={{ 
-                              backgroundColor: COLORS.pink, // changed from blue to pink
+                              backgroundColor: COLORS.pink, 
                               color: 'white',
                               fontSize: '0.8rem',
                               borderRadius: '20px',
@@ -1461,7 +1456,6 @@ const ManageTeachers = () => {
         </Container>
       </div>
 
-      {/* Modals */}
       <TeacherModal
         show={showModal}
         onHide={handleCloseModal}

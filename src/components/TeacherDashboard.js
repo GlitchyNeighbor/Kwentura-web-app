@@ -23,7 +23,7 @@ import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore"; 
 import { generateContent } from "../services/AIService.js";
 
-// Constants - Updated to match AdminDashboard.js color scheme
+
 const COLORS = {
   primary: "#FF69B4",
   secondary: "#FFB6C1", 
@@ -55,7 +55,7 @@ const CARD_STYLES = {
   bookmarks: { bg: "#FFFACD", icon: "#FFD700" },
 };
 
-// Custom hooks
+
 const useAuth = () => {
   const [currentTeacher, setCurrentTeacher] = useState(null);
   const [teacherSection, setTeacherSection] = useState("");
@@ -94,12 +94,12 @@ const useAuth = () => {
   return { currentTeacher, teacherSection, authLoading, error };
 };
 
-// Utility functions
+
 const capitalizeStatus = (status) => {
   return status.charAt(0).toUpperCase() + status.slice(1).replace("_", " ");
 };
 
-// Data fetching functions
+
 const fetchPopularStoriesData = async () => {
   try {
     const storiesRef = collection(db, "stories");
@@ -266,7 +266,7 @@ const fetchQuizScoresData = async (section) => {
   }
 };
 
-// UI Components - Updated to match AdminDashboard.js style
+
 const MetricCard = ({ title, value, icon: IconComponent, style, loading }) => (
   <Card className="shadow-sm h-100 border-0" style={{ borderRadius: "12px" }}>
     <Card.Body className="p-4">
@@ -363,7 +363,7 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 };
 
-// Main Component
+
 const TeacherDashboard = () => {
   const [showSidebar, setShowSidebar] = useState(false);
   const [dashboardData, setDashboardData] = useState({
@@ -480,7 +480,7 @@ const TeacherDashboard = () => {
   const renderBarChart = useMemo(() => (data) => {
     if (!data.length) return null;
 
-    // Truncate long titles for better display
+    
     const processedData = data.map(item => ({
       ...item,
       shortTitle: item.title.length > 8 ? `${item.title.substring(0, 8)}...` : item.title,
@@ -549,7 +549,6 @@ const TeacherDashboard = () => {
           </BarChart>
         </ResponsiveContainer>
         
-        {/* Story insights below chart */}
         <div  >
           <div className="row g-1 justify-content-center text-center">
             <div className="col-md-4 col-sm-12 mb-2">
@@ -577,7 +576,7 @@ const TeacherDashboard = () => {
   const renderBookmarkChart = useMemo(() => (data) => {
     if (!data.length) return null;
 
-    // Truncate long titles for better display
+    
     const processedData = data.map(item => ({
       ...item,
       shortTitle: item.title.length > 8 ? `${item.title.substring(0, 8)}...` : item.title,
@@ -788,7 +787,6 @@ const TeacherDashboard = () => {
             background: 'linear-gradient(135deg, #FFF5F8 0%, #FFE8F1 50%, #F8E8FF 100%)',
           }}
         >
-          {/* Header - Updated to match AdminDashboard.js style */}
           <div className="d-flex justify-content-between align-items-center mb-4">
             <div>
               <h1 className="mb-1 fw-bold text-dark">Teacher Dashboard</h1>
@@ -808,7 +806,6 @@ const TeacherDashboard = () => {
             </Alert>
           )}
 
-          {/* Metrics Cards - Updated styling */}
           <Row className="g-4 mb-4">
             <Col lg={3} md={6}>
               <MetricCard
@@ -857,7 +854,6 @@ const TeacherDashboard = () => {
             </Col>
           </Row>
 
-          {/* Charts Section */}
           <Row className="g-4 mb-4">
             <Col xl={6} lg={12}>
               <ChartCard
@@ -879,7 +875,6 @@ const TeacherDashboard = () => {
             </Col>
           </Row>
 
-          {/* Additional Chart Row */}
           {dashboardData.students.approvalData.length > 0 && (
             <Row className="g-4 mb-4">
               <Col xl={6} lg={12}>
@@ -901,7 +896,6 @@ const TeacherDashboard = () => {
                 </ChartCard>
               </Col>
               <Col xl={6}>
-                {/* Enhanced Section Insights Card */}
                 <Card className="shadow-sm h-100 border-0" style={{ borderRadius: "12px" }}>
                   <Card.Header 
                     className="border-0 py-4"
@@ -913,7 +907,6 @@ const TeacherDashboard = () => {
                     <h5 className="mb-0 fw-semibold text-dark">Section Insights</h5>
                   </Card.Header>
                   <Card.Body className="p-4">
-                    {/* Top metrics row */}
                     <Row className="g-3 mb-4">
                       <Col sm={6}>
                         <div className="text-center p-3 rounded-3" style={{ backgroundColor: `${COLORS.success}08` }}>
@@ -941,7 +934,6 @@ const TeacherDashboard = () => {
                       </Col>
                     </Row>
 
-                    {/* Grade distribution list */}
                     {dashboardData.students.gradeData.length > 0 && (
                       <div>
                         <h6 className="mb-3 text-dark fw-semibold">Grade Distribution:</h6>

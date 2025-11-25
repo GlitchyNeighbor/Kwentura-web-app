@@ -18,7 +18,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import LogoutConfirmation from "./LogoutConfirmation";
 import { useAuth } from "../context/AuthContext.js";
 
-// Constants - Updated to match your pink theme
+
 const COLORS = {
   primary: "#FF69B4",
   secondary: "#FFB6C1", 
@@ -100,9 +100,9 @@ const NAVIGATION_ITEMS = {
   ]
 };
 
-// Custom hooks - Updated with TopNavbar logic
 
-// UI Components
+
+
 const UserProfile = React.memo(({ userName, profileImageUrl, userRole, loading }) => {
   const displayRole = useMemo(() => {
     if (!userRole) return "User";
@@ -478,7 +478,7 @@ const SidebarMenuAdmin = ({ isOpen, toggleSidebar }) => {
           zIndex: 99,
         }}
       >
-        {/* User Profile Section */}
+
         <div 
           className="w-100 border-bottom"
           style={{ 
@@ -545,7 +545,6 @@ const SidebarMenuAdmin = ({ isOpen, toggleSidebar }) => {
           )}
         </div>
 
-        {/* Navigation */}
         <Nav 
           className="flex-column w-100 flex-grow-1" 
           style={{ 
@@ -557,7 +556,6 @@ const SidebarMenuAdmin = ({ isOpen, toggleSidebar }) => {
         >
           {isOpen ? (
             <div className="d-flex flex-column h-100">
-              {/* Dashboard Section */}
               <div className="sidebar-section">
                 <div 
                   className="sidebar-heading text-uppercase fw-bold small mb-3"
@@ -590,13 +588,11 @@ const SidebarMenuAdmin = ({ isOpen, toggleSidebar }) => {
                 </div>
               </div>
 
-              {/* Dynamic spacing based on User Management state */}
               <div style={{ 
                 height: expandedItems.has('users') ? '20px' : '40px',
                 transition: 'height 0.3s ease'
               }}></div>
 
-              {/* Account Section */}
               <div className="sidebar-section">
                 <div 
                   className="sidebar-heading text-uppercase fw-bold small mb-2"

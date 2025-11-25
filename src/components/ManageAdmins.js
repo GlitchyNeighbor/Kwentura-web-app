@@ -83,7 +83,7 @@ const ManageAdmins = () => {
     message: "",
     type: "success",
   });
-  const [schoolIdStatus, setSchoolIdStatus] = useState('idle'); // 'idle', 'checking', 'available', 'taken'
+  const [schoolIdStatus, setSchoolIdStatus] = useState('idle'); 
 
   
   const [showPassword, setShowPassword] = useState(false);
@@ -97,9 +97,9 @@ const ManageAdmins = () => {
     hasSymbol: false,
   });
 
-  // Regex for checking presence of symbol characters in passwords
-  // Regex for checking presence of symbol characters in passwords
-  // Use RegExp constructor so '/' doesn't need escaping and ESLint won't flag unnecessary escapes
+  
+  
+  
   const PASSWORD_SYMBOL_REGEX = new RegExp("[-!@#$%^&*()_+=[\\]{};':\"\\\\|,.<>/?]");
   const showAlert = useCallback((message, type = "success") => {
     setAlert({ show: true, message, type });
@@ -389,17 +389,17 @@ const ManageAdmins = () => {
         );
 
         showAlert("Admin updated successfully!", "success");
-        // --- LOG EDIT ---
+        
         const adminFullName = `${formData.firstName || ""} ${formData.lastName || ""}`.trim();
         logAdminUiActionCallable({
           actionType: 'admin_account_updated',
-          adminId: currentUser?.uid, // <-- Add this line
+          adminId: currentUser?.uid, 
           collectionName: 'admins',
           documentId: selectedAdmin.id,
           targetUserId: selectedAdmin.uid || selectedAdmin.id,
           targetUserFullName: adminFullName,
         }).catch(console.error);
-        // --- END LOG EDIT ---
+        
       } else {
         
         const secondaryApp = initializeApp(firebaseConfig, `secondary-creation-${Date.now()}`);
@@ -428,11 +428,11 @@ const ManageAdmins = () => {
         setAdmins((prevAdmins) => [...prevAdmins, newAdminWithId]);
         showAlert("Admin added successfully!", "success");
 
-        // Log admin action for admin creation
+        
         const adminFullName = `${formData.firstName || ""} ${formData.lastName || ""}`.trim();
         logAdminUiActionCallable({
           actionType: 'admin_account_created',
-          adminId: currentUser?.uid, // <-- Add this line
+          adminId: currentUser?.uid, 
           collectionName: 'admins',
           documentId: authUid,
           targetUserId: authUid,
@@ -505,7 +505,7 @@ const ManageAdmins = () => {
         actionType: 'admin_account_archived',
         collectionName: 'admins',
         documentId: selectedAdmin.id,
-        targetUserId: selectedAdmin.uid || selectedAdmin.id, // Ensure this uses the correct ID field
+        targetUserId: selectedAdmin.uid || selectedAdmin.id, 
         targetUserFullName: adminFullName,
       }).catch(console.error);
       setShowDeleteConfirm(false);
@@ -543,7 +543,6 @@ const ManageAdmins = () => {
       ) : (
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          width="14"
           height="14"
           viewBox="0 0 24 24"
           fill="none"
@@ -621,7 +620,7 @@ const ManageAdmins = () => {
 
           }}
         >
-          {/* Alert */}
+
           <Alert
             show={alert.show}
             variant={alert.type === "danger" ? "danger" : "success"}
@@ -641,7 +640,6 @@ const ManageAdmins = () => {
             {alert.message}
           </Alert>
 
-          {/* Header */}
           <div className="d-flex justify-content-between align-items-center mb-4">
             <div className="d-flex align-items-center">
               <Button
@@ -699,7 +697,6 @@ const ManageAdmins = () => {
             </div>
           </div>
 
-          {/* Stats Cards */}
           <Row className="g-4 mb-4">
             <Col lg={3} md={6}>
               <Card className="shadow-sm h-100 border-0" style={{ borderRadius: "12px" }}>
@@ -727,7 +724,6 @@ const ManageAdmins = () => {
             </Col>
           </Row>
 
-          {/* Content */}
           <Card className="shadow-sm border-0" style={{ borderRadius: "15px" }}>
             <Card.Header 
               className="border-0 py-4"
@@ -1208,7 +1204,7 @@ const ManageAdmins = () => {
           <Button
             onClick={handleSubmit}
             disabled={loading}
-            // Add a disabled check for schoolIdStatus if needed, e.g., disabled={loading || schoolIdStatus === 'taken'}
+            
             style={{
               backgroundColor: COLORS.pink,
               border: "none",

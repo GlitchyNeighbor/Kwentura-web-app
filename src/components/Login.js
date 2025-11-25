@@ -9,7 +9,7 @@ import {
   signOut, 
 } from "firebase/auth";
 import { Eye, EyeOff } from "lucide-react";
-// We'll create the navbar inline to match contact.js style
+
 import {
   Container,
   Form,
@@ -57,7 +57,6 @@ const HomeNavbar = () => {
           alignItems: 'center'
         }}
       >
-        {/* Logo Section */}
         <div className="d-flex align-items-center" style={{gap: '1rem'}}>
           <div 
             className="logo"
@@ -76,7 +75,6 @@ const HomeNavbar = () => {
             onMouseEnter={(e) => e.target.style.transform = 'scale(1.1) rotate(5deg)'}
             onMouseLeave={(e) => e.target.style.transform = 'scale(1) rotate(0deg)'}
           >
-            {/* Logo */}
             <div className="logo-container" >
               <img
                 src={require("../assets/images/KLogo.png")}
@@ -118,7 +116,6 @@ const HomeNavbar = () => {
           </div>
         </div>
         
-        {/* Desktop Navigation */}
         <nav className="d-none d-lg-flex align-items-center" style={{gap: '2rem'}}>
           <a 
             href="/" 
@@ -225,7 +222,6 @@ const HomeNavbar = () => {
           </a>
         </nav>
         
-        {/* Mobile Menu Button */}
         <button 
           className="d-lg-none btn btn-link p-0"
           style={{
@@ -239,8 +235,7 @@ const HomeNavbar = () => {
           <i className={`fas ${isMobileMenuOpen ? 'fa-times' : 'fa-bars'}`}></i>
         </button>
       </div>
-      
-      {/* Mobile Menu */}
+
       {isMobileMenuOpen && (
         <div 
           className="d-lg-none"
@@ -278,7 +273,7 @@ const Login = () => {
   const location = useLocation();
 
   useEffect(() => {
-    // FontAwesome is imported centrally in src/index.js
+    
   }, []);
 
   useEffect(() => {
@@ -560,7 +555,6 @@ const Login = () => {
     >
       <HomeNavbar />
 
-      {/* Combined Hero and Login Section */}
       <section 
         className="d-flex align-items-center justify-content-center"
         style={{
@@ -572,7 +566,6 @@ const Login = () => {
           overflow: 'hidden'
         }}
       >
-        {/* Background decorative elements */}
         <div 
           className="position-absolute"
           style={{
@@ -622,7 +615,6 @@ const Login = () => {
           }}
         >
           <Row className="justify-content-center align-items-center w-100">
-            {/* Left Column - Hero Content */}
             <Col lg={6} className="text-center text-lg-start mb-4 mb-lg-0">
               <div 
                 className="d-inline-flex align-items-center mb-3"
@@ -668,7 +660,6 @@ const Login = () => {
               </p>
             </Col>
 
-            {/* Right Column - Login Form */}
             <Col lg={6}>
               <div className="d-flex justify-content-center justify-content-lg-end">
                 <div
@@ -683,7 +674,6 @@ const Login = () => {
                     maxWidth: '420px'
                   }}
                 >
-                  {/* Alerts */}
                   {infoAlert && (
                     <Alert 
                       variant="info" 
@@ -724,7 +714,6 @@ const Login = () => {
                     </Alert>
                   )}
 
-                  {/* Form Header */}
                   <div className="text-center mb-3">
                     <div 
                       style={{
@@ -900,7 +889,6 @@ const Login = () => {
                       )}
                     </Button>
 
-                    {/* Links */}
                     <div className="text-center">
                       <Link
                         to="/forgot-password"
@@ -956,8 +944,6 @@ const Login = () => {
           </Row>
         </Container>
       </section>
-
-      {/* FontAwesome is loaded from local package via import in src/index.js */}
 
       <style jsx>{`
         @keyframes float {

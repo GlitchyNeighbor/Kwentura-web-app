@@ -41,7 +41,7 @@ const StorySynopsis = () => {
   const toggleSidebar = () => setShowSidebar(!showSidebar);
   const { userData } = useAuth();
 
-  // Check if story is bookmarked
+  
   useEffect(() => {
     const checkBookmarked = async () => {
       if (!id) return;
@@ -66,14 +66,14 @@ const StorySynopsis = () => {
     checkBookmarked();
   }, [id]);
 
-  // Handle bookmark toggle
+  
   const handleBookmarkToggle = async () => {
     if (!story) return;
     
     setBookmarkLoading(true);
     
     if (bookmarked) {
-      // Remove bookmark
+      
       try {
         let queryRef;
         if (userData && userData.id) {
@@ -100,7 +100,7 @@ const StorySynopsis = () => {
         alert("Failed to remove bookmark.");
       }
     } else {
-      // Add bookmark
+      
       try {
         const favoriteId = `${id}_${Date.now()}`;
         if (userData && userData.id) {
@@ -271,7 +271,6 @@ const StorySynopsis = () => {
           marginLeft: showSidebar ? "250px" : "0",
         }}
       >
-        {/* Header Section */}
         <Row className="align-items-center mb-4" style={{ paddingTop: "8px" }}>
           <Col xs="auto" className="d-flex align-items-center gap-3">
             <Button
@@ -317,7 +316,6 @@ const StorySynopsis = () => {
 
         </Row>
 
-        {/* Main Story Card */}
         <div className="d-flex justify-content-center">
           <Card
             className="rounded-4 overflow-hidden"
@@ -332,7 +330,6 @@ const StorySynopsis = () => {
           >
             <Card.Body className="p-0">
               <Row className="g-0 align-items-stretch">
-                {/* Image Section */}
                 <Col lg={5} className="position-relative">
                   <div className="h-100 position-relative" style={{ minHeight: "500px" }}>
                     {story.image ? (
@@ -355,7 +352,6 @@ const StorySynopsis = () => {
                           }}
                         />
                         
-                        {/* Bookmark Button - Floating on Image */}
                         <div className="position-absolute" style={{ top: "20px", right: "20px" }}>
                           <Button
                             variant="light"
@@ -415,10 +411,8 @@ const StorySynopsis = () => {
                   </div>
                 </Col>
 
-                {/* Content Section */}
                 <Col lg={7}>
                   <div className="p-4 p-lg-5 h-100 d-flex flex-column">
-                    {/* Title and Author */}
                     <div className="mb-4">
                       <h1 className="fw-bold mb-3" style={{ 
                         fontSize: "2.5rem", 
@@ -455,7 +449,6 @@ const StorySynopsis = () => {
                       </Badge>
                     </div>
 
-                    {/* Synopsis Section */}
                     <div className="mb-4 flex-grow-1">
                       <h3 className="h4 fw-bold mb-3" style={{ color: "#333" }}>
                         📖 Synopsis
@@ -488,7 +481,6 @@ const StorySynopsis = () => {
                       )}
                     </div>
 
-                    {/* Action Button */}
                     <div className="mt-auto">
                       <Button
                         size="lg"

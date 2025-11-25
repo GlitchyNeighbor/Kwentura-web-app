@@ -27,7 +27,7 @@ import { useNavigate } from "react-router-dom";
 import { Search } from "react-bootstrap-icons";
 import { useAuth } from "../context/AuthContext.js";
 
-// --- Enhanced Styles ---
+
 const cardStyle = {
   minHeight: "420px",
   maxHeight: "470px",
@@ -199,7 +199,7 @@ const StoryCard = ({ id, title, image, category, author, onBookmarkToggle }) => 
             style={{
               display: "flex",
               flexDirection: "column",
-              alignItems: "center", // centers both horizontally
+              alignItems: "center", 
               justifyContent: "center",
             }}
           >
@@ -220,7 +220,6 @@ const StoryCard = ({ id, title, image, category, author, onBookmarkToggle }) => 
             >
               {title}
             </div>
-            {/* Author Section */}
             {author && (
               <div
                 style={{
@@ -293,7 +292,7 @@ const Stories = () => {
   }, []);
 
   const handleBookmarkToggle = (storyId, isBookmarked) => {
-    // kept for compatibility with StoryCard callback; no local state needed
+    
     return;
   };
 
@@ -353,7 +352,6 @@ const Stories = () => {
           marginLeft: showSidebar ? "250px" : "0",
         }}
       >
-        {/* Header Section */}
         <Row className="align-items-center mb-3" style={{ paddingTop: "8px" }}>
           <Col xs="auto" className="d-flex align-items-center gap-3">
             <Button
@@ -459,7 +457,6 @@ const Stories = () => {
           </Col>
         </Row>
 
-        {/* Category Navigation */}
         <Row className="justify-content-center mb-4">
           <Col className="d-flex justify-content-center">
             <Nav

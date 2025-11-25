@@ -46,11 +46,11 @@ import SidebarMenuAdmin from "./SidebarMenuAdmin";
 import TopNavbar from "./TopNavbar";
 import "../scss/custom.scss";
 
-// Initialize Firebase Functions
+
 const functions = getFunctions(app, "us-central1"); 
 const logAdminUiActionCallable = httpsCallable(functions, 'logAdminUiAction');
 
-// Constants
+
 const COLORS = {
   primary: "#FF69B4",
   secondary: "#FFB6C1", 
@@ -71,7 +71,7 @@ const ACCOUNT_TYPES = {
   student: { label: "Student", icon: PersonFill, color: COLORS.info },
 };
 
-// Custom hooks
+
 const useAccounts = (filterStatus, currentUser, authChecked) => {
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -99,7 +99,7 @@ const useAccounts = (filterStatus, currentUser, authChecked) => {
       setError(null);
       const allAccounts = [];
 
-      // Fetch admins
+      
       const adminsRef = collection(db, "admins");
       const adminsSnapshot = await getDocs(getAccountQuery(adminsRef));
       adminsSnapshot.forEach((doc) => {
@@ -111,7 +111,7 @@ const useAccounts = (filterStatus, currentUser, authChecked) => {
         });
       });
 
-      // Fetch teachers
+      
       const teachersRef = collection(db, "teachers");
       const teachersSnapshot = await getDocs(getAccountQuery(teachersRef));
       teachersSnapshot.forEach((doc) => {
@@ -123,7 +123,7 @@ const useAccounts = (filterStatus, currentUser, authChecked) => {
         });
       });
 
-      // Fetch students
+      
       const studentsRef = collection(db, "students");
       const studentsSnapshot = await getDocs(getAccountQuery(studentsRef));
       studentsSnapshot.forEach((doc) => {
@@ -175,7 +175,7 @@ const useAlert = () => {
   return { alert, showAlert, hideAlert };
 };
 
-// Components
+
 const StatCard = ({ title, value, icon: IconComponent, color, trend }) => (
   <Card className="shadow-sm h-100 border-0" style={{ borderRadius: "12px" }}>
     <Card.Body className="p-4">
@@ -331,22 +331,22 @@ const DeleteConfirmModal = ({ show, onHide, onConfirm, account, loading }) => (
   </Modal>
 );
 
-// Main Component
+
 const AccountList = () => {
   const navigate = useNavigate();
   const { alert, showAlert, hideAlert } = useAlert();
 
-  // Authentication state
+  
   const [currentUser, setCurrentUser] = useState(null); 
   const [authChecked, setAuthChecked] = useState(false);
 
-  // UI State
+  
   const [showSidebar, setShowSidebar] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("active");
   const [loading, setLoading] = useState(false);
 
-  // Modal state
+  
   const [showUnarchiveConfirm, setShowUnarchiveConfirm] = useState(false);
   const [selectedAccountToUnarchive, setSelectedAccountToUnarchive] = useState(null);
   const [showPermanentDeleteConfirm, setShowPermanentDeleteConfirm] = useState(false);
@@ -354,7 +354,7 @@ const AccountList = () => {
 
   const { accounts, setAccounts, loading: accountsLoading, error: accountsError } = useAccounts(filterStatus, currentUser, authChecked);
 
-  // Authentication effect
+  
   useEffect(() => {
     const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -367,7 +367,7 @@ const AccountList = () => {
     return () => unsubscribe();
   }, [showAlert]); 
 
-  // Computed values
+  
   const filteredAccounts = useMemo(() => {
     return accounts.filter((account) => {
       const searchTermLower = searchTerm.toLowerCase();
@@ -394,7 +394,7 @@ const AccountList = () => {
     }, {}),
   }), [accounts]);
 
-  // Event handlers
+  
   const toggleSidebar = useCallback(() => {
     setShowSidebar(prev => !prev);
   }, []);
@@ -439,7 +439,7 @@ const AccountList = () => {
 
       showAlert("Account unarchived successfully!", "success");
 
-      // Log admin action
+      
       logAdminUiActionCallable({
         actionType: 'account_unarchived',
         collectionName: collectionName,
@@ -516,7 +516,7 @@ const AccountList = () => {
           documentId: accountToDelete.id,
         });
 
-        // Log admin action
+        
         logAdminUiActionCallable({
           actionType: 'account_permanently_deleted',
           collectionName: collectionName,
@@ -674,7 +674,6 @@ const AccountList = () => {
             background: 'linear-gradient(135deg, #FFF5F8 0%, #FFE8F1 50%, #F8E8FF 100%)',
           }}
         >
-          {/* Alert */}
           <Alert
             show={alert.show}
             variant={alert.variant}
@@ -694,7 +693,6 @@ const AccountList = () => {
             {alert.message}
           </Alert>
 
-          {/* Header */}
           <div className="d-flex justify-content-between align-items-center mb-4">
             <div className="d-flex align-items-center">
               <Button
@@ -716,7 +714,6 @@ const AccountList = () => {
               </div>
             </div>
             <div className="d-flex align-items-center gap-3">
-              {/* Filter Buttons */}
               <div className="d-flex gap-2">
                 <FilterButton
                   active={filterStatus === "active"}
@@ -741,7 +738,6 @@ const AccountList = () => {
                 </FilterButton>
                 </div>
               
-              {/* Search */}
               <InputGroup style={{ width: "300px" }}>
                 <FormControl
                   placeholder="Search accounts..."
@@ -769,7 +765,6 @@ const AccountList = () => {
             </div>
           </div>
 
-          {/* Stats Cards */}
           <Row className="g-4 mb-4">
             <Col lg={3} md={6}>
               <StatCard
@@ -805,14 +800,12 @@ const AccountList = () => {
             </Col>
           </Row>
 
-          {/* Error State */}
           {accountsError && (
             <Alert variant="danger" className="mb-4">
               <strong>Error loading accounts:</strong> {accountsError}
             </Alert>
           )}
 
-          {/* Content */}
           <Card className="shadow-sm border-0" style={{ borderRadius: "15px" }}>
             <Card.Header 
               className="border-0 py-4"
@@ -1111,7 +1104,6 @@ const AccountList = () => {
         </Container>
       </div>
 
-      {/* Modals */}
       <UnarchiveConfirmModal
         show={showUnarchiveConfirm}
         onHide={() => {

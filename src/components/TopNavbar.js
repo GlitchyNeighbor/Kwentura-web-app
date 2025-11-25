@@ -5,10 +5,10 @@ import { User, LogOut, Bell } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.js";
 import LogoutConfirmation from "./LogoutConfirmation.js";
-import NotificationsModal from "./NotificationsModal.js"; // This will be updated next
+import NotificationsModal from "./NotificationsModal.js"; 
 import "../css/TopNavbar.css";
 import "../css/custom.css";
-// Removed unused Firestore imports (collection, query, where, getDocs) and db
+
 
 const USER_ROLES = {
   SUPERADMIN: "superAdmin",
@@ -26,7 +26,7 @@ const ROLE_DISPLAY_NAMES = {
   user: "User"
 };
 
-// Custom Toggle Component for Profile Dropdown
+
 const ProfileToggle = React.forwardRef(({ children, onClick }, ref) => (
   <div
     ref={ref}
@@ -69,7 +69,7 @@ const TopNavbar = ({ toggleSidebar, isSidebarOpen = false }) => {
     if (!userData) return "User";
     if (userData.fullName?.trim()) return userData.fullName;
     if (userData.firstName?.trim()) return userData.firstName;
-    // Use the role directly without lowercasing it for lookup
+    
     return ROLE_DISPLAY_NAMES[userData.role] || ROLE_DISPLAY_NAMES[USER_ROLES.USER];
   }, [userData, loading]);
 
@@ -77,7 +77,7 @@ const TopNavbar = ({ toggleSidebar, isSidebarOpen = false }) => {
     return userData?.profileImageUrl || require("../assets/images/profile.png");
   }, [userData]);
 
-  // Build notifications array depending on role
+  
   const notifications = useMemo(() => {
     if (!userData) return [];
     if (userData.role === 'teacher') {
@@ -111,12 +111,12 @@ const TopNavbar = ({ toggleSidebar, isSidebarOpen = false }) => {
   }, [toggleSidebar]);
 
   const handleProfileClick = useCallback(() => {
-    // Route to the correct settings/profile page depending on role
-    // Debug: log resolved role to help diagnose navigation issues
+    
+    
     const role = userData?.role;
-  // debug removed
+  
 
-    // Navigate based on role
+    
     if (role === 'admin' || role === 'superAdmin') {
       navigate('/admin/settings');
     } else if (role === 'teacher') {
@@ -150,7 +150,7 @@ const TopNavbar = ({ toggleSidebar, isSidebarOpen = false }) => {
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        // Extra handling if needed
+        
       }
     };
 
@@ -169,7 +169,7 @@ const TopNavbar = ({ toggleSidebar, isSidebarOpen = false }) => {
       >
         <Container fluid className="mx-4 mx-lg-2">
           <div className="d-flex justify-content-between align-items-center w-100">
-            {/* Left Section - Sidebar toggle button and logo/brand */}
+
             <div className="d-flex align-items-center">
               <button
                 type="button"
@@ -236,7 +236,6 @@ const TopNavbar = ({ toggleSidebar, isSidebarOpen = false }) => {
                 />
               </button>
 
-              {/* Logo and Brand Section */}
               <div className="d-flex align-items-center">
                 <Navbar.Brand className="me-2 p-0 logo-hover-parent">
                   <div
@@ -305,7 +304,6 @@ const TopNavbar = ({ toggleSidebar, isSidebarOpen = false }) => {
               </div>
             </div>
 
-            {/* Right Section - User info with dropdown */}
             <div className="d-flex align-items-center">
               {error && (
                 <div className="alert alert-sm alert-danger me-3 mb-0 py-1 px-2">
@@ -323,7 +321,6 @@ const TopNavbar = ({ toggleSidebar, isSidebarOpen = false }) => {
                   </div>
                 </div>
 
-                {/* Profile Dropdown */}
                 <Dropdown ref={dropdownRef} align="end">
                   <Dropdown.Toggle as={ProfileToggle}>
                     <div className="profile-avatar">
@@ -474,8 +471,6 @@ const TopNavbar = ({ toggleSidebar, isSidebarOpen = false }) => {
           </div>
         </Container>
       </Navbar>
-
-      {/* Logout Confirmation Modal */}
       <LogoutConfirmation
         show={showLogoutModal}
         onHide={handleLogoutCancel}
@@ -485,14 +480,12 @@ const TopNavbar = ({ toggleSidebar, isSidebarOpen = false }) => {
         isLoggingOut={isLoggingOut}
       />
 
-      {/* Notifications Modal */}
       <NotificationsModal
         show={showNotificationsModal}
         onHide={() => setShowNotificationsModal(false)}
         notifications={notifications}
       />
 
-      {/* Add style for logo shadow and brand block and logo hover effect */}
       <style jsx>{`
         .top-navbar {
           box-shadow: 0 4px 12px rgba(255,84,154,0.05);
@@ -507,7 +500,6 @@ const TopNavbar = ({ toggleSidebar, isSidebarOpen = false }) => {
         }
       `}</style>
 
-      {/* Styles for Notification Ping */}
       <style jsx>{`
         .notification-ping-indicator {
           position: absolute;

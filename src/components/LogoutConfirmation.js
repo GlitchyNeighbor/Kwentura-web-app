@@ -25,7 +25,6 @@ const LogoutConfirmation = ({
         overflow: 'hidden',
         width: '100%',
       }}>
-        {/* Header */}
         <div className="modal-header" style={{
           background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 50%, #fca5a5 100%)',
           border: 'none',
@@ -35,7 +34,6 @@ const LogoutConfirmation = ({
           alignItems: 'center',
           justifyContent: 'space-between'
         }}>
-          {/* Logo and text positioned to the left */}
           <div className="d-flex align-items-center gap-3">
             <LogOut 
               size={32} 
@@ -55,7 +53,6 @@ const LogoutConfirmation = ({
             </h4>
           </div>
           
-          {/* Close button positioned to the right */}
           {!isLoggingOut && (
             <button
               type="button"
@@ -87,7 +84,6 @@ const LogoutConfirmation = ({
           )}
         </div>
 
-        {/* Body */}
         <div className="modal-body" style={{
           padding: '32px 32px 24px 32px',
           textAlign: 'center',
@@ -117,7 +113,6 @@ const LogoutConfirmation = ({
             </p>
           </div>
 
-          {/* Additional info box */}
           <div style={{
             backgroundColor: '#f8fafc',
             border: '1px solid #e2e8f0',
@@ -149,7 +144,6 @@ const LogoutConfirmation = ({
           </div>
         </div>
 
-        {/* Footer */}
         <div className="modal-footer" style={{
           border: 'none',
           padding: '0 32px 32px 32px',
@@ -260,7 +254,6 @@ const LogoutConfirmation = ({
         </div>
       </div>
       
-      {/* Custom CSS for modal width */}
       <style jsx global>{`
         .logout-modal .modal-dialog {
           max-width: 440px !important;

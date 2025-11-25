@@ -16,7 +16,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import LogoutConfirmation from "./LogoutConfirmation.js";
 import { useAuth } from "../context/AuthContext.js";
 
-// Constants - Updated to match pink theme like admin sidebar
+
 const COLORS = {
   primary: "#FF69B4",
   secondary: "#FFB6C1", 
@@ -82,9 +82,9 @@ const NAVIGATION_ITEMS = {
   ]
 };
 
-// Custom hooks
 
-// UI Components
+
+
 const UserProfile = React.memo(({ userName, profileImageUrl, teacherData, loading }) => {
   const profileTooltip = (
     <Tooltip id="profile-tooltip" className="custom-profile-tooltip">
@@ -356,7 +356,7 @@ const NavigationSection = React.memo(({
   );
 });
 
-// Main Component
+
 const SideMenuTeacher = ({ isOpen, toggleSidebar }) => {
   const [expandedItems, setExpandedItems] = useState(new Set(['stories', 'students']));
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -365,14 +365,14 @@ const SideMenuTeacher = ({ isOpen, toggleSidebar }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Get all navigation items for collapsed view
+  
   const getAllNavigationItems = useCallback(() => {
     const allItems = [];
     
-    // Add dashboard items
+    
     NAVIGATION_ITEMS.dashboard.forEach(item => {
       if (item.subItems) {
-        // For items with subItems, add the subitems directly
+        
         item.subItems.forEach(subItem => {
           allItems.push({
             ...subItem,
@@ -385,7 +385,7 @@ const SideMenuTeacher = ({ isOpen, toggleSidebar }) => {
       }
     });
     
-    // Add other items
+    
     NAVIGATION_ITEMS.others.forEach(item => {
       allItems.push(item);
     });
@@ -466,7 +466,6 @@ const SideMenuTeacher = ({ isOpen, toggleSidebar }) => {
           zIndex: 99,
         }}
       >
-        {/* User Profile Section */}
         <div 
           className="w-100 border-bottom"
           style={{ 
@@ -483,7 +482,7 @@ const SideMenuTeacher = ({ isOpen, toggleSidebar }) => {
               loading={loading}
             />
           ) : (
-            // Collapsed profile - just show avatar
+            
             <div className="d-flex justify-content-center">
               <OverlayTrigger
                 placement="right"
@@ -543,20 +542,18 @@ const SideMenuTeacher = ({ isOpen, toggleSidebar }) => {
           )}
         </div>
 
-        {/* Navigation */}
         <Nav 
           className="flex-column w-100 flex-grow-1" 
           style={{ 
             overflowY: "auto",
             overflowX: "hidden",
             padding: isOpen ? "16px 0" : "12px 0",
-            maxHeight: "calc(100vh - 200px)" // Reserve space for profile and logout
+            maxHeight: "calc(100vh - 200px)" 
           }}
         >
           {isOpen ? (
-            // Full navigation when expanded - with proper scrolling
+            
             <div className="d-flex flex-column">
-              {/* Dashboard Section */}
               <NavigationSection
                 title="Dashboard"
                 items={NAVIGATION_ITEMS.dashboard}
@@ -566,10 +563,8 @@ const SideMenuTeacher = ({ isOpen, toggleSidebar }) => {
                 currentPath={location.pathname}
               />
 
-              {/* Reduced spacing to fit everything */}
               <div style={{ height: '16px' }}></div>
 
-              {/* Account Section */}
               <NavigationSection
                 title="Account"
                 items={NAVIGATION_ITEMS.others}
@@ -579,11 +574,10 @@ const SideMenuTeacher = ({ isOpen, toggleSidebar }) => {
                 currentPath={location.pathname}
               />
 
-              {/* Small bottom padding */}
               <div style={{ height: '16px' }}></div>
             </div>
           ) : (
-            // Collapsed navigation - compact icons
+            
             <div className="d-flex flex-column justify-content-center align-items-center h-100" style={{ gap: '8px' }}>
               {getAllNavigationItems().map((item, index) => {
                 const ItemIcon = item.icon;
@@ -690,7 +684,7 @@ const SideMenuTeacher = ({ isOpen, toggleSidebar }) => {
             border-radius: 12px;
           }
 
-          /* Enhanced Logout Button Styles */
+         
           .logout-link:hover {
             background: linear-gradient(135deg, ${COLORS.danger}, #c62828) !important;
             color: ${COLORS.white} !important;
@@ -745,7 +739,7 @@ const SideMenuTeacher = ({ isOpen, toggleSidebar }) => {
             border-right-color: ${COLORS.dark} !important;
           }
 
-          /* Custom scrollbar */
+         
           .sidebar .nav::-webkit-scrollbar {
             width: 8px;
           }
@@ -764,7 +758,7 @@ const SideMenuTeacher = ({ isOpen, toggleSidebar }) => {
             background: ${COLORS.primary};
           }
 
-          /* Collapsed Navigation Styles */
+         
           .collapsed-nav-item {
             color: ${COLORS.dark} !important;
             text-decoration: none !important;
@@ -792,7 +786,7 @@ const SideMenuTeacher = ({ isOpen, toggleSidebar }) => {
             border-color: ${COLORS.danger} !important;
           }
 
-          /* Mobile Styles - Keep fixed positioning only for mobile */
+         
           @media (max-width: 768px) {
             .sidebar {
               position: fixed !important;
@@ -817,7 +811,7 @@ const SideMenuTeacher = ({ isOpen, toggleSidebar }) => {
             }
           }
 
-          /* Desktop Styles - Smaller widths to prevent overlap */
+         
           @media (min-width: 769px) {
             .sidebar {
               position: relative !important;
@@ -839,7 +833,7 @@ const SideMenuTeacher = ({ isOpen, toggleSidebar }) => {
             }
           }
 
-          /* Overlay for mobile when sidebar is open */
+         
           @media (max-width: 768px) {
             .sidebar-overlay {
               position: fixed;
@@ -862,7 +856,6 @@ const SideMenuTeacher = ({ isOpen, toggleSidebar }) => {
         `}</style>
       </Navbar>
 
-      {/* Mobile Overlay - Only show on mobile */}
       {typeof window !== 'undefined' && window.innerWidth <= 768 && (
         <div 
           className={`sidebar-overlay ${isOpen ? 'show' : ''}`}
@@ -870,7 +863,6 @@ const SideMenuTeacher = ({ isOpen, toggleSidebar }) => {
         />
       )}
 
-      {/* Logout Confirmation Modal */}
       <LogoutConfirmation
         show={showLogoutModal}
         onHide={handleLogoutCancel}

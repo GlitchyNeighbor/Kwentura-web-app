@@ -6,12 +6,12 @@ import { useNavigate } from "react-router-dom";
 import { doc, getDocs, collection, query, where, getDoc } from "firebase/firestore";
 import { CheckCircleFill, XCircleFill, ArrowLeftCircleFill, PersonBadgeFill } from "react-bootstrap-icons";
 import "../scss/custom.scss";
-import { db, app } from "../config/FirebaseConfig.js"; // Import app
+import { db, app } from "../config/FirebaseConfig.js"; 
 import { getAuth } from "firebase/auth";
-import { getFunctions, httpsCallable } from "firebase/functions"; // Import Firebase Functions
+import { getFunctions, httpsCallable } from "firebase/functions"; 
 
-// Initialize Functions client with the specific region where cloud functions are deployed
-// This ensures callable functions target the regional endpoint (avoids CORS preflight issues)
+
+
 const FUNCTIONS_REGION = "asia-southeast1";
 const functions = getFunctions(app, FUNCTIONS_REGION);
 const logAdminUiActionCallable = httpsCallable(functions, 'logAdminUiAction');
@@ -66,8 +66,8 @@ const ApproveTeacherAccount = () => {
   const fetchPendingTeachers = useCallback(async () => {
     setLoading(true);
     try {
-      const pendingTeachersRef = collection(db, "pendingTeachers"); // Changed collection name
-      const q = query(pendingTeachersRef); // No status filter needed if all in this collection are pending
+      const pendingTeachersRef = collection(db, "pendingTeachers"); 
+      const q = query(pendingTeachersRef); 
       const querySnapshot = await getDocs(q);
       const teachersList = querySnapshot.docs.map((doc) => ({
         id: doc.id,
@@ -168,7 +168,7 @@ const ApproveTeacherAccount = () => {
 
       logAdminUiActionCallable({
         actionType: 'teacher_account_approved',
-        collectionName: 'teachers', // This should ideally be 'pendingTeachers' for the source, but 'teachers' for the target
+        collectionName: 'teachers', 
         documentId: teacherId,
         targetUserId: teacherUid,
         targetUserFullName: teacherFullName,

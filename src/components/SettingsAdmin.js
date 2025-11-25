@@ -37,7 +37,7 @@ const SettingsAdmin = () => {
   const [activeTab, setActiveTab] = useState("about");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
-  // State for editable fields
+  
   const [editableDetails, setEditableDetails] = useState({
     schoolId: "",
     contactNumber: "",
@@ -86,13 +86,13 @@ const SettingsAdmin = () => {
       });
       setIsEmailVerified(auth.currentUser?.emailVerified || false);
 
-      // Redirect if user is not an admin
+      
       if (userData.role !== "admin" && userData.role !== "superAdmin") {
         console.warn("Redirecting non-admin user from admin settings.");
         navigate("/login");
       }
     } else if (!authLoading && !userData) {
-      // If loading is finished and there's still no user, redirect
+      
       navigate("/login");
     }
   }, [userData, authLoading, navigate, auth.currentUser]);
@@ -107,7 +107,7 @@ const SettingsAdmin = () => {
           message: "Verification email sent! Please check your inbox.",
           type: "success",
         });
-        // It's important to reload the user to get the updated emailVerified status
+        
         await user.reload();
         setIsEmailVerified(user.emailVerified);
       } catch (error) {
@@ -178,7 +178,7 @@ const SettingsAdmin = () => {
         message: "Profile updated successfully! You may need to re-login if email was changed.",
         type: "success",
       });
-      refetchUserData(); // Re-fetch data in context
+      refetchUserData(); 
 
       setTimeout(() => {
         setUpdateStatus({ show: false, message: "", type: "" });
@@ -221,7 +221,7 @@ const SettingsAdmin = () => {
         return;
       }
 
-      // perform full password validations
+      
       const newPwd = passwordDetails.newPassword || "";
       const curPwd = passwordDetails.currentPassword || "";
       const validations = {
@@ -361,7 +361,7 @@ const SettingsAdmin = () => {
       await uploadBytes(storageRef, file);
       const url = await getDownloadURL(storageRef);
 
-      // Update Firestore
+      
       if (!userData || !userData.id) return;
       const userRef = doc(db, "admins", userData.id);
       await updateDoc(userRef, { profileImageUrl: url, updatedAt: serverTimestamp() });
@@ -388,7 +388,7 @@ const SettingsAdmin = () => {
       return;
     }
 
-    // Add confirmation dialog
+    
     const confirmRemoval = window.confirm(
       "Are you sure you want to remove your profile picture? This action cannot be undone."
     );
@@ -425,7 +425,6 @@ const SettingsAdmin = () => {
   if (authLoading) {
     return (
       <div>
-        {/* Sticky TopNavbar */}
         <div style={{ 
           position: "fixed", 
           top: 0, 
@@ -524,7 +523,6 @@ const SettingsAdmin = () => {
 
   return (
     <div>
-      {/* Sticky TopNavbar */}
       <div style={{ 
         position: "fixed", 
         top: 0, 
@@ -569,7 +567,6 @@ const SettingsAdmin = () => {
             minHeight: "calc(100vh - 56px)",
           }}
         >
-          {/* Header Section */}
           <div 
             style={{
               background: "rgba(255, 255, 255, 0.9)",
@@ -652,7 +649,6 @@ const SettingsAdmin = () => {
             </div>
           </div>
 
-          {/* Content Container */}
           <div 
             style={{
               background: "rgba(255, 255, 255, 0.9)",
@@ -663,7 +659,6 @@ const SettingsAdmin = () => {
               border: "1px solid rgba(255, 84, 154, 0.1)",
             }}
           >
-            {/* About Me Tab */}
             {activeTab === "about" && (
               <>
                 <div 
@@ -703,7 +698,6 @@ const SettingsAdmin = () => {
                     </Alert>
                   )}
                 
-                {/* Profile Picture Section */}
                 <div 
                   style={{
                     background: "linear-gradient(135deg, rgba(255, 84, 154, 0.05), rgba(194, 24, 91, 0.03))",
@@ -835,7 +829,6 @@ const SettingsAdmin = () => {
                   </div>
                 </div>
 
-                {/* Profile Form */}
                 <div 
                   style={{
                     fontSize: "28px",
@@ -851,7 +844,6 @@ const SettingsAdmin = () => {
                   Personal Information
                 </div>
                 
-                {/* Editable Note */}
                 <div 
                   style={{
                     background: "linear-gradient(135deg, rgba(255, 84, 154, 0.1), rgba(233, 30, 99, 0.05))",
@@ -1030,7 +1022,6 @@ const SettingsAdmin = () => {
               </>
             )}
 
-            {/* Password Tab */}
             {activeTab === "password" && (
               <div>
                 <div 
@@ -1345,7 +1336,6 @@ const SettingsAdmin = () => {
         </div>
       </div>
 
-      {/* Custom Styles */}
       <style jsx>{`
         @keyframes spin {
           0% { transform: rotate(0deg); }

@@ -10,7 +10,7 @@ import { useAuth } from "../context/AuthContext.js";
 import { useNavigate } from "react-router-dom";
 import "../scss/custom.scss";
 
-// --- Enhanced Styles matching Stories.js ---
+
 const cardStyle = {
   minHeight: "420px",
   maxHeight: "470px",
@@ -32,7 +32,7 @@ const LibraryStoryCard = ({ story, category, onRemoveBookmark }) => {
   const [loading, setLoading] = useState(false);
 
   const handleRemoveBookmark = async (e) => {
-    e.stopPropagation(); // Prevent card click navigation
+    e.stopPropagation(); 
     setLoading(true);
     await onRemoveBookmark(story.storyId || story.id);
     setLoading(false);
@@ -138,7 +138,6 @@ const LibraryStoryCard = ({ story, category, onRemoveBookmark }) => {
               {story.originalCategory || story.category || category}
             </div>
 
-            {/* Remove bookmark button */}
             {category === "Favorites" && (
               <Button
                 variant="outline-danger"
@@ -231,14 +230,14 @@ const TeacherLibrary = () => {
   };
 
   useEffect(() => {
-    // refetch when userData becomes available so bookmarks are scoped per-user
+    
     fetchBookmarkedStories();
   }, [userData]);
 
-  // Remove bookmark function
+  
   const handleRemoveBookmark = async (storyId) => {
     try {
-      // delete from the current user's bookmarks collection if available
+      
       const getBookmarksCollection = () => {
         if (userData && userData.id) {
           const role = (userData.role || "").toLowerCase();
@@ -259,7 +258,7 @@ const TeacherLibrary = () => {
         } else {
           await deleteDoc(doc(db, "favorites", favDoc.id));
         }
-        // Refresh the bookmarked stories list
+        
         await fetchBookmarkedStories();
       }
     } catch (error) {
@@ -268,17 +267,17 @@ const TeacherLibrary = () => {
     }
   };
 
-  // Filter stories based on search
+  
   const filteredBookmarkedStories = bookmarkedStories.filter((story) =>
     story.title?.toLowerCase().includes(search.toLowerCase())
   );
 
-  // Get stories by category (for future categories like "Completed")
+  
   const getStoriesByCategory = (category) => {
     if (category === "Favorites") {
       return filteredBookmarkedStories;
     }
-    // Add logic for other categories here
+    
     return [];
   };
 
@@ -359,7 +358,7 @@ const TeacherLibrary = () => {
           marginLeft: showSidebar ? "250px" : "0",
         }}
       >
-        {/* Header Section */}
+
         <Row className="align-items-center mb-3" style={{ paddingTop: "8px" }}>
           <Col xs="auto" className="d-flex align-items-center gap-3">
             <Button
@@ -463,8 +462,6 @@ const TeacherLibrary = () => {
             </Button>
           </Col>
         </Row>
-
-        {/* Library Categories */}
         {CATEGORIES.map((category) => {
           const categoryStories = getStoriesByCategory(category);
           

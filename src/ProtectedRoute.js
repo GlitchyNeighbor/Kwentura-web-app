@@ -18,12 +18,12 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
       setLoading(false);
 
       if (user) {
-        // Check if user is an admin
+        
         const adminDocRef = doc(db, "admins", user.uid);
         const adminDocSnap = await getDoc(adminDocRef);
         if (adminDocSnap.exists()) {
           const adminData = adminDocSnap.data();
-          // Normalize role values coming from Firestore (handle 'superadmin' vs 'superAdmin')
+          
           const rawRole = (adminData.role || "admin").toString();
           const normalized = (rawRole || "").toLowerCase();
           if (normalized === 'superadmin' || normalized === 'super_admin' || normalized === 'super-admin') {
@@ -31,14 +31,14 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
           } else if (normalized === 'admin') {
             setUserRole('admin');
           } else {
-            // fallback to admin when ambiguous
+            
             setUserRole('admin');
           }
           setCheckingRole(false);
           return;
         }
 
-        // Check if user is a teacher
+        
         const teacherDocRef = doc(db, "teachers", user.uid);
         const teacherDocSnap = await getDoc(teacherDocRef);
         if (teacherDocSnap.exists()) {
@@ -47,8 +47,8 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
           return;
         }
 
-        // If not admin or teacher, assume student or unassigned role
-        setUserRole("student"); // Default role if not found in admin or teacher collections
+        
+        setUserRole("student"); 
         setCheckingRole(false);
       } else {
         setCheckingRole(false);
@@ -59,21 +59,21 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 
   useSessionManager(user);
 
-  if (loading || checkingRole) return null; // Still loading auth state or checking role
+  if (loading || checkingRole) return null; 
 
   if (!user) {
     return <Navigate to="/login" replace />;
   }
 
   if (allowedRoles && !allowedRoles.includes(userRole)) {
-    // Redirect based on role if not authorized for the current route
+    
     if (userRole === "teacher") {
       return <Navigate to="/teacher/dashboard" replace />;
     } else if (userRole === "admin" || userRole === "superAdmin") {
       return <Navigate to="/admin/dashboard" replace />;
     } else {
-      // For students or unassigned roles trying to access protected routes
-      return <Navigate to="/home" replace />; // Redirect to home or a generic unauthorized page
+      
+      return <Navigate to="/home" replace />; 
     }
   }
 

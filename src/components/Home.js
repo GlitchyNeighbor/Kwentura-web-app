@@ -38,7 +38,7 @@ const HomeNavbar = () => {
           alignItems: 'center'
         }}
       >
-        {/* Logo Section */}
+
         <div className="d-flex align-items-center" style={{gap: '1rem'}}>
           <div 
             className="logo"
@@ -57,7 +57,7 @@ const HomeNavbar = () => {
             onMouseEnter={(e) => e.target.style.transform = 'scale(1.1) rotate(5deg)'}
             onMouseLeave={(e) => e.target.style.transform = 'scale(1) rotate(0deg)'}
           >
-            {/* Logo */}
+
             <div className="logo-container" >
               <img
                 src={require("../assets/images/KLogo.png")}
@@ -99,7 +99,6 @@ const HomeNavbar = () => {
           </div>
         </div>
         
-        {/* Desktop Navigation */}
         <nav className="d-none d-lg-flex align-items-center" style={{gap: '2rem'}}>
           <a 
             href="/" 
@@ -204,7 +203,6 @@ const HomeNavbar = () => {
           </a>
         </nav>
         
-        {/* Mobile Menu Button */}
         <button 
           className="d-lg-none btn btn-link p-0"
           style={{
@@ -219,7 +217,6 @@ const HomeNavbar = () => {
         </button>
       </div>
       
-      {/* Mobile Menu */}
       {isMobileMenuOpen && (
         <div 
           className="d-lg-none"
@@ -244,14 +241,13 @@ const HomeNavbar = () => {
 
 const Home = () => {
   useEffect(() => {
-    // FontAwesome is imported centrally in src/index.js
+    
   }, []);
 
   return (
     <div className="min-vh-100 d-flex flex-column">
       <HomeNavbar />
       
-      {/* Hero Section */}
       <main 
         className="flex-grow-1 position-relative overflow-hidden d-flex align-items-center"
         style={{
@@ -260,7 +256,6 @@ const Home = () => {
           minHeight: '100vh'
         }}
       >
-        {/* Background decorative elements */}
         <div 
           className="position-absolute floating-shape"
           style={{
@@ -303,7 +298,6 @@ const Home = () => {
 
         <div className="container" style={{maxWidth: '1200px', padding: '0 2rem', position: 'relative', zIndex: 10}}>
           <div className="text-center" style={{maxWidth: '800px', margin: '0 auto'}}>
-            {/* Hero Badge */}
             <div 
               className="d-inline-flex align-items-center mb-4"
               style={{
@@ -320,8 +314,7 @@ const Home = () => {
             >
               Promoting Filipino Culture Through Education
             </div>
-            
-            {/* Hero Title */}
+
             <h1 
               className="mb-4"
               style={{
@@ -340,7 +333,6 @@ const Home = () => {
               <span style={{color: '#FF549A'}}>Filipino Cultural Stories</span>
             </h1>
             
-            {/* Hero Subtitle */}
             <p 
               className="mb-5 text-muted"
               style={{
@@ -352,8 +344,7 @@ const Home = () => {
               A comprehensive web-based platform where teachers can easily access, organize, and share 
               engaging animated Filipino storybooks with their K-1 students while tracking learning progress.
             </p>
-            
-            {/* CTA Buttons */}
+          
             <div 
               className="d-flex flex-column flex-sm-row justify-content-center mb-5"
               style={{
@@ -424,8 +415,6 @@ const Home = () => {
                 Learn More
               </a>
             </div>
-            
-            {/* Features Grid */}
             <div 
               className="row g-4 mt-4 mb-5"
               style={{animation: 'slideUp 0.8s ease-out 0.8s both'}}
@@ -575,7 +564,6 @@ const Home = () => {
         </div>
       </main>
 
-      {/* Stats Section */}
       <section style={{background: 'white', padding: '4rem 0', borderTop: '1px solid #f0f0f0'}}>
         <div className="container" style={{maxWidth: '1200px', padding: '0 2rem'}}>
           <div className="row text-center g-4">
@@ -631,7 +619,6 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Call to Action Section */}
       <section style={{background: 'linear-gradient(135deg, #FF549A, #FF8CC8)', padding: '4rem 0', color: 'white'}}>
         <div className="container text-center" style={{maxWidth: '800px', padding: '0 2rem'}}>
           <h2 style={{fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: '700', marginBottom: '1rem'}}>

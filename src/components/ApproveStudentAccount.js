@@ -15,7 +15,7 @@ import {
   CheckCircleFill,
   XCircleFill,
   ArrowLeftCircleFill,
-  PersonFill, // Changed from PersonBadgeFill to PersonFill for students
+  PersonFill, 
 } from "react-bootstrap-icons";
 import "../scss/custom.scss";
 import { db, auth } from "../config/FirebaseConfig.js";
@@ -66,7 +66,7 @@ const ApproveStudentAccounts = () => {
     }, duration);
   }, []);
 
-  // fetchTeacherAndStudents removed — not used. Keep logic inline where needed.
+  
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
@@ -208,7 +208,6 @@ const ApproveStudentAccounts = () => {
         </Alert>
       )}
 
-      {/* Confirmation Modal */}
       <Modal
         show={confirmationModal.show}
         onHide={() => setConfirmationModal({ ...confirmationModal, show: false })}
@@ -308,7 +307,6 @@ const ApproveStudentAccounts = () => {
             background: 'linear-gradient(135deg, #FFF5F8 0%, #FFE8F1 50%, #F8E8FF 100%)',
           }}
         >
-          {/* Header */}
           <div className="d-flex justify-content-between align-items-center mb-4">
             <div className="d-flex align-items-center">
               <Button
@@ -329,7 +327,6 @@ const ApproveStudentAccounts = () => {
             </div>
           </div>
 
-          {/* Loading state when no section is assigned */}
           {loading && !teacherSection && (
             <div className="text-center mt-5">
               <Spinner
@@ -343,7 +340,6 @@ const ApproveStudentAccounts = () => {
             </div>
           )}
 
-          {/* Warning when no section is assigned */}
           {!loading && !teacherSection && (
             <Alert variant="warning">
               Your teacher profile does not have a section assigned. Please
@@ -351,7 +347,6 @@ const ApproveStudentAccounts = () => {
             </Alert>
           )}
 
-          {/* Content */}
           {teacherSection && (
             <div className="shadow-sm border-0" style={{ borderRadius: "15px", background: COLORS.light }}>
               <div className="py-4 px-4" style={{ borderRadius: "15px 15px 0 0", backgroundColor: COLORS.light }}>

@@ -5,7 +5,6 @@ const HomeNavbar = () => {
   return (
     <Navbar expand="lg" className="shadow-sm sticky-top bg-white py-2">
       <Container fluid className="mx-4 mx-lg-5">
-        {/* Logo and Brand Section */}
         <div className="d-flex align-items-center">
           <Navbar.Brand href="/" className="me-2">
             <img
@@ -18,7 +17,7 @@ const HomeNavbar = () => {
               alt="Kwentura Logo"
               onError={(e) => {
                 console.error("KLogo failed to load in HomeNavbar:", e);
-                // Fallback to the original logo.png
+                
                 e.target.src = require("../assets/images/logo.png");
               }}
             />

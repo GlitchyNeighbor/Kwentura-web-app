@@ -521,7 +521,7 @@ const ManageStories = () => {
  * @returns {Promise<{audioData: object[], failedPages: number[]}>}
  */
 const generateTtsForLanguage = async (texts, languageCode, storyId) => {
-  // reuse existing synthesizeSpeechGoogle httpsCallable defined earlier to avoid duplicate creation
+  
   const audioPromises = [];
   const failedPages = [];
 
@@ -997,7 +997,6 @@ const handleSubmit = async () => {
             background: 'linear-gradient(135deg, #FFF5F8 0%, #FFE8F1 50%, #F8E8FF 100%)',
           }}
         >
-          {/* Alert */}
           <Alert
             show={alert.show}
             variant={alert.type === "danger" ? "danger" : "success"}
@@ -1017,7 +1016,6 @@ const handleSubmit = async () => {
             {alert.message}
           </Alert>
 
-          {/* Header */}
           <div className="d-flex justify-content-between align-items-center mb-4">
             <div className="d-flex align-items-center">
               <Button
@@ -1074,7 +1072,6 @@ const handleSubmit = async () => {
             </div>
           </div>
 
-          {/* Stats Cards */}
           <Row className="g-4 mb-4">
             <Col lg={3} md={6}>
               <Card className="shadow-sm h-100 border-0" style={{ borderRadius: "12px" }}>
@@ -1115,7 +1112,6 @@ const handleSubmit = async () => {
             </Col>
           </Row>
 
-          {/* Content */}
           <Card className="shadow-sm border-0" style={{ borderRadius: "15px" }}>
             <Card.Header 
               className="border-0 py-4"
@@ -1349,7 +1345,6 @@ const handleSubmit = async () => {
         </Container>
       </div>
 
-      {/* Story Registration/Edit Modal */} 
       <Modal show={showModal} onHide={handleCloseModal} size="lg" centered>
         <Modal.Header closeButton style={{ border: "none", background: `linear-gradient(135deg, ${COLORS.lightPink} 0%, ${COLORS.softPink} 100%)` }}>
           <Modal.Title className="w-100 text-center">
@@ -1360,7 +1355,6 @@ const handleSubmit = async () => {
         </Modal.Header>
         
 <Modal.Body className="p-4">
-  {/* Top Section: Image Upload and Basic Form Fields */}
   <Row className="align-items-start mb-4">
     <Col md={4}>
       <div
@@ -1611,7 +1605,6 @@ const handleSubmit = async () => {
         <>
           <hr />
           <h5 className="fw-bold mt-4 mb-3">AI Content Evaluation</h5>
-          {/* Synopsis Evaluation */}
           <Card className="mb-3 border-0 shadow-sm" style={{ borderRadius: "12px", backgroundColor: '#fdf7fd' }}>
             <Card.Body>
               <div className="d-flex justify-content-between align-items-center">
@@ -1640,7 +1633,6 @@ const handleSubmit = async () => {
               )}
             </Card.Body>
           </Card>
-          {/* Comprehension Questions Evaluation */}
           <Card className="border-0 shadow-sm" style={{ borderRadius: "12px", backgroundColor: '#fdf7fd' }}>
             <Card.Body>
               <div className="d-flex justify-content-between align-items-center">
@@ -1670,7 +1662,6 @@ const handleSubmit = async () => {
               )}
             </Card.Body>
           </Card>
-          {/* Translation Validation */}
           <Card className="mt-3 border-0 shadow-sm" style={{ borderRadius: "12px", backgroundColor: '#fdf7fd' }}>
             <Card.Body>
               <div className="d-flex justify-content-between align-items-center">
@@ -1704,9 +1695,7 @@ const handleSubmit = async () => {
     </Col>
   </Row>
 
-  {/* Full Width Questions Section */}
   <div className="w-100">
-    {/* Moral Lesson Section - Full Width */}
     <Card className="border-0 shadow-sm mb-4" style={{ borderRadius: "15px" }}>
       <Card.Header className="border-0" style={{ backgroundColor: COLORS.light, borderRadius: "15px 15px 0 0" }}>
         <h6 className="mb-0 fw-bold" style={{ color: COLORS.pink }}>
@@ -1724,7 +1713,6 @@ const handleSubmit = async () => {
           </div>
         )}
         
-        {/* Question Field - Full Width */}
         <Form.Group className="mb-4">
           <Form.Label className="fw-semibold">Question</Form.Label>
           <Form.Control
@@ -1744,7 +1732,6 @@ const handleSubmit = async () => {
           </Form.Control.Feedback>
         </Form.Group>
 
-        {/* Options - Full Width */}
         <Row className="g-3">
           {formData.moralOptions.map((option, index) => (
             <Col xs={12} key={`moral-option-${index}`}>
@@ -1801,7 +1788,6 @@ const handleSubmit = async () => {
           </Form.Text>
         )}
 
-        {/* Moral Lesson Image Upload */}
         <Form.Group className="mt-3">
           <Form.Label className="fw-medium">Question Image (Optional)</Form.Label>
           <Form.Control type="file" size="sm" accept="image/*" onChange={(e) => handleAssessmentImageUpload(e, 'moralLesson')} />
@@ -1819,7 +1805,6 @@ const handleSubmit = async () => {
       </Card.Body>
     </Card>
 
-    {/* Comprehension Questions Section - Full Width */}
     <Card className="border-0 shadow-sm" style={{ borderRadius: "15px" }}>
       <Card.Header className="border-0" style={{ backgroundColor: COLORS.light, borderRadius: "15px 15px 0 0" }}>
         <h6 className="mb-0 fw-bold" style={{ color: COLORS.pink }}>
@@ -1842,8 +1827,7 @@ const handleSubmit = async () => {
           <div className="w-100">
             {formData.comprehensionQuestions.map((q, idx) => (
               <div key={`cq-${idx}`} className="mb-4 p-4 border-0 shadow-sm" style={{ borderRadius: "12px", backgroundColor: '#fdf7fd' }}>
-                
-                {/* Comprehension Question Image Upload */}
+
                 <Form.Group className="mb-3">
                   <Form.Label className="fw-medium small">Image for Question {idx + 1} (Optional)</Form.Label>
                   <Form.Control type="file" size="sm" accept="image/*" onChange={(e) => handleAssessmentImageUpload(e, 'comprehensionQuestions', idx)} />
@@ -1858,7 +1842,6 @@ const handleSubmit = async () => {
                   )}
                 </Form.Group>
 
-                {/* Question Field - Full Width */}
                 <Form.Group className="mb-4">
                   <Form.Label className="fw-semibold">Question {idx + 1}</Form.Label>
                   <Form.Control
@@ -1879,7 +1862,6 @@ const handleSubmit = async () => {
                   />
                 </Form.Group>
                 
-                {/* Options - Full Width */}
                 <Row className="g-2">
                   {q.options.map((option, oidx) => (
                     <Col xs={12} key={`cq${idx}-option-${oidx}`}>
@@ -1989,7 +1971,6 @@ const handleSubmit = async () => {
         </Modal.Footer>
       </Modal>
 
-      {/* Delete Confirmation Modal */}
       <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)} size="sm" centered>
         <Modal.Header 
           className="border-0 text-white"

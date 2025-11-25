@@ -14,7 +14,7 @@ import { collection, query, where, getDocs, doc, setDoc } from "firebase/firesto
 import { Eye, EyeOff, Mail, RefreshCw, Check, X } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 
-// Debounce utility function
+
 const debounce = (func, delay) => {
   let timeout;
   return function(...args) {
@@ -60,7 +60,6 @@ const HomeNavbar = () => {
           alignItems: 'center'
         }}
       >
-        {/* Logo Section */}
         <div className="d-flex align-items-center" style={{gap: '1rem'}}>
           <div 
             className="logo"
@@ -79,7 +78,6 @@ const HomeNavbar = () => {
             onMouseEnter={(e) => e.target.style.transform = 'scale(1.1) rotate(5deg)'}
             onMouseLeave={(e) => e.target.style.transform = 'scale(1) rotate(0deg)'}
           >
-            {/* Logo */}
             <div className="logo-container" >
               <img
                 src={require("../assets/images/KLogo.png")}
@@ -93,7 +91,7 @@ const HomeNavbar = () => {
                   transition: "opacity 0.2s ease"
                 }}
                 onError={(e) => {
-                  // Logo failed to load: hide the image silently (no console output)
+                  
                   e.target.style.display = "none";
                 }}
                 loading="lazy"
@@ -121,7 +119,6 @@ const HomeNavbar = () => {
           </div>
         </div>
         
-        {/* Desktop Navigation */}
         <nav className="d-none d-lg-flex align-items-center" style={{gap: '2rem'}}>
           <a 
             href="/" 
@@ -228,7 +225,6 @@ const HomeNavbar = () => {
           </a>
         </nav>
         
-        {/* Mobile Menu Button */}
         <button 
           className="d-lg-none btn btn-link p-0"
           style={{
@@ -242,8 +238,7 @@ const HomeNavbar = () => {
           <i className={`fas ${isMobileMenuOpen ? 'fa-times' : 'fa-bars'}`}></i>
         </button>
       </div>
-      
-      {/* Mobile Menu */}
+
       {isMobileMenuOpen && (
         <div 
           className="d-lg-none"
@@ -276,7 +271,7 @@ const Signup = () => {
   const [verificationSent, setVerificationSent] = useState(false);
   const [tempUser, setTempUser] = useState(null);
   const [verificationLoading, setVerificationLoading] = useState(false);
-  const [schoolIdStatus, setSchoolIdStatus] = useState('idle'); // 'idle', 'checking', 'available', 'taken'
+  const [schoolIdStatus, setSchoolIdStatus] = useState('idle'); 
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -323,63 +318,63 @@ const Signup = () => {
       try {
         let isTaken = false;
 
-        // Query admins (rules currently allow reads on admins)
+        
         try {
           const adminsQuery = query(collection(db, "admins"), where("schoolId", "==", schoolId));
           const adminsSnapshot = await getDocs(adminsQuery);
           if (!adminsSnapshot.empty) isTaken = true;
         } catch (err) {
-          // If admins query is denied for some reason, continue silently
+          
           if (err.code && err.code !== 'permission-denied') throw err;
         }
 
-        // Query teachers
+        
                 try {
           const teachersQuery = query(collection(db, "teachers"), where("schoolId", "==", schoolId));
           const teachersSnapshot = await getDocs(teachersQuery);
           if (!teachersSnapshot.empty) isTaken = true;
         } catch (err) {
-          // If admins query is denied for some reason, continue silently
+          
           if (err.code && err.code !== 'permission-denied') throw err;
         }
 
-        // Query students (rules allow reads on students)
+        
         try {
           const studentsQuery = query(collection(db, "students"), where("schoolId", "==", schoolId));
           const studentsSnapshot = await getDocs(studentsQuery);
           if (!studentsSnapshot.empty) isTaken = true;
         } catch (err) {
-          // If students query is denied, continue silently
+          
           if (err.code && err.code !== 'permission-denied') throw err;
         }
 
-        // Query teachers only if there's an authenticated user. The `teachers` collection
-        // is restricted in security rules and will throw permission errors for unauthenticated reads.
+        
+        
         if (auth && auth.currentUser) {
           try {
             const teachersQuery = query(collection(db, "teachers"), where("schoolId", "==", schoolId));
             const teachersSnapshot = await getDocs(teachersQuery);
             if (!teachersSnapshot.empty) isTaken = true;
           } catch (err) {
-            // If teachers query fails (e.g., permission-denied), continue silently
+            
             if (err.code && err.code !== 'permission-denied') throw err;
           }
         } else {
-          // No signed-in user; skip teachers query to avoid expected permission-denied error.
+          
         }
 
         setSchoolIdStatus(isTaken ? 'taken' : 'available');
       } catch (error) {
-        // Error checking school ID; surface friendly message to UI but avoid console output
-        // Provide a friendly message for permission issues and avoid spamming the console with uncaught errors
+        
+        
         if (error.code === 'permission-denied') {
           setError("Unable to verify school ID due to security rules. Please contact support if this persists.");
         } else {
           setError("Error checking school ID availability: " + (error.message || error));
         }
-        setSchoolIdStatus('idle'); // Revert to idle on error
+        setSchoolIdStatus('idle'); 
       }
-    }, 500), // Debounce for 500ms
+    }, 500), 
     []
   );
 
@@ -411,7 +406,7 @@ const Signup = () => {
       return;
     }
 
-    // Check password requirements
+    
     const passwordReqs = validatePassword(formData.password);
     const allRequirementsMet = Object.values(passwordReqs).every(req => req);
     
@@ -424,7 +419,7 @@ const Signup = () => {
     setError("");
 
     try {
-      // Create user account
+      
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         formData.email,
@@ -434,18 +429,18 @@ const Signup = () => {
       const user = userCredential.user;
       setTempUser(user);
 
-      // Send verification email
+      
       await sendEmailVerification(user);
       
       setVerificationSent(true);
       setShowVerificationModal(true);
       setSuccess("Verification email sent! Please check your inbox and click the verification link.");
       
-      // Sign out the user so they can't access the app until verified
+      
       await signOut(auth);
       
     } catch (error) {
-      // Sending verification email failed; avoid logging to console
+      
       let errorMessage = "Failed to send verification email.";
       
       switch (error.code) {
@@ -473,20 +468,20 @@ const Signup = () => {
 
     setVerificationLoading(true);
     try {
-      // Reload the user to get updated emailVerified status
+      
       await tempUser.reload();
       
       if (tempUser.emailVerified) {
         setIsEmailVerified(true);
         setShowVerificationModal(false);
         setSuccess("Email verified successfully! You can now complete your registration.");
-        // Sign out again to keep user logged out until full registration is complete
+        
         await signOut(auth);
       } else {
         setError("Email not verified yet. Please check your inbox and click the verification link.");
       }
     } catch (error) {
-      // Checking email verification failed; avoid console output
+      
       setError("Error checking verification status. Please try again.");
     } finally {
       setVerificationLoading(false);
@@ -506,7 +501,7 @@ const Signup = () => {
       return;
     }
 
-    // Check if school ID is taken
+    
     if (schoolIdStatus === 'taken') {
       setError("The School ID is already taken. Please use a different one.");
       return;
@@ -516,10 +511,10 @@ const Signup = () => {
     setError("");
 
     try {
-      // Add user data to a "pendingTeachers" collection
-      // The Firebase user (email/password) is created during email verification (handleSendVerification)
-      // We just need to save the additional profile information here.
-      // The uid is already stored in tempUser from handleSendVerification.
+      
+      
+      
+      
       if (!tempUser || !tempUser.uid) {
         throw new Error("User not found or UID missing after email verification.");
       }
@@ -545,7 +540,7 @@ const Signup = () => {
 
       setSuccess("Account created successfully! Your account is pending approval. You will be redirected to the login page.");
 
-      // Reset form
+      
       setFormData({
         firstName: "",
         lastName: "",
@@ -562,13 +557,13 @@ const Signup = () => {
       setVerificationSent(false);
       setTempUser(null);
       
-      // Redirect to login page after a short delay
+      
       setTimeout(() => {
         navigate('/login');
-      }, 5000); // 5 seconds delay
+      }, 5000); 
       
     } catch (error) {
-      // Creating account failed; avoid console output
+      
       setError("Failed to create account. Please try again: " + error.message);
     } finally {
       setLoading(false);
@@ -597,12 +592,10 @@ const Signup = () => {
     >
       <HomeNavbar />
 
-      {/* Animated Decorative Circles */}
       <div className="animated-bg-circle circle1"></div>
       <div className="animated-bg-circle circle2"></div>
       <div className="animated-bg-circle circle3"></div>
 
-      {/* Email Verification Modal */}
       <Modal show={showVerificationModal} onHide={() => setShowVerificationModal(false)} centered>
         <Modal.Header closeButton>
           <Modal.Title style={{color: '#FF549A'}}>
@@ -661,7 +654,6 @@ const Signup = () => {
         </Modal.Footer>
       </Modal>
 
-      {/* Main Content - Single Section */}
       <div 
         className="flex-grow-1 d-flex align-items-center justify-content-center"
         style={{ 
@@ -674,7 +666,6 @@ const Signup = () => {
       >
         <Container style={{ maxWidth: '1300px', height: '100%' }}>
           <Row className="h-100 align-items-center">
-            {/* Left Column - Welcome Text */}
             <Col lg={5} className="d-none d-lg-block">
               <div style={{paddingRight: '2rem'}}>
                 <div 
@@ -736,7 +727,6 @@ const Signup = () => {
               </div>
             </Col>
 
-            {/* Right Column - Form */}
             <Col lg={7} xs={12}>
               <div className="text-center d-lg-none mb-3">
                 <h2 
@@ -754,7 +744,6 @@ const Signup = () => {
                 </h2>
               </div>
 
-              {/* Alerts */}
               {error && (
                 <Alert variant="danger" className="mb-3" style={{borderRadius: '8px', padding: '0.75rem', fontSize: '0.9rem'}}>
                   <i className="fas fa-exclamation-triangle me-2"></i>
@@ -769,7 +758,6 @@ const Signup = () => {
                 </Alert>
               )}
 
-              {/* Form Card */}
               <div
                 style={{
                   background: 'white',
@@ -808,7 +796,6 @@ const Signup = () => {
                 </div>
 
                 <Form onSubmit={handleSubmit}>
-                  {/* Name Fields */}
                   <Row className="mb-3">
                     <Col xs={6}>
                       <Form.Label style={{fontSize: '0.85rem', fontWeight: '600', color: '#333'}}>
@@ -852,7 +839,6 @@ const Signup = () => {
                     </Col>
                   </Row>
 
-                  {/* Contact and Email */}
                   <Row className="mb-3">
                     <Col xs={6}>
                       <Form.Label style={{fontSize: '0.85rem', fontWeight: '600', color: '#333'}}>
@@ -930,7 +916,6 @@ const Signup = () => {
                     </Col>
                   </Row>
 
-                  {/* School ID */}
                   <Form.Group className="mb-3">
                     <Form.Label style={{fontSize: '0.85rem', fontWeight: '600', color: '#333'}}>
                       School ID *
@@ -960,8 +945,6 @@ const Signup = () => {
                       <small className="text-success">School ID is available.</small>
                     )}
                   </Form.Group>
-
-                  {/* Level and Section */}
                   <Row className="mb-3">
                     <Col xs={6}>
                       <Form.Label style={{fontSize: '0.85rem', fontWeight: '600', color: '#333'}}>
@@ -1010,7 +993,6 @@ const Signup = () => {
                     </Col>
                   </Row>
 
-                  {/* Password Fields */}
                   <Row className="mb-3">
                     <Col xs={6}>
                       <Form.Label style={{fontSize: '0.85rem', fontWeight: '600', color: '#333'}}>
@@ -1101,7 +1083,6 @@ const Signup = () => {
                     </Col>
                   </Row>
 
-                  {/* Password Requirements */}
                   {formData.password && (
                     <div
                       className="mb-3 p-2 border rounded"
@@ -1139,7 +1120,6 @@ const Signup = () => {
                     </div>
                   )}
 
-                  {/* Password Match Indicator */}
                   {confirmPassword && (
                     <div className="mb-3">
                       <small className={formData.password === confirmPassword ? "text-success" : "text-danger"}>
@@ -1149,7 +1129,6 @@ const Signup = () => {
                     </div>
                   )}
 
-                  {/* Terms Checkbox */}
                   <Form.Group className="mb-3">
                     <Form.Check
                       type="checkbox"
@@ -1173,7 +1152,6 @@ const Signup = () => {
                     />
                   </Form.Group>
 
-                  {/* Email Verification Notice */}
                   {!isEmailVerified && (
                     <div 
                       className="mb-3 p-3 border rounded"
@@ -1198,7 +1176,6 @@ const Signup = () => {
                     </div>
                   )}
 
-                  {/* Buttons */}
                   <div className="d-flex gap-2">
                     <Button
                       variant="outline-secondary"
@@ -1237,7 +1214,6 @@ const Signup = () => {
                   </div>
                 </Form>
 
-                {/* Login Link */}
                 <div className="text-center mt-3">
                   <small style={{ color: '#666' }}>
                     Already have an account?{" "}
@@ -1258,7 +1234,7 @@ const Signup = () => {
       />
 
       <style jsx>{`
-        /* Animated circles for background */
+       
         .animated-bg-circle {
           position: absolute;
           border-radius: 50%;

@@ -5,7 +5,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { getAuth, signOut } from "firebase/auth";
 import LogoutConfirmation from "./LogoutConfirmation";
 
-// Constants - Matching SidebarMenuAdmin
+
 const COLORS = {
   primary: "#FF69B4",
   secondary: "#FFB6C1", 
@@ -39,7 +39,7 @@ const ROLE_DISPLAY_NAMES = {
   [USER_ROLES.USER]: "User"
 };
 
-// Navigation items for settings
+
 const SETTINGS_NAVIGATION = [
   { 
     id: 'account',
@@ -74,7 +74,7 @@ const SETTINGS_NAVIGATION = [
   }
 ];
 
-// User Profile Component
+
 const UserProfile = React.memo(({ userName, profileImageUrl, userRole, loading }) => {
   const displayRole = useMemo(() => {
     if (!userRole) return "User";
@@ -113,7 +113,6 @@ const UserProfile = React.memo(({ userName, profileImageUrl, userRole, loading }
         className="d-flex flex-column align-items-center text-center user-profile-section"
         style={{ cursor: 'pointer' }}
       >
-        {/* Added space above the profile image */}
         <div style={{ height: "14px" }}></div>
         <div className="position-relative mb-3">
           <div 
@@ -177,7 +176,7 @@ const UserProfile = React.memo(({ userName, profileImageUrl, userRole, loading }
   );
 });
 
-// Navigation Item Component
+
 const NavigationItem = React.memo(({ item, isActive, onNavigate }) => {
   const ItemIcon = item.icon;
 
@@ -225,7 +224,7 @@ const NavigationItem = React.memo(({ item, isActive, onNavigate }) => {
   );
 });
 
-// Main Component
+
 const SidebarSettingsAdmin = ({ isOpen, toggleSidebar, profileImageUrl, userName, userRole }) => {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -284,7 +283,6 @@ const SidebarSettingsAdmin = ({ isOpen, toggleSidebar, profileImageUrl, userName
           zIndex: 99,
         }}
       >
-        {/* User Profile Section */}
         <div 
           className="w-100 border-bottom"
           style={{ 
@@ -301,7 +299,7 @@ const SidebarSettingsAdmin = ({ isOpen, toggleSidebar, profileImageUrl, userName
               loading={false}
             />
           ) : (
-            // Collapsed profile - just show avatar
+            
             <div className="d-flex justify-content-center">
               <OverlayTrigger
                 placement="right"
@@ -351,7 +349,6 @@ const SidebarSettingsAdmin = ({ isOpen, toggleSidebar, profileImageUrl, userName
           )}
         </div>
 
-        {/* Navigation */}
         <Nav 
           className="flex-column w-100 flex-grow-1" 
           style={{ 
@@ -362,9 +359,8 @@ const SidebarSettingsAdmin = ({ isOpen, toggleSidebar, profileImageUrl, userName
           }}
         >
           {isOpen ? (
-            // Full navigation when expanded
+            
             <div className="d-flex flex-column h-100">
-              {/* Settings Section */}
               <div className="sidebar-section">
                 <div 
                   className="sidebar-heading text-uppercase fw-bold small mb-3"
@@ -390,11 +386,10 @@ const SidebarSettingsAdmin = ({ isOpen, toggleSidebar, profileImageUrl, userName
                 </div>
               </div>
 
-              {/* Spacer */}
               <div className="flex-grow-1"></div>
             </div>
           ) : (
-            // Collapsed navigation - compact icons
+            
             <div className="d-flex flex-column justify-content-center align-items-center h-100" style={{ gap: '8px' }}>
               {SETTINGS_NAVIGATION.map((item, index) => {
                 const ItemIcon = item.icon;
@@ -506,7 +501,7 @@ const SidebarSettingsAdmin = ({ isOpen, toggleSidebar, profileImageUrl, userName
             border-radius: 12px;
           }
 
-          /* Enhanced Logout Button Styles */
+         
           .logout-link:hover {
             background: linear-gradient(135deg, ${COLORS.danger}, #c62828) !important;
             color: ${COLORS.white} !important;
@@ -548,7 +543,7 @@ const SidebarSettingsAdmin = ({ isOpen, toggleSidebar, profileImageUrl, userName
             border-right-color: ${COLORS.dark} !important;
           }
 
-          /* Custom scrollbar */
+         
           .sidebar .nav::-webkit-scrollbar {
             width: 8px;
           }
@@ -567,7 +562,7 @@ const SidebarSettingsAdmin = ({ isOpen, toggleSidebar, profileImageUrl, userName
             background: ${COLORS.primary};
           }
 
-          /* Collapsed Navigation Styles */
+         
           .collapsed-nav-item {
             color: ${COLORS.dark} !important;
             text-decoration: none !important;
@@ -595,7 +590,7 @@ const SidebarSettingsAdmin = ({ isOpen, toggleSidebar, profileImageUrl, userName
             border-color: ${COLORS.danger} !important;
           }
 
-          /* Mobile Styles */
+         
           @media (max-width: 768px) {
             .sidebar {
               position: fixed !important;
@@ -620,7 +615,7 @@ const SidebarSettingsAdmin = ({ isOpen, toggleSidebar, profileImageUrl, userName
             }
           }
 
-          /* Desktop Styles */
+         
           @media (min-width: 769px) {
             .sidebar {
               position: relative !important;
@@ -644,7 +639,6 @@ const SidebarSettingsAdmin = ({ isOpen, toggleSidebar, profileImageUrl, userName
         `}</style>
       </Navbar>
 
-      {/* Mobile Overlay */}
       {typeof window !== 'undefined' && window.innerWidth <= 768 && (
         <div 
           className={`sidebar-overlay ${isOpen ? 'show' : ''}`}
@@ -664,7 +658,6 @@ const SidebarSettingsAdmin = ({ isOpen, toggleSidebar, profileImageUrl, userName
         />
       )}
 
-      {/* Logout Confirmation Modal */}
       <LogoutConfirmation
         show={showLogoutModal}
         onHide={handleLogoutCancel}

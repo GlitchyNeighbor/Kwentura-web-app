@@ -26,7 +26,7 @@ import SidebarMenuAdmin from "./SidebarMenuAdmin";
 import TopNavbar from "./TopNavbar";
 import "../scss/custom.scss";
 
-// Constants - Updated to match AdminDashboard.js color scheme
+
 const COLORS = {
   primary: "#FF69B4",
   secondary: "#FFB6C1", 
@@ -59,7 +59,7 @@ const Charts = () => {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
-  // Create refs for each chart
+  
   const storiesChartRef = useRef();
   const usersChartRef = useRef();
   const sectionsChartRef = useRef();
@@ -112,7 +112,7 @@ const Charts = () => {
     }
   }, []);
 
-  // Helper function to generate colors for sections
+  
   const generateRandomColor = () => {
     const colors = ["#FF69B4", "#FFB6C1", "#98FB98", "#FFE4E1", "#DDA0DD"];
     return colors[Math.floor(Math.random() * colors.length)];
@@ -214,7 +214,7 @@ const Charts = () => {
     fetchData();
   }, [fetchStoriesData, fetchUsersData]);
 
-  // Custom tooltip component
+  
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
@@ -269,11 +269,11 @@ const Charts = () => {
     pdf.setTextColor(100);
     const splitText = pdf.splitTextToSize(interpretation, pdf.internal.pageSize.getWidth() - 80);
     pdf.text(splitText, 40, finalY + 20);
-    pdf.setFont("helvetica", "normal"); // Reset font
+    pdf.setFont("helvetica", "normal"); 
     pdf.setTextColor(0);
   };
 
-  // Download handler for a specific chart
+  
   const handleDownloadChartPdf = async (ref, filename, chartData, labelMapKey, existingPdf = null) => {
     if ((!ref || !ref.current) && !existingPdf) return;
     if (!chartData || chartData.length === 0) return;
@@ -343,7 +343,7 @@ const Charts = () => {
     }
   };
 
-  // Component for chart cards with loading and error states
+  
   const ChartCard = ({ title, loading, error, children, height = 300, onDownload }) => (
     <Card className="shadow-sm h-100 border-0" style={{ borderRadius: "12px" }}>
       <Card.Header 
@@ -463,7 +463,6 @@ const Charts = () => {
             background: 'linear-gradient(135deg, #FFF5F8 0%, #FFE8F1 50%, #F8E8FF 100%)',
           }}
         >
-          {/* Header - Updated to match AdminDashboard.js style */}
           <div className="d-flex justify-content-between align-items-center mb-4">
             <div className="d-flex align-items-center">
               <Button

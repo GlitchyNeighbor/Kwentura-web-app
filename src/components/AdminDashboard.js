@@ -38,7 +38,7 @@ import SidebarMenuAdmin from "./SidebarMenuAdmin";
 import TopNavbar from "./TopNavbar";
 import "../scss/custom.scss";
 
-// Constants - Updated to match ManageTeachers.js color scheme
+
 const COLORS = {
   primary: "#FF69B4",
   secondary: "#FFB6C1", 
@@ -61,9 +61,9 @@ const CARD_STYLES = {
   students: { bg: "#FFE4E1", icon: "#FF69B4" },
 };
 
-// ...existing code...
 
-// Utility functions
+
+
 const formatActionType = (action) => {
   if (!action) return "Performed an action";
   return action
@@ -85,7 +85,7 @@ const formatTimestamp = (timestamp) => {
   });
 };
 
-// Component for metric cards - Updated to match ManageTeachers.js style
+
 const MetricCard = ({ title, value, icon: IconComponent, style, trend }) => (
   <Card className="shadow-sm h-100 border-0" style={{ borderRadius: "12px" }}>
     <Card.Body className="p-4">
@@ -110,7 +110,7 @@ const MetricCard = ({ title, value, icon: IconComponent, style, trend }) => (
   </Card>
 );
 
-// Component for charts with loading and error states - Updated styling
+
 const ChartCard = ({ title, loading, error, children, height = 300 }) => (
   <Card className="shadow-sm h-100 border-0" style={{ borderRadius: "12px" }}>
     <Card.Header 
@@ -144,7 +144,7 @@ const ChartCard = ({ title, loading, error, children, height = 300 }) => (
   </Card>
 );
 
-// Main component
+
 const AdminDashboard = () => {
   const [showSidebar, setShowSidebar] = useState(false);
   const [dashboardData, setDashboardData] = useState({
@@ -163,7 +163,7 @@ const AdminDashboard = () => {
     setShowSidebar(prev => !prev);
   }, []);
 
-  // Data fetching functions
+  
   const fetchStoriesData = useCallback(async () => {
     const storiesRef = collection(db, "stories");
     const q = query(storiesRef, orderBy("createdAt", "asc"));
@@ -205,7 +205,7 @@ const AdminDashboard = () => {
       query(collection(db, "admins"), where("isArchived", "==", false)),
       query(collection(db, "teachers"), where("isArchived", "==", false)),
       query(collection(db, "students"), where("isArchived", "==", false)),
-      query(collection(db, "students")) // For section analysis
+      query(collection(db, "students")) 
     ];
 
     const [adminsSnapshot, teachersSnapshot, studentsSnapshot, allStudentsSnapshot] = 
@@ -240,7 +240,7 @@ const AdminDashboard = () => {
       },
     ];
 
-    // Process students per section
+    
     const sectionCounts = {};
     allStudentsSnapshot.forEach((doc) => {
       const student = doc.data();
@@ -286,7 +286,7 @@ const AdminDashboard = () => {
         }
       }
 
-      // Fetch affected user name if needed
+      
       let targetUserName = logData.targetUserFullName || logData.affectedUserFullName || null;
       
       if (!targetUserName && logData.collectionName && logData.documentId && 
@@ -360,7 +360,7 @@ const AdminDashboard = () => {
     };
   }, []);
 
-  // Main data fetching effect
+  
   useEffect(() => {
     const loadDashboardData = async () => {
       try {
@@ -404,7 +404,7 @@ const AdminDashboard = () => {
     loadDashboardData();
   }, [fetchStoriesData, fetchUsersData, fetchAdminLogs, fetchRetentionData, fetchStoryEngagementData]);
 
-  // Custom tooltip components
+  
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
@@ -492,7 +492,7 @@ const AdminDashboard = () => {
             background: 'linear-gradient(135deg, #FFF5F8 0%, #FFE8F1 50%, #F8E8FF 100%)',
           }}
         >
-          {/* Header - Updated to match ManageTeachers.js style */}
+
           <div className="d-flex justify-content-between align-items-center mb-4">
             <div>
               <h1 className="mb-1 fw-bold text-dark">Admin Dashboard</h1>
@@ -510,7 +510,6 @@ const AdminDashboard = () => {
             </Alert>
           )}
 
-          {/* Metrics Cards - Updated styling */}
           <Row className="g-4 mb-4">
             <Col lg={3} md={6}>
               <MetricCard
@@ -546,7 +545,6 @@ const AdminDashboard = () => {
             </Col>
           </Row>
 
-          {/* Charts Row 1 */}
           <Row className="g-4 mb-4">
             <Col xl={8} lg={12}>
               <ChartCard title="Stories Added Over Time" loading={false}>
@@ -606,7 +604,6 @@ const AdminDashboard = () => {
             </Col>
           </Row>
 
-          {/* Charts Row 2 */}
           <Row className="g-4 mb-4">
             <Col>
               <ChartCard title="Students per Section" loading={false}>
@@ -643,44 +640,8 @@ const AdminDashboard = () => {
                 </div>
               </ChartCard>
             </Col>
-            {/* <Col xl={6} lg={12}>
-              <ChartCard title="User Retention" loading={false}>
-                <div className="chart-container">
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={retentionChartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#FFE4E1" />
-                      <XAxis 
-                        dataKey="name" 
-                        stroke="#2D2D2D" 
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <YAxis 
-                        allowDecimals={false} 
-                        stroke="#2D2D2D" 
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Bar
-                        dataKey="users"
-                        name="Active Users"
-                        radius={[6, 6, 0, 0]}
-                      >
-                        {retentionChartData.map((entry, index) => (
-                          <Cell key={`retention-${index}`} fill={entry.fill} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </ChartCard>
-            </Col> */}
           </Row>
 
-          {/* Engagement Cards - Updated styling */}
           <Row className="g-4 mb-4">
             <Col xl={4} md={6}>
               <Card className="shadow-sm h-100 border-0" style={{ borderRadius: "12px" }}>
@@ -726,7 +687,6 @@ const AdminDashboard = () => {
             </Col>
           </Row>
 
- {/* Recent Admin Actions - Improved Spacing */}
           <Row className="g-4 mb-4">
             <Col>
               <Card className="shadow-sm border-0" style={{ borderRadius: "15px" }}>
@@ -770,7 +730,6 @@ const AdminDashboard = () => {
                             }}
                           >
                             <div className="flex-grow-1">
-                              {/* Main action line */}
                               <div className="d-flex align-items-center flex-wrap mb-1">
                                 <span className="fw-bold text-dark me-2" style={{ fontSize: '0.95rem' }}>
                                   {log.adminName}
@@ -805,7 +764,6 @@ const AdminDashboard = () => {
                                 )}
                               </div>
                               
-                              {/* Permanent delete badge */}
                               {isPermanentDelete && (
                                 <div className="mt-2">
                                   <Badge 
@@ -826,7 +784,6 @@ const AdminDashboard = () => {
                               )}
                             </div>
                             
-                            {/* Timestamp */}
                             <div className="text-end flex-shrink-0 ms-4">
                               <small 
                                 className="text-muted" 

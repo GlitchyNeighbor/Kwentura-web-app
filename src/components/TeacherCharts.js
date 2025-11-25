@@ -27,7 +27,7 @@ import { FaBook, FaUserGraduate, FaChartBar, FaClipboardCheck } from "react-icon
 import TopNavbar from "./TopNavbar";
 import "../scss/custom.scss";
 
-// Constants - Matching Charts.js color scheme
+
 const COLORS = {
   primary: "#FF69B4",
   secondary: "#FFB6C1", 
@@ -58,7 +58,7 @@ const TABLE_LABELS = {
   storiesData: { title: "Story Title", reads: "Number of Readers" },
   bookmarkedStoriesData: { title: "Story Title", bookmarks: "Number of Bookmarks" },
   studentsByGradeInSectionData: { name: "Grade Level", value: "Number of Students", percentage: "Percentage" },
-  studentApprovalData: { name: "Approval Status", value: "Count" }, // no 'color'
+  studentApprovalData: { name: "Approval Status", value: "Count" }, 
   averageScorePerStoryData: { name: "Story Title", averageScore: "Average Score (%)" },
 };
 
@@ -343,7 +343,7 @@ const TeacherCharts = () => {
 
   
 
-  // Custom tooltip component matching Charts.js
+  
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
@@ -360,7 +360,7 @@ const TeacherCharts = () => {
     return null;
   };
 
-  // Generates a textual interpretation for a given dataset.
+  
   const generateInterpretation = (labelKey, data) => {
     if (!data || data.length === 0) {
       return "No data available to generate an interpretation.";
@@ -418,7 +418,7 @@ const TeacherCharts = () => {
     pdf.setTextColor(100);
     const splitText = pdf.splitTextToSize(interpretation, pdf.internal.pageSize.getWidth() - 80);
     pdf.text(splitText, 40, finalY + 20);
-    pdf.setFont("helvetica", "normal"); // Reset font
+    pdf.setFont("helvetica", "normal"); 
     pdf.setTextColor(0);
   };
 
@@ -434,13 +434,13 @@ const handleDownloadChartPdf = async (ref, filename, chartData, labelMapKey, exi
   let startY = 40;
 
   try {
-    // Add chart image only if a ref is provided
+    
     if (ref && ref.current) {
       const canvas = await html2canvas(ref.current, { scale: 2 });
       const imgData = canvas.toDataURL("image/png");
       const imgProps = pdf.getImageProperties(imgData);
       const pdfWidth = pdf.internal.pageSize.getWidth();
-      const imgWidth = pdfWidth - 80; // with margin
+      const imgWidth = pdfWidth - 80; 
       const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
       
       pdf.addImage(imgData, "PNG", 40, 40, imgWidth, Math.min(imgHeight, 350));
@@ -474,7 +474,7 @@ const handleDownloadChartPdf = async (ref, filename, chartData, labelMapKey, exi
 };
 
 const handleDownloadPdf = async () => {
-  if (!chartsRef.current) { // This ref isn't strictly needed anymore but good to keep
+  if (!chartsRef.current) { 
     console.error("Charts container ref is not available.");
     return;
   }
@@ -482,25 +482,25 @@ const handleDownloadPdf = async () => {
   try {
     const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
 
-    // List of charts with their refs, data, and table labels
+    
     const charts = [
       { ref: storiesChartRef, title: "Most Read Stories", data: storiesData, labelKey: "storiesData" },
       { ref: bookmarkedChartRef, title: "Most Bookmarked Stories", data: bookmarkedStoriesData, labelKey: "bookmarkedStoriesData" },
       { ref: studentsGradeChartRef, title: "Students Per Grade (My Section)", data: studentsByGradeInSectionData, labelKey: "studentsByGradeInSectionData" },
-      { ref: studentsGradeChartRef, title: "Student Approval Status", data: studentApprovalData, labelKey: "studentApprovalData" }, // Re-using a ref for the pie chart
-      { ref: storiesChartRef, title: "Average Score Per Story", data: averageScorePerStoryData, labelKey: "averageScorePerStoryData" } // Re-using a ref for the bar chart
+      { ref: studentsGradeChartRef, title: "Student Approval Status", data: studentApprovalData, labelKey: "studentApprovalData" }, 
+      { ref: storiesChartRef, title: "Average Score Per Story", data: averageScorePerStoryData, labelKey: "averageScorePerStoryData" } 
     ];
 
     for (let i = 0; i < charts.length; i++) {
       const { ref, title, data, labelKey } = charts[i];
       if (!data || data.length === 0) continue;
 
-      if (i > 0) pdf.addPage(); // new page per chart
+      if (i > 0) pdf.addPage(); 
 
       pdf.setFontSize(18);
       pdf.text(title, 40, 40);
 
-      await handleDownloadChartPdf(ref, null, data, labelKey, pdf); // Pass the existing PDF
+      await handleDownloadChartPdf(ref, null, data, labelKey, pdf); 
     }
 
     pdf.save("All Charts.pdf");
@@ -510,7 +510,7 @@ const handleDownloadPdf = async () => {
 };
 
 
-  // Component for chart cards with loading and error states - matching Charts.js
+  
   const ChartCard = ({ title, loading, error, children, height = 300, onDownload }) => (
     <Card className="shadow-sm h-100 border-0" style={{ borderRadius: "12px" }}>
       <Card.Header 
@@ -630,7 +630,6 @@ const handleDownloadPdf = async () => {
             background: 'linear-gradient(135deg, #FFF5F8 0%, #FFE8F1 50%, #F8E8FF 100%)',
           }}
         >
-          {/* Header - Updated to match Charts.js style */}
           <div className="d-flex justify-content-between align-items-center mb-4">
             <div className="d-flex align-items-center">
               <Button
@@ -670,7 +669,6 @@ const handleDownloadPdf = async () => {
             </Alert>
           )}
 
-          {/* Metric Cards */}
           <Row className="g-4 mb-4">
             <Col lg={2} md={4}>
               <MetricCard

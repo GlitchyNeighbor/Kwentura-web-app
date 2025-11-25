@@ -72,7 +72,7 @@ const SettingsTeacher = () => {
   const [isEmailVerified, setIsEmailVerified] = useState(false);
 
   const auth = getAuth();
-  // logout not used here; keeping auth handling local via firebase auth
+  
   const navigate = useNavigate();
 
   const fetchUserDataFromFirestore = useCallback(async (currentUser) => {
@@ -181,7 +181,7 @@ const SettingsTeacher = () => {
           message: "Verification email sent! Please check your inbox.",
           type: "success",
         });
-        // It's important to reload the user to get the updated emailVerified status
+        
         await user.reload();
         setIsEmailVerified(user.emailVerified);
       } catch (error) {
@@ -287,7 +287,7 @@ const SettingsTeacher = () => {
         });
         return;
       }
-      // validate password requirements
+      
       const newPwd = userDetails.newPassword || "";
       const curPwd = userDetails.currentPassword || "";
       const validations = {
@@ -432,7 +432,7 @@ const SettingsTeacher = () => {
       await uploadBytes(storageRef, file);
       const url = await getDownloadURL(storageRef);
 
-      // Update Firestore
+      
       let collectionName = "teachers";
       if (userRole === "admin" || userRole === "superAdmin" || userRole === "superadmin") {
         collectionName = "admins";
@@ -464,7 +464,7 @@ const SettingsTeacher = () => {
       return;
     }
 
-    // Add confirmation dialog
+    
     const confirmRemoval = window.confirm(
       "Are you sure you want to remove your profile picture? This action cannot be undone."
     );
@@ -507,7 +507,6 @@ const SettingsTeacher = () => {
   if (loading) {
     return (
       <div>
-        {/* Sticky TopNavbar */}
         <div style={{ 
           position: "fixed", 
           top: 0, 
@@ -605,7 +604,6 @@ const SettingsTeacher = () => {
 
   return (
     <div>
-      {/* Sticky TopNavbar */}
       <div style={{ 
         position: "fixed", 
         top: 0, 
@@ -648,7 +646,7 @@ const SettingsTeacher = () => {
             minHeight: "calc(100vh - 56px)",
           }}
         >
-          {/* Header Section */}
+
           <div 
             style={{ 
               background: "rgba(255, 255, 255, 0.9)",
@@ -731,7 +729,6 @@ const SettingsTeacher = () => {
             </div>
           </div>
 
-          {/* Content Container */}
           <div 
             style={{ 
               background: "rgba(255, 255, 255, 0.9)",
@@ -742,7 +739,6 @@ const SettingsTeacher = () => {
               border: "1px solid rgba(255, 84, 154, 0.1)",
             }}
           >
-            {/* About Me Tab */}
             {activeTab === "about" && (
               <>
                 <div 
@@ -778,7 +774,6 @@ const SettingsTeacher = () => {
                   </Alert>
                 )}
                 
-                {/* Profile Picture Section */}
                 <div 
                   style={{ 
                     background: "linear-gradient(135deg, rgba(255, 84, 154, 0.05), rgba(194, 24, 91, 0.03))",
@@ -908,7 +903,6 @@ const SettingsTeacher = () => {
                   </div>
                 </div>
 
-                {/* Profile Information Section */}
                 <div 
                   style={{ 
                     fontSize: "28px",
@@ -1150,7 +1144,6 @@ const SettingsTeacher = () => {
               </>
             )}
 
-            {/* Change Password Tab */}
             {activeTab === "password" && (
               <>
                 <div 

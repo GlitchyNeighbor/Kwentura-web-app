@@ -36,7 +36,7 @@ const HomeNavbar = () => {
           alignItems: 'center'
         }}
       >
-        {/* Logo Section */}
+
         <div className="d-flex align-items-center" style={{gap: '1rem'}}>
           <div 
             className="logo"
@@ -55,7 +55,7 @@ const HomeNavbar = () => {
             onMouseEnter={(e) => e.target.style.transform = 'scale(1.1) rotate(5deg)'}
             onMouseLeave={(e) => e.target.style.transform = 'scale(1) rotate(0deg)'}
           >
-            {/* Logo */}
+
             <div className="logo-container" >
               <img
                 src={require("../assets/images/KLogo.png")}
@@ -97,7 +97,6 @@ const HomeNavbar = () => {
           </div>
         </div>
         
-        {/* Desktop Navigation */}
         <nav className="d-none d-lg-flex align-items-center" style={{gap: '2rem'}}>
           <a 
             href="/" 
@@ -204,7 +203,6 @@ const HomeNavbar = () => {
           </a>
         </nav>
         
-        {/* Mobile Menu Button */}
         <button 
           className="d-lg-none btn btn-link p-0"
           style={{
@@ -218,8 +216,7 @@ const HomeNavbar = () => {
           <i className={`fas ${isMobileMenuOpen ? 'fa-times' : 'fa-bars'}`}></i>
         </button>
       </div>
-      
-      {/* Mobile Menu */}
+
       {isMobileMenuOpen && (
         <div 
           className="d-lg-none"
@@ -246,9 +243,9 @@ const PrivacyPolicy = () => {
   const [, setActiveSection] = useState("");
 
   useEffect(() => {
-    // FontAwesome is imported centrally in src/index.js
+    
 
-    // Handle scroll spy for sections
+    
     const handleScroll = () => {
       const sections = document.querySelectorAll('[data-section]');
       const scrollPosition = window.scrollY + 150;
@@ -271,8 +268,6 @@ const PrivacyPolicy = () => {
   return (
     <div style={{minHeight: '100vh', display: 'flex', flexDirection: 'column'}}>
       <HomeNavbar />
-
-      {/* Hero Section */}
       <section 
         style={{
           display: 'flex',
@@ -286,7 +281,6 @@ const PrivacyPolicy = () => {
           overflow: 'hidden'
         }}
       >
-        {/* Background decorative elements */}
         <div 
           style={{
             position: 'absolute',
@@ -388,7 +382,6 @@ const PrivacyPolicy = () => {
         </div>
       </section>
 
-      {/* Main Content Section */}
       <section 
         style={{ 
           backgroundColor: 'white',
@@ -403,7 +396,6 @@ const PrivacyPolicy = () => {
             backgroundColor: 'white',
         }}>
           <div>
-            {/* Main Content */}
             <div>
               <div
                 style={{
@@ -416,7 +408,6 @@ const PrivacyPolicy = () => {
                   margin: '0 auto'
                 }}
               >
-                {/* Introduction */}
                 <div style={{marginBottom: '3rem'}}>
                   <div 
                     style={{
@@ -460,7 +451,6 @@ const PrivacyPolicy = () => {
                   </div>
                 </div>
 
-                {/* Privacy Sections */}
                 <div className="privacy-content">
                   <section data-section="information" style={{marginBottom: '3rem'}}>
                     <div 
@@ -884,7 +874,6 @@ const PrivacyPolicy = () => {
                       personal data is handled, please contact us at:
                     </p>
                     
-                    {/* Contact Information Container */}
                     <div 
                       style={{
                         background: 'rgba(255, 255, 255, 0.95)',
@@ -1030,7 +1019,6 @@ const PrivacyPolicy = () => {
                     </div>
                   </section>
 
-                  {/* Final Agreement */}
                   <section style={{marginBottom: '3rem'}}>
                     <div 
                       style={{
@@ -1109,7 +1097,6 @@ const PrivacyPolicy = () => {
         </div>
       </section>
 
-      {/* Back to Top Button */}
       <button
         onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
         style={{
@@ -1139,9 +1126,6 @@ const PrivacyPolicy = () => {
       >
         <i className="fas fa-arrow-up"></i>
       </button>
-
-      {/* FontAwesome CDN */}
-      {/* FontAwesome is loaded from local package via import in src/index.js */}
 
       <style jsx>{`
         @keyframes float {

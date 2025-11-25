@@ -22,7 +22,7 @@ export const AuthProvider = ({ children }) => {
   const [pendingStudents, setPendingStudents] = useState([]);
   const [pendingTeachers, setPendingTeachers] = useState([]);
 
-  // Use a ref to hold userData to break dependency cycle
+  
   const userDataRef = useRef(userData);
   const auth = getAuth();
 
@@ -48,16 +48,16 @@ export const AuthProvider = ({ children }) => {
       for (const { name: collectionName, defaultRole, roleField } of collectionsToSearch) {
         let docSnap = null;
 
-        // Try to find by UID first, as it's more reliable and unique
+        
         if (currentUser.uid) {
-            const docRef = doc(db, collectionName, currentUser.uid); // This is a reference, not a document
+            const docRef = doc(db, collectionName, currentUser.uid); 
             const uidDocSnap = await getDoc(docRef);
             if (uidDocSnap.exists()) {
                 docSnap = uidDocSnap;
             }
         }
 
-        // If not found by UID, try by email as a fallback
+        
         if (!docSnap && currentUser.email) {
           const emailQuery = query(collection(db, collectionName), where("email", "==", currentUser.email));
           const emailSnapshot = await getDocs(emailQuery);
@@ -68,7 +68,7 @@ export const AuthProvider = ({ children }) => {
         
         if (docSnap) {
           const data = docSnap.data();
-          // Normalize role strings to a canonical set used across the app
+          
           const rawRole = (data[roleField] || defaultRole || '').toString();
           const roleLower = rawRole.toLowerCase();
           let canonicalRole;
@@ -85,7 +85,7 @@ export const AuthProvider = ({ children }) => {
           }
 
           foundUserData = {
-            id: docSnap.id, // Use the actual document ID
+            id: docSnap.id, 
             ...data,
             role: canonicalRole,
           };
@@ -97,7 +97,7 @@ export const AuthProvider = ({ children }) => {
         const fullName = `${foundUserData.firstName || foundUserData.studentFirstName || ""} ${foundUserData.lastName || foundUserData.studentLastName || ""}`.trim();
         setUserData({ ...foundUserData, fullName });
       } else {
-        // Fallback for users that might only exist in Auth
+        
         const displayName = currentUser.displayName || "";
         const nameParts = displayName.split(" ");
         setUserData({
@@ -134,16 +134,16 @@ export const AuthProvider = ({ children }) => {
         setPendingStudents(studentsList);
       } catch (err) {
         console.error("AuthContext: Error fetching pending students:", err);
-        // Optionally set an error state here
+        
       }
     } else {
-      // If user is not a teacher or has no section, ensure the list is empty
+      
       setPendingStudents([]);
     }
   }, []);
 
   const fetchPendingTeachers = useCallback(async () => {
-    // Only admins and superadmins should fetch pending teacher approvals
+    
     const currentData = userDataRef.current;
     if (!currentData) {
       setPendingTeachers([]);
@@ -153,7 +153,7 @@ export const AuthProvider = ({ children }) => {
     if (currentData.role === USER_ROLES.ADMIN || currentData.role === USER_ROLES.SUPERADMIN) {
       try {
         const teachersRef = collection(db, "pendingTeachers");
-        const q = query(teachersRef); // assuming all docs in this collection are pending
+        const q = query(teachersRef); 
         const querySnapshot = await getDocs(q);
         const teachersList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setPendingTeachers(teachersList);
@@ -193,17 +193,17 @@ export const AuthProvider = ({ children }) => {
     };
   }, [auth, fetchUserDataFromFirestore]);
 
-  // Keep userDataRef updated to avoid dependency cycles
+  
   useEffect(() => {
     userDataRef.current = userData;
-    // When userData is updated (e.g., on login), fetch pending students
+    
     if (userData?.role === 'teacher') {
       fetchPendingStudents();
     } else if (userData?.role === USER_ROLES.ADMIN || userData?.role === USER_ROLES.SUPERADMIN) {
-      // For admins and super admins, fetch pending teacher approvals
+      
       fetchPendingTeachers();
     } else {
-      // Clear lists for other roles
+      
       setPendingStudents([]);
       setPendingTeachers([]);
     }
@@ -241,9 +241,9 @@ export const AuthProvider = ({ children }) => {
       console.error("Error signing out from Firebase:", error);
       throw error;
     }
-  }, [user, auth]); // Removed userData from dependencies
+  }, [user, auth]); 
 
-  // Separate logout function for remote sign-out to avoid clearing the new session's ID
+  
   const remoteLogout = useCallback(async () => {
     try {
       await signOut(auth);
@@ -251,12 +251,12 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem("user");
     } catch (error) {
       console.error("Error during remote sign out from Firebase:", error);
-      // Don't re-throw, as this is a background operation.
+      
     }
   }, [auth]);
 
   useEffect(() => {
-    // This effect should only run when the user logs in or out.
+    
     if (!user) {
       return;
     }
@@ -266,7 +266,7 @@ export const AuthProvider = ({ children }) => {
     }
 
     let collectionName;
-    const role = userData?.role; // Use userData directly since it's a dependency
+    const role = userData?.role; 
 
     if (role === USER_ROLES.TEACHER) {
       collectionName = "teachers";
@@ -278,9 +278,7 @@ export const AuthProvider = ({ children }) => {
     if (!collectionName) {
       return;
     }
-
-    // Use the Firestore document ID found during profile lookup when available.
-    // Many collections use document IDs that are not the same as the Firebase Auth UID.
+    
     const targetDocId = userData?.id || user.uid;
     const userDocRef = doc(db, collectionName, targetDocId);
     const unsubscribe = onSnapshot(userDocRef, (docSnapshot) => {
@@ -290,8 +288,8 @@ export const AuthProvider = ({ children }) => {
           firestoreData.activeSessionId &&
           firestoreData.activeSessionId !== sessionId
         ) {
-          // Another device has logged in. Log this one out.
-          unsubscribe(); // Stop listening to prevent re-triggering.
+          
+          unsubscribe(); 
           remoteLogout().then(() => {
             alert("You have been logged out because you signed in on another device.");
           });
@@ -299,7 +297,7 @@ export const AuthProvider = ({ children }) => {
       }
     });
     return () => unsubscribe();
-  }, [user, userData, remoteLogout]); // Depend on the new remoteLogout function
+  }, [user, userData, remoteLogout]); 
 
   const value = useMemo(() => ({
     user,

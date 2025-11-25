@@ -48,20 +48,20 @@ export const StudentProvider = ({ children }) => {
 
       const { uid: newStudentUid, email: newStudentEmail, ...restOfStudentData } = result.data;
 
-      // The cloud function should return the full student object including server-set fields.
-      // For immediate UI update, we can optimistically add it, then refetch for full accuracy.
-      // Or, if the cloud function returns the complete object, use that.
-      // Assuming result.data contains the full student object as stored in Firestore after creation.
+      
+      
+      
+      
       const createdStudent = {
-        id: newStudentUid, // Use UID as ID for consistency
+        id: newStudentUid, 
         uid: newStudentUid,
         email: newStudentEmail,
-        ...restOfStudentData, // This should contain all fields set by the cloud function
+        ...restOfStudentData, 
       };
 
       setStudents((prevStudents) => [...prevStudents, createdStudent]);
 
-      // Log action
+      
       const currentUser = auth.currentUser;
       const studentFullName = `${newStudentData.studentFirstName || ""} ${newStudentData.studentLastName || ""}`.trim();
       logAdminUiActionCallable({
@@ -96,7 +96,7 @@ export const StudentProvider = ({ children }) => {
         )
       );
 
-      // Log action
+      
       const currentUser = auth.currentUser;
       const studentFullName = `${updatedData.studentFirstName || ""} ${updatedData.studentLastName || ""}`.trim();
       logAdminUiActionCallable({
@@ -104,7 +104,7 @@ export const StudentProvider = ({ children }) => {
         adminId: currentUser?.uid,
         collectionName: "students",
         documentId: studentId,
-        targetUserId: studentId, // Assuming studentId is the UID
+        targetUserId: studentId, 
         targetUserFullName: studentFullName,
       }).catch(console.error);
 
@@ -133,7 +133,7 @@ export const StudentProvider = ({ children }) => {
         prevStudents.filter((student) => student.id !== studentId)
       );
 
-      // Log action
+      
       const currentUser = auth.currentUser;
       logAdminUiActionCallable({
         actionType: "student_account_archived",
@@ -160,7 +160,7 @@ export const StudentProvider = ({ children }) => {
         students,
         loading,
         error,
-        fetchStudents, // Expose fetchStudents for manual refresh if needed
+        fetchStudents, 
         addStudent,
         updateStudent,
         archiveStudent,

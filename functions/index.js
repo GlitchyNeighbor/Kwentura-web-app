@@ -19,7 +19,6 @@ exports.updateAdminPassword = onCall(async (request) => {
         "You must be authenticated to update a password.");
   }
 
-  // Security Enhancement: Verify the caller is an admin or superAdmin
   const adminUid = request.auth.uid;
   try {
     const adminDoc = await db.collection("admins").doc(adminUid).get();
@@ -72,7 +71,6 @@ onCall({timeoutSeconds: 3600, region: "asia-southeast1"},
       "fil-PH-Standard-A" : "en-US-Chirp-HD-F",
         },
         audioConfig: {audioEncoding: "MP3"},
-        // Add timepoints to get word timings.
         enableTimepointing: ["SSML_MARK"],
       };
 
@@ -134,14 +132,10 @@ exports.generateAndStoreTts = onCall(async (request) => {
 
     await file.save(response.audioContent);
     console.log(`TTS audio saved to ${filePath}`);
-
-    // Make the file public
     await file.makePublic();
 
-    // Get the public URL
     const publicUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
 
-    // Save the URL to Firestore
     await db.collection("tts_config").doc(fileName).set({
       url: publicUrl,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -487,7 +481,6 @@ exports.deleteUserAccount = onCall(async (request) => {
       throw new HttpsError("invalid-argument", "Missing required parameters");
     }
 
-    // If deleting a student, also delete their subcollections
     if (collectionName === "students") {
       const studentRef = getFirestore().collection("students").doc(documentId);
       const subcollectionsToDelete = ["bookmarks", "quizScores"];
@@ -503,7 +496,6 @@ exports.deleteUserAccount = onCall(async (request) => {
       }
     }
 
-    // Delete the main document and the auth user
     await getFirestore().collection(collectionName).doc(documentId).delete();
     await getAuth().deleteUser(uid);
 
@@ -820,14 +812,12 @@ exports.approveTeacher = onCall({
 
     const teacherData = pendingTeacherDoc.data();
 
-    // Enhance teacher data with approved status and timestamp
     const teacherRecord = {
       ...teacherData,
       status: "approved",
       approvedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 
-    // Set custom user claim for role
     await getAuth().setCustomUserClaims(teacherUid, {role: "teacher"});
     console.log(`Custom claim 'teacher' set for user ${teacherUid}`);
 
@@ -855,9 +845,6 @@ exports.approveTeacher = onCall({
   }
 });
 
-/**
- * Cleans up associated data in Firestore and Storage when a story is deleted.
- */
 exports.onStoryDelete =
 onDocumentDeleted({document: "stories/{storyId}",
   region: "asia-southeast1"}, async (event) => {
@@ -867,7 +854,6 @@ onDocumentDeleted({document: "stories/{storyId}",
 
   console.log(`Starting cleanup for deleted story: ${storyId}`);
 
-  // 1. Delete associated files in Cloud Storage
   const storagePrefixes = [
     `stories/${storyId}`,
     `story_pdfs/${storyId}`,
@@ -890,7 +876,6 @@ onDocumentDeleted({document: "stories/{storyId}",
     }
   }
 
-  // 2. Delete subcollections (e.g., 'readers')
   const subcollections = await db.collection("stories")
       .doc(storyId).listCollections();
   for (const subcollection of subcollections) {
@@ -904,7 +889,7 @@ onDocumentDeleted({document: "stories/{storyId}",
     }
   }
 
-  // 3. Delete associated quiz scores from all students
+
   try {
     console.log(`Searching for quiz scores related to story ${storyId}...`);
     const studentsSnapshot = await db.collection("students").get();
@@ -973,11 +958,9 @@ exports.rejectTeacher = onCall({region: "asia-southeast1"}, async (request) => {
   }
 
   try {
-    // Delete Firebase Auth user
     await getAuth().deleteUser(teacherUid);
     console.log(`Firebase Auth user ${teacherUid} deleted.`);
 
-    // Delete document from pendingTeachers collection
     await getFirestore().collection("pendingTeachers")
         .doc(teacherId).delete();
     console.log(`Pending teacher document ${teacherId} deleted.`);
@@ -993,23 +976,20 @@ exports.rejectTeacher = onCall({region: "asia-southeast1"}, async (request) => {
   }
 });
 
-// CSP report receiver — lightweight endpoint to collect CSP violation
-// reports. Linted to satisfy functions predeploy checks.
 exports.cspReport = require("firebase-functions").https.onRequest(
     async (req, res) => {
-      // Allow only POST requests with JSON body
+
       if (req.method !== "POST") {
         res.status(204).send("");
         return;
       }
 
       let report = req.body;
-      // Some user agents send the report in report.report or as raw JSON
+
       if (report && report["csp-report"]) {
         report = report["csp-report"];
       }
 
-      // Capture some request metadata for triage
       const metadata = {
         ip:
             req.headers["x-forwarded-for"] || req.ip ||
@@ -1028,18 +1008,17 @@ exports.cspReport = require("firebase-functions").https.onRequest(
       );
 
       try {
-        // Write the report to Firestore for later inspection
+
         await db.collection("csp_reports").add({
           report: report || {},
           metadata,
           receivedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
       } catch (err) {
-        // Log error but do not fail the request
+
         console.error("Failed to persist CSP report:", err);
       }
 
-      // Always return 204 No Content to the reporter
       res.status(204).send("");
     },
 );
@@ -1094,7 +1073,6 @@ Example:
         const response = result.response;
         let responseText = response.text();
 
-        // Remove markdown if present
         if (responseText.startsWith("```json")) {
           responseText = responseText.substring(7);
         } else if (responseText.startsWith("```")) {
@@ -1204,7 +1182,7 @@ Synopsis to Evaluate: "${contentToEvaluate}"
 
 Return ONLY a valid JSON object in the format:
 ${JSON.stringify(exampleJson, null, 2)}`;
-        } else { // comprehensionQuestions
+        } else {
           contentToEvaluate = storyData.comprehensionQuestions;
           if (!contentToEvaluate || contentToEvaluate.length === 0) {
             throw new HttpsError("failed-precondition",
@@ -1333,7 +1311,6 @@ ${JSON.stringify(exampleJson, null, 2)}`;
         const response = result.response;
         let responseText = response.text().trim();
 
-        // Clean up potential markdown
         if (responseText.startsWith("```json")) {
           responseText = responseText.substring(7,
               responseText.length - 3).trim();
@@ -1349,7 +1326,6 @@ ${JSON.stringify(exampleJson, null, 2)}`;
           throw new Error("AI translation validation result is invalid.");
         }
 
-        // Store the validation result in Firestore
         const fieldToUpdate = "aiFeedback.translation";
         await storyRef.update({
           [fieldToUpdate]: {

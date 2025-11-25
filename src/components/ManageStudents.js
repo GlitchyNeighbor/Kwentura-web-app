@@ -29,7 +29,7 @@ import {
 } from "react-bootstrap-icons";
 import { Eye, EyeOff, Users, UserCheck, UserPlus, GraduationCap } from "lucide-react";
 
-// Firebase imports
+
 import {
   doc,
   getDocs,
@@ -53,17 +53,17 @@ import SidebarMenuAdmin from "./SidebarMenuAdmin";
 import TopNavbar from "./TopNavbar";
 import "../scss/custom.scss";
 
-// Initialize Firebase Functions
+
 const functions = getFunctions(app);
 const logAdminUiActionCallable = httpsCallable(functions, 'logAdminUiAction');
 
-// Function to call the Firebase Cloud Function for updating passwords
+
 async function updateStudentPassword(uid, newPassword) {
   const updatePasswordFn = httpsCallable(functions, "updateAdminPassword");
   return updatePasswordFn({ uid, newPassword });
 }
 
-// Constants
+
 const COLORS = {
   primary: "#FF69B4",
   secondary: "#FFB6C1", 
@@ -90,11 +90,11 @@ const SECTIONS = [
   { value: "INF227", label: "INF227" },
 ];
 
-// Regex for checking presence of symbol characters in passwords
-// Use RegExp constructor to avoid unnecessary-escape ESLint warnings
+
+
 const PASSWORD_SYMBOL_REGEX = new RegExp("[!@#$%^&*()_+\\\-=[\\]{};':\"\\\\|,.<>/?]");
 
-// Custom hooks
+
 const useStudents = () => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -148,7 +148,7 @@ const useAlert = () => {
   return { alert, showAlert, hideAlert };
 };
 
-// Utility functions
+
 const validatePassword = (password) => {
   const requirements = {
     minLength: password.length >= 6,
@@ -167,7 +167,7 @@ const formatParentName = (student) => {
   return `${student.parentFirstName || ''} ${student.parentLastName || ''}`.trim();
 };
 
-// Components
+
 const StatCard = ({ title, value, icon: IconComponent, color, trend }) => (
   <Card className="shadow-sm h-100 border-0" style={{ borderRadius: "12px" }}>
     <Card.Body className="p-4">
@@ -258,7 +258,6 @@ const StudentModal = ({
     
     <Modal.Body className="p-4">
       <Form onSubmit={(e) => { e.preventDefault(); onSubmit(); }}>
-        {/* Student Information */}
         <div className="mb-4">
           <h6 className="fw-semibold mb-3" style={{ color: COLORS.pink }}>
             <PersonFill className="me-2" size={18} />
@@ -388,7 +387,6 @@ const StudentModal = ({
           </Row>
         </div>
 
-        {/* Parent Information */}
         <div className="mb-4">
           <h6 className="fw-semibold mb-3" style={{ color: COLORS.pink }}>
             <PeopleFill className="me-2" size={18} />
@@ -444,7 +442,6 @@ const StudentModal = ({
           </Form.Group>
         </div>
 
-        {/* Login Credentials */}
         <div className="mb-4">
           <h6 className="fw-semibold mb-3" style={{ color: COLORS.pink }}>
             Login Credentials
@@ -567,7 +564,7 @@ const StudentModal = ({
       <Button
         onClick={onSubmit}
         disabled={loading}
-        // Add a disabled check for schoolIdStatus if needed, e.g., disabled={loading || schoolIdStatus === 'taken'}
+        
         style={{
           backgroundColor: COLORS.pink,
           border: "none",
@@ -647,21 +644,21 @@ const DeleteConfirmModal = ({ show, onHide, onConfirm, student, loading }) => (
   </Modal>
 );
 
-// Main Component
+
 const ManageStudents = () => {
   const navigate = useNavigate();
   const { students, setStudents, loading: studentsLoading, error: studentsError, refetch } = useStudents();
   const { alert, showAlert, hideAlert } = useAlert();
 
-  // UI State
+  
   const [showSidebar, setShowSidebar] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [schoolIdStatus, setSchoolIdStatus] = useState('idle'); // 'idle', 'checking', 'available', 'taken'
+  const [schoolIdStatus, setSchoolIdStatus] = useState('idle'); 
   const [loading, setLoading] = useState(false);
 
-  // Form State
+  
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [formData, setFormData] = useState({
@@ -688,7 +685,7 @@ const ManageStudents = () => {
 
   const currentUser = auth.currentUser;
 
-  // Computed values
+  
   const filteredStudents = useMemo(() => {
     return students.filter((student) =>
       Object.values(student).some((value) =>
@@ -707,7 +704,7 @@ const ManageStudents = () => {
     }, {}),
   }), [students]);
 
-  // Event handlers
+  
   const toggleSidebar = useCallback(() => {
     setShowSidebar(prev => !prev);
   }, []);
@@ -726,7 +723,7 @@ const ManageStudents = () => {
         const querySnapshot = await getDocs(q);
         if (!querySnapshot.empty) {
           if (excludeId) {
-            // If we are editing, check if the found ID is not the same as the current student's ID
+            
             if (querySnapshot.docs.some(doc => doc.id !== excludeId)) {
               isTaken = true;
               break;
@@ -824,7 +821,7 @@ const ManageStudents = () => {
   }, []);
 
   const handleSubmit = useCallback(async () => {
-    // Validation
+    
     if (
       !formData.studentFirstName ||
       !formData.studentLastName ||
@@ -882,11 +879,11 @@ const ManageStudents = () => {
       };
 
       if (isEditMode && selectedStudent) {
-        // Update existing student
+        
         const studentRef = doc(db, "students", selectedStudent.id);
         await updateDoc(studentRef, studentData);
 
-        // --- START: Added Password Update Logic ---
+        
         if (formData.password && formData.password.length >= 6) {
           try {
             await updateStudentPassword(selectedStudent.uid, formData.password);
@@ -895,7 +892,7 @@ const ManageStudents = () => {
             showAlert(`Failed to update password: ${err.message}`, "danger");
           }
         }
-        // --- END: Added Password Update Logic ---
+        
 
         setStudents((prevStudents) =>
           prevStudents.map((student) =>
@@ -907,7 +904,7 @@ const ManageStudents = () => {
 
         showAlert("Student updated successfully!", "success");
 
-        // Log admin action
+        
         const studentFullName = formatDisplayName(studentData);
         logAdminUiActionCallable({
           actionType: 'student_account_updated',
@@ -918,7 +915,7 @@ const ManageStudents = () => {
           targetUserFullName: studentFullName,
         }).catch(console.error);
       } else {
-        // Create new student
+        
         const secondaryApp = initializeApp(firebaseConfig, `secondary-creation-${Date.now()}`);
         const secondaryAuth = getAuth(secondaryApp);
         const userCredential = await createUserWithEmailAndPassword(
@@ -937,12 +934,12 @@ const ManageStudents = () => {
         const docRef = doc(db, "students", authUser.uid);
         await setDoc(docRef, studentData);
 
-        // Update local state
+        
         setStudents(prev => [...prev, { id: authUser.uid, ...studentData }]);
 
         showAlert("Student created successfully!", "success");
 
-        // Log admin action
+        
         const studentFullName = formatDisplayName(studentData);
         logAdminUiActionCallable({
           actionType: 'student_account_created',
@@ -958,7 +955,7 @@ const ManageStudents = () => {
     } catch (error) {
       console.error(isEditMode ? "Error updating student:" : "Error creating student:", error);
 
-      // Cleanup on error
+      
       if (!isEditMode && authUser) {
         try {
           await deleteUser(authUser);
@@ -967,7 +964,7 @@ const ManageStudents = () => {
         }
       }
 
-      // Error messages
+      
       let errorMessage = error.message;
       if (error.code === "auth/email-already-in-use") {
         errorMessage = "This email address is already registered.";
@@ -1000,7 +997,7 @@ const ManageStudents = () => {
       setStudents(students.filter((student) => student.id !== selectedStudent.id));
       showAlert("Student archived successfully!", "success");
 
-      // Log admin action
+      
       const studentFullName = formatDisplayName(selectedStudent);
       logAdminUiActionCallable({
         actionType: 'student_account_archived',
@@ -1101,7 +1098,6 @@ const ManageStudents = () => {
             background: 'linear-gradient(135deg, #FFF5F8 0%, #FFE8F1 50%, #F8E8FF 100%)',
           }}
         >
-          {/* Alert */}
           <Alert
             show={alert.show}
             variant={alert.variant}
@@ -1121,7 +1117,6 @@ const ManageStudents = () => {
             {alert.message}
           </Alert>
 
-          {/* Header */}
           <div className="d-flex justify-content-between align-items-center mb-4">
             <div className="d-flex align-items-center">
               <Button
@@ -1179,7 +1174,6 @@ const ManageStudents = () => {
             </div>
           </div>
 
-          {/* Stats Cards */}
           <Row className="g-4 mb-4">
             <Col lg={3} md={6}>
               <StatCard
@@ -1215,7 +1209,6 @@ const ManageStudents = () => {
             </Col>
           </Row>
 
-          {/* Error State */}
           {studentsError && (
             <Alert variant="danger" className="mb-4">
               <strong>Error loading students:</strong> {studentsError}
@@ -1230,7 +1223,6 @@ const ManageStudents = () => {
             </Alert>
           )}
 
-          {/* Content */}
           <Card className="shadow-sm border-0" style={{ borderRadius: "15px" }}>
             <Card.Header 
               className="border-0 py-4"
@@ -1543,7 +1535,6 @@ const ManageStudents = () => {
         </Container>
       </div>
 
-      {/* Modals */}
       <StudentModal
         show={showModal}
         onHide={handleCloseModal}
