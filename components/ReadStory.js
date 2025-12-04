@@ -38,17 +38,17 @@ const { width, height } = Dimensions.get("window");
 
 const ReadStory = ({ route, navigation }) => {
   const storyId = route.params?.storyId;
-  const initialPage = route.params?.initialPage || 0; // Get initial page from route params
+  const initialPage = route.params?.initialPage || 0; 
   const [pageImages, setPageImages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currentPage, setCurrentPage] = useState(initialPage); // Set initial page
+  const [currentPage, setCurrentPage] = useState(initialPage); 
   const [imagesReady, setImagesReady] = useState(false);
   const [pageTexts, setPageTexts] = useState([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [storyTitle, setStoryTitle] = useState("");
   const [storyAuthor, setStoryAuthor] = useState("");
-  const [storyData, setStoryData] = useState(null); // Store complete story data
+  const [storyData, setStoryData] = useState(null); 
   const [showCompletion, setShowCompletion] = useState(false);
   const [audioData, setAudioData] = useState([]);
   const [currentAudio, setCurrentAudio] = useState(null);
@@ -65,14 +65,14 @@ const ReadStory = ({ route, navigation }) => {
   const orientationChangeRef = useRef(false);
   const hasScrolledToInitialPage = useRef(false);
 
-  // Animation values
+  
   const speakerScale = useSharedValue(1);
   const starRotation = useSharedValue(0);
   const sparkleOpacity = useSharedValue(0);
   const completionScale = useSharedValue(0);
   const celebrationBounce = useSharedValue(1);
 
-  // Save progress function
+  
   const saveProgress = async (pageIndex) => {
     const auth = getAuth();
     if (!auth.currentUser || !storyData || pageIndex < 0) return;
@@ -108,7 +108,7 @@ const ReadStory = ({ route, navigation }) => {
     const nextLanguage = availableLanguages[nextIndex];
     setCurrentLanguage(nextLanguage);
 
-    // Stop any currently playing audio
+    
     if (currentAudio) {
       currentAudio.unloadAsync();
       setCurrentAudio(null);
@@ -117,7 +117,7 @@ const ReadStory = ({ route, navigation }) => {
     }
   };
 
-  // Handle orientation change with improved synchronization
+  
   const toggleOrientation = async () => {
     try {
       orientationChangeRef.current = true;
@@ -131,14 +131,14 @@ const ReadStory = ({ route, navigation }) => {
         setIsLandscape(true);
       }
       
-      // Wait longer for orientation change to complete and force scroll to correct page
+      
       setTimeout(() => {
         if (flatListRef.current && pageImages.length > 0) {
           flatListRef.current.scrollToIndex({ 
             animated: false, 
             index: targetPage 
           });
-          // Double check after a short delay
+          
           setTimeout(() => {
             if (flatListRef.current) {
               flatListRef.current.scrollToIndex({ 
@@ -159,7 +159,7 @@ const ReadStory = ({ route, navigation }) => {
     }
   };
 
-  // Start sparkle animation on load
+  
   useEffect(() => {
     sparkleOpacity.value = withRepeat(
       withSequence(
@@ -177,14 +177,14 @@ const ReadStory = ({ route, navigation }) => {
     );
   }, []);
 
-  // Completion screen animations
+  
   useEffect(() => {
     if (showCompletion) {
       completionScale.value = withSpring(1, { damping: 15 });
     }
   }, [showCompletion]);
 
-  // UI visibility timer
+  
   useEffect(() => {
     let timer;
     if (showUI) {
@@ -200,7 +200,7 @@ const ReadStory = ({ route, navigation }) => {
     return () => clearTimeout(timer);
   }, [showUI]);
 
-  // Increment "users read" count when story is completed
+  
   useEffect(() => {
     const auth = getAuth();
     if (showCompletion && auth.currentUser && storyId) {
@@ -275,18 +275,18 @@ const ReadStory = ({ route, navigation }) => {
       let images = [];
       let texts = [];
   
-      // setStoryTitle(data.title || "");
-      // setStoryAuthor(data.author || "");
-      setStoryData(data); // Store complete story data
+      
+      
+      setStoryData(data); 
   
-      // Determine available languages
+      
       const baseLang = data.language || 'fil-PH';
       const translationKeys = data.translations ? Object.keys(data.translations) : [];
       const uniqueLangs = [...new Set([baseLang, ...translationKeys])];
       setAvailableLanguages(uniqueLangs);
       setCurrentLanguage(baseLang);
 
-      // Store all page text variations
+      
       const allPageTexts = {
         [baseLang]: data.pageTexts || [],
         ...data.translations,
@@ -294,7 +294,7 @@ const ReadStory = ({ route, navigation }) => {
       setOriginalPageTexts(allPageTexts);
       setPageTexts(allPageTexts[baseLang] || []);
 
-      // Process page images
+      
       const imageSources = Array.isArray(data.pageImages)
         ? data.pageImages
         : data.pageImages && typeof data.pageImages === 'object'
@@ -316,14 +316,11 @@ const ReadStory = ({ route, navigation }) => {
     fetchPages();
   }, [storyId]);
 
-  // Effect to update texts and audio when language changes
+  
   useEffect(() => {
     if (!storyData || !currentLanguage) return;
-
-    // Update page texts
     setPageTexts(originalPageTexts[currentLanguage] || []);
 
-    // Update audio data
     const updateAudio = async () => {
       const ttsForLanguage = storyData.ttsAudio?.[currentLanguage];
       if (ttsForLanguage && Array.isArray(ttsForLanguage)) {
@@ -343,7 +340,7 @@ const ReadStory = ({ route, navigation }) => {
     updateAudio();
   }, [currentLanguage, storyData, originalPageTexts]);
 
-  // Scroll to initial page when images are ready
+  
   useEffect(() => {
     if (imagesReady && pageImages.length > 0 && !hasScrolledToInitialPage.current) {
       setTimeout(() => {
@@ -358,14 +355,14 @@ const ReadStory = ({ route, navigation }) => {
     }
   }, [imagesReady, pageImages.length, initialPage]);
 
-  // Save progress when page changes
+  
   useEffect(() => {
     if (imagesReady && storyData && currentPage >= 0) {
       saveProgress(currentPage);
     }
   }, [currentPage, imagesReady, storyData]);
 
-  // Auto-play with visual feedback
+  
   useEffect(() => {
     if (imagesReady && pageTexts[currentPage] && !showCompletion) {
       if (currentAudio) {
@@ -380,7 +377,7 @@ const ReadStory = ({ route, navigation }) => {
             withSpring(1.2, { damping: 10 }),
             withSpring(1, { damping: 10 })
           ),
-          -1, // Loop indefinitely while playing
+          -1,
           true
         );
         
@@ -389,7 +386,7 @@ const ReadStory = ({ route, navigation }) => {
     }
   }, [currentPage, imagesReady, showCompletion, audioData]);
 
-  // Cleanup audio when component unmounts or loses focus
+  
   useEffect(() => {
     const unsubscribeBlur = navigation.addListener('blur', () => {
       if (currentAudio) {
@@ -416,22 +413,22 @@ const ReadStory = ({ route, navigation }) => {
     };
   }, [currentAudio, navigation]);
 
-  // Speaker animation
+  
   const speakerAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: speakerScale.value }],
   }));
 
-  // Star rotation animation
+  
   const starAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: `${starRotation.value}deg` }],
   }));
 
-  // Sparkle animation
+  
   const sparkleAnimatedStyle = useAnimatedStyle(() => ({
     opacity: sparkleOpacity.value,
   }));
 
-  // Completion screen animations
+  
   const completionAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: completionScale.value }],
   }));
@@ -440,12 +437,12 @@ const ReadStory = ({ route, navigation }) => {
     transform: [{ scale: celebrationBounce.value }],
   }));
 
-  // UI opacity animation
+  
   const uiAnimatedStyle = useAnimatedStyle(() => ({
     opacity: uiOpacity.value,
   }));
 
-  // Play audio function
+  
   const playAudio = async (audioInfo) => {
     setIsLoadingAudio(true);
     
@@ -477,7 +474,7 @@ const ReadStory = ({ route, navigation }) => {
     }
   };
 
-  // Improved viewable items handler with debouncing
+  
   const onViewableItemsChanged = useRef(({ viewableItems }) => {
     if (!orientationChangeRef.current && !isScrollingRef.current && viewableItems.length > 0) {
       const newIndex = viewableItems[0].index;
@@ -492,7 +489,7 @@ const ReadStory = ({ route, navigation }) => {
     waitForInteraction: false,
   }).current;
 
-  // Improved navigation functions with better error handling
+  
   const goToPreviousPage = () => {
     if (currentPage > 0 && !isScrollingRef.current) {
       isScrollingRef.current = true;
@@ -511,7 +508,7 @@ const ReadStory = ({ route, navigation }) => {
           index: targetIndex 
         });
         
-        // Update currentPage immediately for better UX
+        
         setCurrentPage(targetIndex);
         
         setTimeout(() => {
@@ -528,10 +525,9 @@ const ReadStory = ({ route, navigation }) => {
       if (currentAudio) {
         try {
           await currentAudio.unloadAsync();
-        } catch (e) { /* ignore */ }
+        } catch(e){}
         setCurrentAudio(null);
       }
-      
       if (currentPage < pageImages.length - 1) {
         setShowCompletion(false);
         const targetIndex = currentPage + 1;
@@ -541,10 +537,7 @@ const ReadStory = ({ route, navigation }) => {
             animated: true, 
             index: targetIndex 
           });
-          
-          // Update currentPage immediately for better UX
           setCurrentPage(targetIndex);
-          
           setTimeout(() => {
             isScrollingRef.current = false;
           }, 300);
@@ -558,7 +551,7 @@ const ReadStory = ({ route, navigation }) => {
     }
   };
 
-  // Enhanced TTS with visual feedback
+  
   const handleSpeak = () => {
     const audioForPage = audioData.find(audio => audio.pageNumber === currentPage + 1);
     if (!audioForPage) {
@@ -585,7 +578,7 @@ const ReadStory = ({ route, navigation }) => {
     navigation.navigate('HomeTab', { screen: 'Home' });
   };
 
-  // Improved scroll handler
+  
   const onScrollBeginDrag = () => {
     isScrollingRef.current = true;
   };
@@ -596,7 +589,7 @@ const ReadStory = ({ route, navigation }) => {
     }, 100);
   };
 
-  // Completion Screen Component
+  
   const CompletionScreen = () => (
     <Animated.View style={[styles.completionOverlay, completionAnimatedStyle]}>
       <View style={styles.completionContainer}>
@@ -645,7 +638,10 @@ const ReadStory = ({ route, navigation }) => {
       />
       {pageTexts[index] ? (
         <View style={isLandscape ? styles.landscapeTextContainer : styles.textContainer}>
-          <ScrollView contentContainerStyle={styles.textScrollViewContent}>
+          <ScrollView 
+              nestedScrollEnabled={true}
+              ontentContainerStyle={styles.textScrollViewContent}
+              showsVerticalScrollIndicator={true}contentContainerStyle={styles.textScrollViewContent}>
             <Text style={isLandscape ? styles.landscapePageText : styles.pageText}>
               {pageTexts[index]}
             </Text>
@@ -655,7 +651,6 @@ const ReadStory = ({ route, navigation }) => {
     </View>
   );
 
-  // Handle scroll to index failure
   const onScrollToIndexFailed = (info) => {
     const wait = new Promise(resolve => setTimeout(resolve, 500));
     wait.then(() => {
@@ -696,7 +691,7 @@ const ReadStory = ({ route, navigation }) => {
 
         <GestureHandlerRootView style={{ flex: 1 }}>
           <SafeAreaView style={styles.safeArea}>
-            <TouchableWithoutFeedback onPress={() => setShowUI(true)}>
+            <TouchableWithoutFeedback onPress={() => setShowUI(true)} pointerEvents="box-none">
               <View style={{ flex: 1 }}>
                 <View style={isLandscape ? styles.landscapeContainer : styles.container}>
                   {pageImages.length > 0 ? (
@@ -712,13 +707,6 @@ const ReadStory = ({ route, navigation }) => {
                         </Animated.View>
                       )}
 
-                      {!isLandscape && (
-                        <>
-                          {/* <Animated.Text style={[styles.decorativeSparkle, styles.bottomLeft, sparkleAnimatedStyle]}>⭐</Animated.Text>
-                          <Animated.Text style={[styles.decorativeSparkle, styles.bottomRight, sparkleAnimatedStyle]}>✨</Animated.Text> */}
-                        </>
-                      )}
-
                       <View style={isLandscape ? styles.landscapeStoryContent : styles.storyContent}>
                         <FlatList
                           ref={flatListRef}
@@ -729,6 +717,7 @@ const ReadStory = ({ route, navigation }) => {
                           pagingEnabled
                           showsHorizontalScrollIndicator={false}
                           onViewableItemsChanged={onViewableItemsChanged}
+                          scrollEnabled={false}
                           viewabilityConfig={viewabilityConfig}
                           onScrollToIndexFailed={onScrollToIndexFailed}
                           onScrollBeginDrag={onScrollBeginDrag}
@@ -1023,13 +1012,13 @@ const styles = StyleSheet.create({
   },
 
   actionButtons: {
-    // Styles for the text container
+    
   textScrollView: {
     position: 'absolute',
-    bottom: 120, // Position it above the controls
+    bottom: 120, 
     left: 20,
     right: 20,
-    maxHeight: height * 0.25, // Limit its height
+    maxHeight: height * 0.25, 
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
     borderRadius: 15,
     padding: 5,
@@ -1039,7 +1028,7 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   pageText: {
-    fontSize: 20, // Increased for readability
+    fontSize: 20, 
     color: 'white',
     lineHeight: 38,
     textAlign: 'center',
@@ -1048,7 +1037,7 @@ const styles = StyleSheet.create({
   },
 
     flexDirection: 'row',
-    justifyContent: 'space-around', // Distribute space evenly
+    justifyContent: 'space-around', 
     alignItems: 'center',
     position: 'absolute',
     bottom: 70,

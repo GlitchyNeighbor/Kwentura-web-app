@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,8 @@ import {
   Image,
   Alert,
   ImageBackground,
+  Modal,
+  Animated,
 } from 'react-native';
 import { doc, getDoc, updateDoc, increment, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../FirebaseConfig';
@@ -29,6 +31,103 @@ const ComQuestions = ({ route, navigation }) => {
   const [error, setError] = useState(null);
   const [sound, setSound] = useState();
   const [ttsUrls, setTtsUrls] = useState({ congratulations: '', encouragement: '' });
+  
+  
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'info',
+    onClose: () => {},
+  });
+  const scaleValue = useRef(new Animated.Value(0)).current;
+
+  
+  const CustomAlert = () => {
+    useEffect(() => {
+      if (alertConfig.visible) {
+        Animated.spring(scaleValue, {
+          toValue: 1,
+          damping: 15,
+          useNativeDriver: true,
+        }).start();
+      } else {
+        scaleValue.setValue(0);
+      }
+    }, [alertConfig.visible]);
+
+    const getEmoji = () => {
+      switch (alertConfig.type) {
+        case 'correct':
+          return '🎉';
+        case 'wrong':
+          return '💭';
+        case 'warning':
+          return '⚠️';
+        default:
+          return 'ℹ️';
+      }
+    };
+
+    const getColors = () => {
+      switch (alertConfig.type) {
+        case 'correct':
+          return {
+            container: '#4ECDC4',
+            button: '#FFD700',
+          };
+        case 'wrong':
+          return {
+            container: '#FF6B6B',
+            button: '#4ECDC4',
+          };
+        case 'warning':
+          return {
+            container: '#FFD700',
+            button: '#FF6B6B',
+          };
+        default:
+          return {
+            container: '#4ECDC4',
+            button: '#FFD700',
+          };
+      }
+    };
+
+    const colors = getColors();
+
+    return (
+      <Modal
+        transparent
+        visible={alertConfig.visible}
+        animationType="fade"
+        onRequestClose={alertConfig.onClose}
+      >
+        <View style={styles.alertOverlay}>
+          <Animated.View
+            style={[
+              styles.alertContainer,
+              { 
+                backgroundColor: colors.container,
+                transform: [{ scale: scaleValue }] 
+              },
+            ]}
+          >
+            <Text style={styles.alertEmoji}>{getEmoji()}</Text>
+            <Text style={styles.alertTitle}>{alertConfig.title}</Text>
+            <Text style={styles.alertMessage}>{alertConfig.message}</Text>
+            <TouchableOpacity
+              style={[styles.alertButton, { backgroundColor: colors.button }]}
+              onPress={alertConfig.onClose}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.alertButtonText}>OK</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
+      </Modal>
+    );
+  };
 
   useEffect(() => {
     const fetchTtsUrls = async () => {
@@ -102,7 +201,7 @@ const ComQuestions = ({ route, navigation }) => {
             setMoralLessonQuestion(processedMoralLesson);
           }
           
-          // Auto-play the first question's audio
+          
           if (processedQuestions.length > 0 && processedQuestions[0].audioUrl) {
             playSoundFromUrl(processedQuestions[0].audioUrl);
           }
@@ -217,7 +316,13 @@ const ComQuestions = ({ route, navigation }) => {
 
   const handleNextQuestion = () => {
     if (selectedOption === null) {
-      Alert.alert("Please select an answer", "You must choose an option before proceeding.");
+      setAlertConfig({
+        visible: true,
+        title: 'Oops!',
+        message: 'You must choose an option before proceeding.',
+        type: 'warning',
+        onClose: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+      });
       return;
     }
 
@@ -226,19 +331,32 @@ const ComQuestions = ({ route, navigation }) => {
 
     if (isCorrect) {
       setScore(score + 1);
-      Alert.alert("Correct!", "Well done!");
+      setAlertConfig({
+        visible: true,
+        title: 'Correct!',
+        message: 'Well done! You got it right!',
+        type: 'correct',
+        onClose: () => {
+          setAlertConfig(prev => ({ ...prev, visible: false }));
+          setTimeout(moveToNext, 500);
+        },
+      });
       playSoundSequence([require('../assets/sounds/correct.mp3')]);
       playSoundSequence([require('../assets/sounds/congratulations.mp3')]);
     } else {
-      Alert.alert("Not quite right", "Think about the story again.");
+      setAlertConfig({
+        visible: true,
+        title: 'Not quite right',
+        message: 'Think about the story again. You can do it!',
+        type: 'wrong',
+        onClose: () => {
+          setAlertConfig(prev => ({ ...prev, visible: false }));
+          setTimeout(moveToNext, 500);
+        },
+      });
       playSoundSequence([require('../assets/sounds/wrong-answer.mp3')]);
       playSoundSequence([require('../assets/sounds/encouragement.mp3')]);
     }
-
-    // Delay moving to the next question to allow user to see feedback
-    setTimeout(() => {
-      moveToNext();
-    }, 1500); // 1.5 second delay
   };
 
   const moveToNext = () => {
@@ -246,12 +364,12 @@ const ComQuestions = ({ route, navigation }) => {
     if (nextIndex < questions.length) {
       setCurrentQuestionIndex(nextIndex);
       if (questions[nextIndex].audioUrl) {
-        setTimeout(() => playSoundFromUrl(questions[nextIndex].audioUrl), 1000); // Delay to allow feedback audio to play
+        setTimeout(() => playSoundFromUrl(questions[nextIndex].audioUrl), 1000);
       }
     } else if (moralLessonQuestion) {
       setCurrentQuestionIndex(questions.length);
       if (moralLessonQuestion.audioUrl) {
-        setTimeout(() => playSoundFromUrl(moralLessonQuestion.audioUrl), 1000); // Delay for feedback audio
+        setTimeout(() => playSoundFromUrl(moralLessonQuestion.audioUrl), 1000);
       }
     } else {
       setShowResults(true);
@@ -261,7 +379,13 @@ const ComQuestions = ({ route, navigation }) => {
 
   const handleSubmitMoralLesson = () => {
     if (selectedOption === null) {
-      Alert.alert("Please select an answer", "You must choose an option before proceeding.");
+      setAlertConfig({
+        visible: true,
+        title: 'Oops!',
+        message: 'You must choose an option before proceeding.',
+        type: 'warning',
+        onClose: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+      });
       return;
     }
 
@@ -269,17 +393,32 @@ const ComQuestions = ({ route, navigation }) => {
 
     if (isCorrect) {
       setScore(score + 1);
-      Alert.alert("Correct!", "Well done!");
+      setAlertConfig({
+        visible: true,
+        title: 'Correct!',
+        message: 'Well done! You got it right!',
+        type: 'correct',
+        onClose: () => {
+          setAlertConfig(prev => ({ ...prev, visible: false }));
+          setTimeout(() => setShowResults(true), 500);
+        },
+      });
       playSoundSequence([require('../assets/sounds/correct.mp3')]);
       playSoundSequence([require('../assets/sounds/congratulations.mp3')]);
     } else {
-      Alert.alert("Not quite right", "Think about the story again.");
+      setAlertConfig({
+        visible: true,
+        title: 'Not quite right',
+        message: 'Think about the story again. You can do it!',
+        type: 'wrong',
+        onClose: () => {
+          setAlertConfig(prev => ({ ...prev, visible: false }));
+          setTimeout(() => setShowResults(true), 500);
+        },
+      });
       playSoundSequence([require('../assets/sounds/wrong-answer.mp3')]);
       playSoundSequence([require('../assets/sounds/encouragement.mp3')]);
     }
-    setTimeout(() => {
-      setShowResults(true);
-    }, 1500); // 1.5 second delay
   };
 
   const currentQuestion = questions[currentQuestionIndex];
@@ -409,6 +548,8 @@ const ComQuestions = ({ route, navigation }) => {
           )}
         </ScrollView>
       </SafeAreaView>
+      
+      <CustomAlert />
     </ImageBackground>
   );
 };
@@ -441,7 +582,6 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.25)',
     textShadowOffset: { width: 1, height: 2 },
     textShadowRadius: 3,
-    marginTop: 100,
   },
   imageContainer: {
     width: '100%',
@@ -538,6 +678,67 @@ const styles = StyleSheet.create({
     color: '#FFD700',
     fontWeight: 'bold',
     marginBottom: 30,
+  },
+  
+  alertOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  alertContainer: {
+    width: '85%',
+    borderRadius: 25,
+    padding: 30,
+    alignItems: 'center',
+    borderWidth: 4,
+    borderColor: 'white',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  alertEmoji: {
+    fontSize: 60,
+    marginBottom: 15,
+  },
+  alertTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 15,
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 1, height: 2 },
+    textShadowRadius: 3,
+  },
+  alertMessage: {
+    fontSize: 18,
+    color: 'white',
+    textAlign: 'center',
+    marginBottom: 25,
+    lineHeight: 26,
+    fontWeight: '600',
+  },
+  alertButton: {
+    borderRadius: 20,
+    paddingVertical: 15,
+    paddingHorizontal: 40,
+    borderWidth: 3,
+    borderColor: 'white',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 8,
+    minWidth: 120,
+  },
+  alertButtonText: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
 });
 

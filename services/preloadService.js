@@ -22,7 +22,7 @@ const createSafeFilename = (url) => {
   for (let i = 0; i < url.length; i++) {
     const char = url.charCodeAt(i);
     hash = (hash << 5) - hash + char;
-    hash |= 0; // Convert to 32bit integer
+    hash |= 0; 
   }
   const extension = url.split('.').pop().split('?')[0];
   return `${hash}.${extension}`;

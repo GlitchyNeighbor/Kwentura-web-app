@@ -31,7 +31,7 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { db } from "../FirebaseConfig";
 
-// Constants
+
 const COLORS = {
   primary: '#FFCF2D',
   primaryDark: '#E6B800',
@@ -51,7 +51,7 @@ const TITLE_COLORS = [
   COLORS.yellow, COLORS.blue, COLORS.green, COLORS.red
 ];
 
-// Utility functions
+
 const validateInputs = (schoolId, password) => {
   if (!schoolId?.trim()) return "Please enter your School ID";
   if (!password?.trim()) return "Please enter your password";
@@ -70,7 +70,7 @@ const Login = ({ navigation }) => {
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const titleOpacity = useRef(new Animated.Value(1)).current;
 
-  // Memoized title letters to prevent unnecessary re-renders
+  
   const titleLetters = useMemo(() => 
     'Kwentura'.split('').map((letter, index) => ({
       letter,
@@ -82,7 +82,7 @@ const Login = ({ navigation }) => {
     const showKeyboard = () => {
       setIsKeyboardVisible(true);
       Animated.timing(titleOpacity, {
-        toValue: 0, // Fade out
+        toValue: 0, 
         duration: 250,
         useNativeDriver: true,
       }).start();
@@ -91,7 +91,7 @@ const Login = ({ navigation }) => {
     const hideKeyboard = () => {
       setIsKeyboardVisible(false);
       Animated.timing(titleOpacity, {
-        toValue: 1, // Fade in
+        toValue: 1, 
         duration: 250,
         useNativeDriver: true,
       }).start();
@@ -153,7 +153,7 @@ const Login = ({ navigation }) => {
   const handleOTPFlow = (user, studentData, isProfileComplete) => {
     const otp = generateOTP();
     
-    // In production, this should be sent via your backend service
+    
     console.log(`Generated OTP for ${studentData.email}: ${otp}`);
     
     Alert.alert(
@@ -176,7 +176,7 @@ const Login = ({ navigation }) => {
   };
 
   const signIn = async () => {
-    // Validate inputs
+    
     const validationError = validateInputs(schoolId, password);
     if (validationError) {
       showAlert("Validation Error", validationError);
@@ -187,20 +187,20 @@ const Login = ({ navigation }) => {
     Keyboard.dismiss();
 
     try {
-      // Step 1: Find student by School ID
+      
       const studentData = await findStudentBySchoolId(schoolId);
       
       if (!studentData.email) {
         throw new Error("Student record is incomplete. Missing email address.");
       }
 
-      // Step 2: Authenticate with Firebase Auth
+      
       const user = await authenticateUser(studentData.email, password);
 
-      // Step 3: Get complete student profile
+      
       const studentProfile = await getStudentProfile(user.uid);
 
-      // Step 4: Check account status
+      
       if (studentProfile.status !== "approved") {
         const statusMessage = `Your account status is: ${studentProfile.status || "pending"}. Please wait for approval or contact support.`;
         showAlert("Account Not Approved", statusMessage);
@@ -208,19 +208,19 @@ const Login = ({ navigation }) => {
         return;
       }
 
-      // Step 5: Check profile completeness and handle OTP
+      
       const isProfileComplete = checkProfileCompleteness(studentProfile);
-      // handleOTPFlow(user, studentProfile, isProfileComplete); // Removed OTP flow
+      
 
-      // The RootNavigator will handle the navigation to the correct screen
-      // based on the authentication state.
+      
+      
 
     } catch (error) {
       console.error("Login error:", error);
       
       let errorMessage = "Sign in failed. Please try again.";
       
-      // Handle specific Firebase Auth errors
+      
       switch (error.code) {
         case "auth/user-not-found":
         case "auth/wrong-password":
@@ -263,7 +263,6 @@ const Login = ({ navigation }) => {
       style={styles.background}
       resizeMode="cover"
     >
-      {/* Decorative Elements */}
       <View style={styles.bushContainer}>
         <Image source={require('../images/Bush.png')} style={styles.bush1} />
         <Image source={require('../images/Bush.png')} style={styles.bush2} />
@@ -278,7 +277,6 @@ const Login = ({ navigation }) => {
         <Image source={require('../images/Flower5.png')} style={styles.flower5} />
       </View>
 
-      {/* Stars */}
       {[1, 2, 3, 4, 5, 6].map(index => (
         <Image 
           key={`star-${index}`}
@@ -289,7 +287,6 @@ const Login = ({ navigation }) => {
 
       <Image source={require('../images/Rainbow.png')} style={styles.rainbow} />
 
-      {/* Title - Fixed position, won't move with keyboard */}
       <Animated.View
         style={[styles.titleContainer, { opacity: titleOpacity }]}
       >
@@ -300,7 +297,6 @@ const Login = ({ navigation }) => {
         ))}
       </Animated.View>
 
-      {/* Form Container - Separate KeyboardAvoidingView */}
       <KeyboardAvoidingView
         style={styles.formKeyboardContainer}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -312,12 +308,10 @@ const Login = ({ navigation }) => {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            {/* Welcome text - only show when keyboard is hidden */}
             {!isKeyboardVisible && (
               <Text style={styles.welcome}>Welcome, Monlimarians!</Text>
             )}
             
-            {/* School ID Input */}
             <View style={styles.inputContainer}>
               <TextInput
                 style={styles.input}
@@ -335,7 +329,6 @@ const Login = ({ navigation }) => {
               />
             </View>
 
-            {/* Password Input */}
             <View style={styles.passwordContainer}>
               <TextInput
                 style={styles.passwordInput}
@@ -366,7 +359,6 @@ const Login = ({ navigation }) => {
               </TouchableOpacity>
             </View>
 
-            {/* Login Button */}
             <TouchableOpacity 
               style={[styles.button, isLoading && styles.buttonDisabled]} 
               onPress={signIn}
@@ -381,7 +373,6 @@ const Login = ({ navigation }) => {
               )}
             </TouchableOpacity>
 
-            {/* Links - only show when keyboard is hidden */}
             {!isKeyboardVisible && (
               <View style={styles.linkContainer}>
                 <View style={styles.linkRow}>
@@ -420,26 +411,26 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   
-  // Title stays fixed between trees
+  
   titleContainer: {
     position: 'absolute',
-    top: '28%', // Position between trees
+    top: '28%', 
     left: 0,
     right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 20,
-    zIndex: 10, // Above other elements
+    zIndex: 10, 
   },
   
-  // Form container takes bottom portion
+  
   formKeyboardContainer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    height: '55%', // Takes bottom 55% of screen
+    height: '55%', 
   },
   
   formSafeArea: {
@@ -449,9 +440,9 @@ const styles = StyleSheet.create({
   formContainer: {
     width: "100%",
     alignItems: "center",
-    justifyContent: "flex-start", // Start from top of container
+    justifyContent: "flex-start", 
     paddingHorizontal: 24,
-    paddingTop: 10, // Small top padding
+    paddingTop: 10, 
     marginBottom:90,
   },
 
@@ -569,7 +560,7 @@ const styles = StyleSheet.create({
     height: '28%',
     alignSelf: 'center',
   },
-  // Star styles
+  
   star1: {
     position: 'absolute',
     top: '6%',
@@ -612,7 +603,7 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
   },
-  // Flower styles
+  
   flowerContainer: {
     position: 'absolute',
     bottom: -20,
@@ -654,7 +645,7 @@ const styles = StyleSheet.create({
     bottom: '-25%',
     transform: [{ rotate: '-20deg' }]
   },
-  // Bush styles
+  
   bushContainer: {
     position: 'absolute',
     bottom: '-2%',

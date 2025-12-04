@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
-// Constants
+
 const COLORS = {
   primary: '#FFCF2D',
   primaryDark: '#E6B800',
@@ -32,7 +32,7 @@ const COLORS = {
   border: '#E0E0E0',
 };
 
-// Custom hook for animations
+
 const useEmailVerifAnimations = () => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
@@ -94,7 +94,7 @@ const useEmailVerifAnimations = () => {
   };
 };
 
-// Enhanced Email Display Component
+
 const EmailDisplayCard = ({ email, fadeAnim }) => (
   <Animated.View 
     style={[
@@ -117,7 +117,7 @@ const EmailDisplayCard = ({ email, fadeAnim }) => (
   </Animated.View>
 );
 
-// Enhanced Code Input Component
+
 const CodeInput = ({ 
   value, 
   onChangeText, 
@@ -161,7 +161,7 @@ const CodeInput = ({
   </Animated.View>
 );
 
-// Enhanced Resend Component
+
 const ResendComponent = ({ onResend, countdown, isResending }) => (
   <View style={styles.resendContainer}>
     <View style={styles.resendTextContainer}>
@@ -191,7 +191,7 @@ const ResendComponent = ({ onResend, countdown, isResending }) => (
 );
 
 const EmailVerif = ({ navigation, route }) => {
-  // Extract data from route params
+  
   const { 
     userName = "User",
     userEmail = "youremail@gmail.com",
@@ -206,7 +206,7 @@ const EmailVerif = ({ navigation, route }) => {
 
   const inputRef = useRef(null);
 
-  // Animation hooks
+  
   const { 
     fadeAnim, 
     slideAnim, 
@@ -217,7 +217,7 @@ const EmailVerif = ({ navigation, route }) => {
     createShakeAnimation
   } = useEmailVerifAnimations();
 
-  // Button animation values
+  
   const cancelButtonScale = useRef(new Animated.Value(1)).current;
   const verifyButtonScale = useRef(new Animated.Value(1)).current;
 
@@ -225,7 +225,7 @@ const EmailVerif = ({ navigation, route }) => {
     startEntranceAnimation();
   }, [startEntranceAnimation]);
 
-  // Countdown timer for resend
+  
   useEffect(() => {
     let timer;
     if (countdown > 0) {
@@ -247,7 +247,7 @@ const EmailVerif = ({ navigation, route }) => {
     
     setIsResending(true);
     try {
-      // Simulate API call
+      
       await new Promise(resolve => setTimeout(resolve, 1500));
       setCountdown(60);
       Alert.alert(
@@ -301,11 +301,11 @@ const EmailVerif = ({ navigation, route }) => {
     setIsLoading(true);
 
     try {
-      // Simulate API verification
+      
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Simulate success/failure
-      const isSuccess = Math.random() > 0.3; // 70% success rate for demo
+      
+      const isSuccess = Math.random() > 0.3; 
       
       if (isSuccess) {
         Alert.alert(
@@ -348,7 +348,6 @@ const EmailVerif = ({ navigation, route }) => {
       style={styles.background}
       resizeMode="cover"
     >
-      {/* Decorative Elements */}
       <View style={styles.bushContainer}>
         <Image source={require('../images/Bush.png')} style={styles.bush1} />
         <Image source={require('../images/Bush.png')} style={styles.bush2} />
@@ -363,7 +362,6 @@ const EmailVerif = ({ navigation, route }) => {
         <Image source={require('../images/Flower5.png')} style={styles.flower5} />
       </View>
 
-      {/* Stars */}
       {[1, 2, 3, 4].map(index => (
         <Image 
           key={`star-${index}`}
@@ -384,10 +382,8 @@ const EmailVerif = ({ navigation, route }) => {
             }
           ]}
         >
-          {/* Email Display */}
           <EmailDisplayCard email={userEmail} fadeAnim={fadeAnim} />
 
-          {/* Header */}
           <View style={styles.headerContainer}>
             <Text style={styles.heading}>Email Code Verification</Text>
             <Text style={styles.subheading}>
@@ -395,7 +391,6 @@ const EmailVerif = ({ navigation, route }) => {
             </Text>
           </View>
 
-          {/* Code Input */}
           <CodeInput
             value={code}
             onChangeText={handleCodeChange}
@@ -405,14 +400,12 @@ const EmailVerif = ({ navigation, route }) => {
             inputRef={inputRef}
           />
 
-          {/* Resend Component */}
           <ResendComponent
             onResend={handleResend}
             countdown={countdown}
             isResending={isResending}
           />
 
-          {/* Action Buttons */}
           <View style={styles.buttonContainer}>
             <Animated.View style={[{ transform: [{ scale: cancelButtonScale }] }]}>
               <TouchableOpacity
@@ -474,7 +467,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  // Email Display Styles
+  
   emailCard: {
     flexDirection: 'row',
     alignItems: "center",
@@ -507,7 +500,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  // Header Styles
+  
   headerContainer: {
     marginBottom: 30,
     alignItems: 'center',
@@ -527,7 +520,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
 
-  // Input Styles
+  
   inputContainer: {
     width: "100%",
     marginBottom: 20,
@@ -566,7 +559,7 @@ const styles = StyleSheet.create({
     transform: [{ translateY: -10 }],
   },
 
-  // Resend Styles
+  
   resendContainer: {
     marginBottom: 30,
     alignItems: 'center',
@@ -602,7 +595,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  // Button Styles
+  
   buttonContainer: {
     flexDirection: "row",
     justifyContent: "center",
@@ -660,7 +653,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  // Decorative Elements (keeping original positioning)
+  
   rainbow: {
     position: 'absolute',
     top: -130,

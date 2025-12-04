@@ -17,7 +17,7 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-// Constants
+
 const COLORS = {
   primary: '#FFCF2D',
   primaryDark: '#E6B800',
@@ -48,7 +48,7 @@ const VERIFICATION_OPTIONS = [
   },
 ];
 
-// Custom hook for animations
+
 const useVerificationAnimations = () => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
@@ -98,7 +98,7 @@ const useVerificationAnimations = () => {
   };
 };
 
-// Enhanced Radio Option Component
+
 const RadioOptionCard = ({ 
   option, 
   isSelected, 
@@ -167,7 +167,7 @@ const RadioOptionCard = ({
   );
 };
 
-// Enhanced User Info Component
+
 const UserInfoCard = ({ userName, userAvatar, fadeAnim }) => (
   <Animated.View 
     style={[
@@ -192,7 +192,7 @@ const UserInfoCard = ({ userName, userAvatar, fadeAnim }) => (
 );
 
 const ChooseVerif = ({ navigation, route }) => {
-  // Extract user data from route params or use defaults
+  
   const { 
     userName = "James Magno Espina", 
     userEmail = "james@example.com",
@@ -203,7 +203,7 @@ const ChooseVerif = ({ navigation, route }) => {
   const [selectedOption, setSelectedOption] = useState("email");
   const [isLoading, setIsLoading] = useState(false);
 
-  // Animation hooks
+  
   const { 
     fadeAnim, 
     slideAnim, 
@@ -212,7 +212,7 @@ const ChooseVerif = ({ navigation, route }) => {
     createPressAnimation 
   } = useVerificationAnimations();
 
-  // Button animation values
+  
   const notYouButtonScale = useRef(new Animated.Value(1)).current;
   const continueButtonScale = useRef(new Animated.Value(1)).current;
 
@@ -222,9 +222,9 @@ const ChooseVerif = ({ navigation, route }) => {
 
   const handleOptionSelect = useCallback((optionId) => {
     setSelectedOption(optionId);
-    // Add haptic feedback if available
+    
     if (Platform.OS === 'ios') {
-      // Add haptic feedback here if you have react-native-haptic-feedback
+      
     }
   }, []);
 
@@ -263,10 +263,10 @@ const ChooseVerif = ({ navigation, route }) => {
     setIsLoading(true);
 
     try {
-      // Simulate API call or preparation time
+      
       await new Promise(resolve => setTimeout(resolve, 800));
 
-      // Navigate to the appropriate screen with user data
+      
       navigation.navigate(selectedVerificationOption.route, {
         userName,
         userEmail,
@@ -412,7 +412,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   
-  // User Info Styles
+  
   userInfoCard: {
     alignItems: "center",
     marginBottom: 30,
@@ -453,7 +453,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // Header Styles
+  
   headerContainer: {
     marginBottom: 30,
     alignItems: 'center',
@@ -473,7 +473,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
 
-  // Options Styles
+  
   optionsContainer: {
     width: "100%",
     marginBottom: 30,
@@ -493,7 +493,7 @@ const styles = StyleSheet.create({
   },
   radioCardSelected: {
     borderColor: COLORS.primary,
-    backgroundColor: COLORS.white, // Keep white background when selected
+    backgroundColor: COLORS.white, 
   },
   radioCardDisabled: {
     opacity: 0.6,
@@ -539,7 +539,7 @@ const styles = StyleSheet.create({
     color: COLORS.gray,
   },
 
-  // Button Styles
+  
   buttonContainer: {
     flexDirection: "row",
     justifyContent: "center",
@@ -594,7 +594,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  // Decorative Elements (keeping original positioning)
+  
   rainbow: {
     position: 'absolute',
     top: -130,

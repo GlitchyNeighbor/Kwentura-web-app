@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { auth, db } from "../FirebaseConfig"; // Adjust path as needed
+import { auth, db } from "../FirebaseConfig"; 
 import { doc, onSnapshot } from "firebase/firestore";
 import { useProfile } from '../context/ProfileContext';
 
@@ -51,7 +51,7 @@ const Header = ({ navigation, leftIconType = "drawer", hideStars = false }) => {
     }
   };
 
-  // Fixed: Navigate to ProfileStack instead of ProfileTab
+  
   const handleProfilePress = () => {
     navigation.navigate("ProfileStack", { screen: "ProfileMain" });
   };
@@ -201,12 +201,12 @@ const styles = StyleSheet.create({
     left: '15%',
     flexDirection: 'row',
     flexWrap: 'wrap',
-    width: '70%', // Adjust as needed
+    width: '70%', 
   },
   dynamicStar: {
     width: 15,
     height: 15,
-    margin: 2, // Adjust spacing between stars
+    margin: 2, 
   },
 });
 

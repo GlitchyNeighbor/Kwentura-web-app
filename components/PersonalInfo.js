@@ -44,7 +44,7 @@ const AVATAR_OPTIONS = [
 ];
 
 const PersonalInfo = ({ navigation }) => {
-  // Form state
+  
   const [formData, setFormData] = useState({
     parentFirstName: "",
     parentLastName: "",
@@ -57,7 +57,7 @@ const PersonalInfo = ({ navigation }) => {
     section: "",
   });
 
-  // UI state
+  
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
@@ -66,26 +66,26 @@ const PersonalInfo = ({ navigation }) => {
   const [selectedAvatar, setSelectedAvatar] = useState(null);
   const [emailVerified, setEmailVerified] = useState(false);
 
-  // Form validation state
+  
   const [errors, setErrors] = useState({});
 
-  // Memoized validation function
+  
   const validateForm = useCallback(() => {
     const newErrors = {};
     
-    // Email validation
+    
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (formData.email && !emailRegex.test(formData.email)) {
       newErrors.email = "Please enter a valid email address";
     }
 
-    // Phone validation (basic)
+    
     const phoneRegex = /^[+]?[\d\s-()]+$/;
     if (formData.contactNumber && !phoneRegex.test(formData.contactNumber)) {
       newErrors.contactNumber = "Please enter a valid contact number";
     }
 
-    // Required field validation
+    
     if (!formData.parentFirstName.trim()) {
       newErrors.parentFirstName = "Parent's first name is required";
     }
@@ -98,18 +98,18 @@ const PersonalInfo = ({ navigation }) => {
     return Object.keys(newErrors).length === 0;
   }, [formData]);
 
-  // Update form data and track changes
+  
   const updateFormData = useCallback((field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     setHasChanges(true);
     
-    // Clear specific field error when user starts typing
+    
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: null }));
     }
   }, [errors]);
 
-  // Parse parent name for display
+  
   const handleParentNameChange = useCallback((text) => {
     const names = text.trim().split(/\s+/);
     const firstName = names[0] || "";
@@ -142,7 +142,7 @@ const PersonalInfo = ({ navigation }) => {
               section: data.section || "",
             });
 
-            // Handle avatar config
+            
             if (data.avatarConfig) {
               if (typeof data.avatarConfig === "number") {
                 setAvatarConfig(AVATAR_OPTIONS[data.avatarConfig] || AVATAR_OPTIONS[0]);
@@ -161,7 +161,7 @@ const PersonalInfo = ({ navigation }) => {
           setLoading(false);
         }
       } else {
-        // Reset form if no user
+        
         setFormData({
           parentFirstName: "",
           parentLastName: "",
@@ -201,7 +201,7 @@ const PersonalInfo = ({ navigation }) => {
 
     if (isSaving) return;
 
-    // Validate form before saving
+    
     if (!validateForm()) {
       Alert.alert("Validation Error", "Please fix the errors in the form before saving.");
       return;
@@ -323,21 +323,6 @@ const PersonalInfo = ({ navigation }) => {
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Personal Information</Text>
 
-              {/* Avatar Section
-              <View style={styles.avatarSection}>
-                <TouchableOpacity
-                  style={styles.avatarContainer}
-                  onPress={() => setAvatarModalVisible(true)}
-                >
-                  <Image source={avatarConfig} style={styles.avatarImage} />
-                  <View style={styles.editIcon}>
-                    <Ionicons name="pencil" size={16} color="#fff" />
-                  </View>
-                </TouchableOpacity>
-                <Text style={styles.avatarLabel}>Tap to change avatar</Text>
-              </View> */}
-
-              {/* Student Information */}
               <Text style={styles.subsectionTitle}>Student Information</Text>
               <Text style={styles.readOnlyNote}>Student information is read-only.</Text>
 
@@ -369,7 +354,6 @@ const PersonalInfo = ({ navigation }) => {
                 { editable: false, placeholder: "Student's Section" }
               )}
 
-              {/* Parent Information */}
               <Text style={styles.subsectionTitle}>Parent Information</Text>
               <Text style={styles.editableNote}>Parent information is editable.</Text>
 
@@ -447,7 +431,6 @@ const PersonalInfo = ({ navigation }) => {
           </ScrollView>
         </KeyboardAvoidingView>
 
-        {/* Avatar Selection Modal */}
         <Modal
           visible={avatarModalVisible}
           transparent={true}

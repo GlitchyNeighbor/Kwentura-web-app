@@ -44,7 +44,6 @@ const RegisterComplete = ({ navigation }) => {
       style={styles.background}
       resizeMode="cover"
     >
-      {/* Decorative Elements */}
       <View style={styles.bushContainer}>
         <Image source={require('../images/Bush.png')} style={styles.bush1} />
         <Image source={require('../images/Bush.png')} style={styles.bush2} />

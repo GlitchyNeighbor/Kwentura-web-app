@@ -41,8 +41,6 @@ const Categories = ({ navigation }) => {
   useEffect(() => {
     fetchAllStories();
   }, []);
-
-  // Listen for auth state and load bookmarks
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -89,8 +87,8 @@ const Categories = ({ navigation }) => {
         return {
           id: doc.id,
           ...data,
-          imageUrl: data.image, // Map Firestore 'image' to 'imageUrl'
-          synopsis: data.generatedSynopsis || data.synopsis, // Map 'generatedSynopsis' or 'synopsis'
+          imageUrl: data.image, 
+          synopsis: data.generatedSynopsis || data.synopsis, 
         };
       });
       setStories(allStories);
@@ -102,7 +100,7 @@ const Categories = ({ navigation }) => {
     }
   };
 
-  // Group stories by category
+  
   const getAllCategories = () => {
     const categories = stories
       .map((story) => story.category)
@@ -111,7 +109,7 @@ const Categories = ({ navigation }) => {
   };
 
   const handleViewStory = (story) => {
-    // Navigate to the HomeTab, then to the ViewStory screen within HomeStack
+    
     navigation.navigate("HomeTab", {
       screen: "ViewStory",
       params: { storyId: story.id, story: story },
@@ -119,7 +117,7 @@ const Categories = ({ navigation }) => {
   };
 
   const handleViewAll = (category) => {
-    //
+    
   };
 
   const handleBookmark = async (story) => {

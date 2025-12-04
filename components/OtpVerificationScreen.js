@@ -12,35 +12,27 @@ import {
   Platform,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { auth, db } from "../FirebaseConfig"; // For sign out on failure/back and fetching student data
-import { PhoneAuthProvider, PhoneMultiFactorGenerator } from "firebase/auth"; // For MFA
-import { doc, getDoc } from "firebase/firestore"; // To fetch student data after MFA
+import { auth, db } from "../FirebaseConfig"; 
+import { PhoneAuthProvider, PhoneMultiFactorGenerator } from "firebase/auth"; 
+import { doc, getDoc } from "firebase/firestore"; 
 
 const OtpVerificationScreen = ({ navigation, route }) => {
-  // New params for MFA: resolver, verificationId, isMfa
-  // Old params for simulation: userId, email, generatedOtp, isProfileComplete
+
   const { resolver, verificationId, isMfa, userId, email, generatedOtp, isProfileComplete } = route.params;
   const [enteredOtp, setEnteredOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  // Note: The resend OTP logic for MFA would be more complex.
-  // It would involve re-triggering phoneAuthProvider.verifyPhoneNumber
-  // with the resolver.session and the same multiFactorHint, using the reCAPTCHA verifier.
-  // This requires passing the recaptchaVerifier instance or re-initializing it here,
-  // and also the multiFactorHint. For simplicity, this example keeps the simulated resend.
-  // A real MFA resend would not generate OTP client-side.
-  // Placeholder for resend OTP logic
+  
   const handleResendOtp = () => {
-    // In a real app, this would trigger a server request to resend OTP
+    
     const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
     Alert.alert(
       "OTP Resent (Simulated)",
       `A new OTP has been sent to ${email}: ${newOtp}\n(For testing, new OTP is ${newOtp})`
     );
-    // Update the generatedOtp for client-side verification (still insecure)
-    // For MFA, this simulated resend won't work with the actual Firebase flow.
-    // You'd need to call verifyPhoneNumber again.
+    
+    
+    
     if (!isMfa) {
         navigation.setParams({ generatedOtp: newOtp });
     }
@@ -48,7 +40,7 @@ const OtpVerificationScreen = ({ navigation, route }) => {
     setError("");
   };
 
-  const handleVerifyOtp = async () => { // Make it async
+  const handleVerifyOtp = async () => { 
     setError("");
     if (enteredOtp.length !== 6) {
       setError("Please enter a 6-digit OTP.");
@@ -57,14 +49,14 @@ const OtpVerificationScreen = ({ navigation, route }) => {
     setLoading(true);
     
     if (isMfa && resolver && verificationId) {
-        // --- Firebase MFA OTP Verification ---
+        
         try {
             const cred = PhoneAuthProvider.credential(verificationId, enteredOtp);
             const multiFactorAssertion = PhoneMultiFactorGenerator.assertion(cred);
             const userCredential = await resolver.resolveSignIn(multiFactorAssertion);
-            const mfaUser = userCredential.user; // User is now fully signed in
+            const mfaUser = userCredential.user; 
 
-            // Fetch student data to check profile completeness
+            
             const studentDocRef = doc(db, "students", mfaUser.uid);
             const studentDocSnap = await getDoc(studentDocRef);
 
@@ -88,7 +80,7 @@ const OtpVerificationScreen = ({ navigation, route }) => {
                 }
             } else {
                 Alert.alert("Error", "User profile not found after MFA. Contact support.");
-                await auth.signOut(); // Sign out as state is inconsistent
+                await auth.signOut(); 
                 navigation.navigate("Login");
             }
         } catch (mfaError) {
@@ -98,17 +90,17 @@ const OtpVerificationScreen = ({ navigation, route }) => {
             setLoading(false);
         }
     } else {
-        // --- Fallback to old SIMULATED OTP logic (for testing/transition) ---
-        // **SECURITY WARNING**: This part is insecure and should be removed in production.
+        
+        
         setTimeout(() => {
-          if (enteredOtp === generatedOtp) { // Relies on `generatedOtp` passed for simulation
+          if (enteredOtp === generatedOtp) { 
             Alert.alert("Success", "OTP Verified! (Simulated)");
             const rootNavigation = navigation.getParent()?.getParent();
             if (rootNavigation) {
-              if (isProfileComplete) { // Relies on `isProfileComplete` passed for simulation
+              if (isProfileComplete) { 
                 rootNavigation.reset({ index: 0, routes: [{ name: "App" }] });
               } else {
-                navigation.replace("CompleteProfile", { userId: userId }); // Relies on `userId` passed for simulation
+                navigation.replace("CompleteProfile", { userId: userId }); 
               }
             }
           } else {
@@ -134,7 +126,7 @@ const OtpVerificationScreen = ({ navigation, route }) => {
             } catch (e) {
               console.error("Error signing out on OTP back:", e);
             }
-            navigation.navigate("Login"); // Go back to Login screen
+            navigation.navigate("Login"); 
           },
         },
       ]
@@ -155,7 +147,6 @@ const OtpVerificationScreen = ({ navigation, route }) => {
           A 6-digit One-Time Password has been sent to{" "}
           <Text style={{ fontWeight: "bold" }}>{email}</Text>.
         </Text>
-        {/* Only show debug OTP if it's the simulated flow and generatedOtp is present */}
         {!isMfa && generatedOtp && (
             <Text style={styles.debugOtpText}>
                 (For testing, your OTP is: {generatedOtp})

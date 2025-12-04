@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
-// Constants
+
 const COLORS = {
   primary: '#FFCF2D',
   primaryDark: '#E6B800',
@@ -31,7 +31,7 @@ const COLORS = {
   border: '#E0E0E0',
 };
 
-// Custom hook for animations
+
 const useContactVerifAnimations = () => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
@@ -93,7 +93,7 @@ const useContactVerifAnimations = () => {
   };
 };
 
-// Enhanced Phone Display Component
+
 const PhoneDisplayCard = ({ phoneNumber, fadeAnim }) => (
   <Animated.View 
     style={[
@@ -116,7 +116,7 @@ const PhoneDisplayCard = ({ phoneNumber, fadeAnim }) => (
   </Animated.View>
 );
 
-// Enhanced Code Input Component
+
 const CodeInputs = ({ 
   code, 
   onChangeText, 
@@ -152,7 +152,7 @@ const CodeInputs = ({
   </Animated.View>
 );
 
-// Enhanced Resend Component
+
 const ResendComponent = ({ onResend, countdown, isResending }) => (
   <View style={styles.resendContainer}>
     <View style={styles.resendTextContainer}>
@@ -182,7 +182,7 @@ const ResendComponent = ({ onResend, countdown, isResending }) => (
 );
 
 const ContactVerif = ({ navigation, route }) => {
-  // Extract data from route params
+  
   const { 
     userName = "User",
     phoneNumber = "+1 (555) 123-4567",
@@ -197,7 +197,7 @@ const ContactVerif = ({ navigation, route }) => {
 
   const inputRefs = useRef({});
 
-  // Animation hooks
+  
   const { 
     fadeAnim, 
     slideAnim, 
@@ -208,7 +208,7 @@ const ContactVerif = ({ navigation, route }) => {
     createShakeAnimation
   } = useContactVerifAnimations();
 
-  // Button animation values
+  
   const cancelButtonScale = useRef(new Animated.Value(1)).current;
   const verifyButtonScale = useRef(new Animated.Value(1)).current;
 
@@ -216,7 +216,7 @@ const ContactVerif = ({ navigation, route }) => {
     startEntranceAnimation();
   }, [startEntranceAnimation]);
 
-  // Countdown timer for resend
+  
   useEffect(() => {
     let timer;
     if (countdown > 0) {
@@ -226,7 +226,7 @@ const ContactVerif = ({ navigation, route }) => {
   }, [countdown]);
 
   const handleInputChange = useCallback((text, index) => {
-    // Only allow numeric input
+    
     const numericText = text.replace(/[^0-9]/g, '');
     
     const newCode = [...code];
@@ -237,7 +237,7 @@ const ContactVerif = ({ navigation, route }) => {
       setHasError(false);
     }
 
-    // Auto-focus next input
+    
     if (numericText && index < 3) {
       const nextInput = inputRefs.current[`input-${index + 1}`];
       if (nextInput) {
@@ -245,7 +245,7 @@ const ContactVerif = ({ navigation, route }) => {
       }
     }
 
-    // Auto-focus previous input on backspace
+    
     if (!numericText && index > 0) {
       const prevInput = inputRefs.current[`input-${index - 1}`];
       if (prevInput) {
@@ -259,7 +259,7 @@ const ContactVerif = ({ navigation, route }) => {
     
     setIsResending(true);
     try {
-      // Simulate API call
+      
       await new Promise(resolve => setTimeout(resolve, 1500));
       setCountdown(60);
       Alert.alert(
@@ -313,11 +313,11 @@ const ContactVerif = ({ navigation, route }) => {
     setIsLoading(true);
 
     try {
-      // Simulate API verification
+      
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Simulate success/failure
-      const isSuccess = Math.random() > 0.3; // 70% success rate for demo
+      
+      const isSuccess = Math.random() > 0.3; 
       
       if (isSuccess) {
         Alert.alert(
@@ -348,7 +348,7 @@ const ContactVerif = ({ navigation, route }) => {
     }
   }, [code, navigation, userName, phoneNumber, createPressAnimation, verifyButtonScale, createShakeAnimation]);
 
-  // Check if all digits are filled
+  
   const isCodeComplete = code.every(digit => digit !== "");
 
   return (
@@ -357,7 +357,7 @@ const ContactVerif = ({ navigation, route }) => {
       style={styles.background}
       resizeMode="cover"
     >
-      {/* Decorative Elements */}
+
       <View style={styles.bushContainer}>
         <Image source={require('../images/Bush.png')} style={styles.bush1} />
         <Image source={require('../images/Bush.png')} style={styles.bush2} />
@@ -372,7 +372,6 @@ const ContactVerif = ({ navigation, route }) => {
         <Image source={require('../images/Flower5.png')} style={styles.flower5} />
       </View>
 
-      {/* Stars */}
       {[1, 2, 3, 4].map(index => (
         <Image 
           key={`star-${index}`}
@@ -393,10 +392,8 @@ const ContactVerif = ({ navigation, route }) => {
             }
           ]}
         >
-          {/* Phone Display */}
           <PhoneDisplayCard phoneNumber={phoneNumber} fadeAnim={fadeAnim} />
 
-          {/* Header */}
           <View style={styles.headerContainer}>
             <Text style={styles.heading}>Mobile Phone Verification</Text>
             <Text style={styles.subheading}>
@@ -404,7 +401,6 @@ const ContactVerif = ({ navigation, route }) => {
             </Text>
           </View>
 
-          {/* Code Input */}
           <CodeInputs
             code={code}
             onChangeText={handleInputChange}
@@ -413,14 +409,12 @@ const ContactVerif = ({ navigation, route }) => {
             inputRefs={inputRefs}
           />
 
-          {/* Resend Component */}
           <ResendComponent
             onResend={handleResend}
             countdown={countdown}
             isResending={isResending}
           />
 
-          {/* Action Buttons */}
           <View style={styles.buttonContainer}>
             <Animated.View style={[{ transform: [{ scale: cancelButtonScale }] }]}>
               <TouchableOpacity
@@ -482,7 +476,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  // Phone Display Styles
+  
   phoneCard: {
     flexDirection: 'row',
     alignItems: "center",
@@ -515,7 +509,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  // Header Styles
+  
   headerContainer: {
     marginBottom: 30,
     alignItems: 'center',
@@ -535,7 +529,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
 
-  // Code Input Styles
+  
   codeContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -566,7 +560,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.error,
   },
 
-  // Resend Styles
+  
   resendContainer: {
     marginBottom: 30,
     alignItems: 'center',
@@ -602,7 +596,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  // Button Styles
+  
   buttonContainer: {
     flexDirection: "row",
     justifyContent: "center",
@@ -660,7 +654,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  // Decorative Elements
+  
   rainbow: {
     position: 'absolute',
     top: -130,

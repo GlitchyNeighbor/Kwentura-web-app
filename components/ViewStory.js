@@ -32,19 +32,19 @@ const ViewStory = ({ navigation, route }) => {
   const [bookmarkLoading, setBookmarkLoading] = useState(false);
   const [user, setUser] = useState(null);
 
-  // Animation values
+  
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const bookmarkScale = useRef(new Animated.Value(1)).current;
   const readButtonScale = useRef(new Animated.Value(1)).current;
 
-  // Listen for auth state
+  
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => setUser(u));
     return unsubscribe;
   }, []);
 
-  // Entrance animation
+  
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -60,7 +60,7 @@ const ViewStory = ({ navigation, route }) => {
     ]).start();
   }, []);
 
-  // Diagnostic log for navigation state
+  
   useEffect(() => {
     if (navigation && typeof navigation.dangerouslyGetState === 'function') {
       console.log("ViewStory Navigation State:", JSON.stringify(navigation.dangerouslyGetState(), null, 2));
@@ -109,7 +109,7 @@ const ViewStory = ({ navigation, route }) => {
     }
   }, [storyId, initialStory]);
 
-  // Check if bookmarked
+  
   useEffect(() => {
     const checkBookmark = async () => {
       if (user && currentStory?.id) {
@@ -129,7 +129,7 @@ const ViewStory = ({ navigation, route }) => {
     checkBookmark();
   }, [user, currentStory?.id]);
 
-  // Animated bookmark toggle
+  
   const toggleBookmark = async () => {
     if (!user || !currentStory?.id) {
       Alert.alert(
@@ -142,7 +142,7 @@ const ViewStory = ({ navigation, route }) => {
 
     setBookmarkLoading(true);
 
-    // Bounce animation
+    
     Animated.sequence([
       Animated.timing(bookmarkScale, {
         toValue: 1.3,
@@ -195,7 +195,7 @@ const ViewStory = ({ navigation, route }) => {
   };
 
   const handleReadStory = () => {
-    // Button press animation
+    
     Animated.sequence([
       Animated.timing(readButtonScale, {
         toValue: 0.95,
@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     paddingHorizontal: 20,
-    alignItems: 'center', // Center children horizontally
+    alignItems: 'center', 
     
   },
   titleText: {
@@ -443,7 +443,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 15,
     marginBottom: 20,
-    width: '100%', // Ensure card takes full width of its container
+    width: '100%', 
     flexDirection: "row",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
@@ -484,8 +484,8 @@ const styles = StyleSheet.create({
   },
   categoryBadge: {
     position: 'absolute',
-    top: 8, // Inside the container, not overlapping
-    left: 8, // Upper left corner
+    top: 8, 
+    left: 8, 
     backgroundColor: "rgba(0,0,0,0.7)",
     borderRadius: 4,
     paddingHorizontal: 6,
@@ -495,8 +495,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 4,
-    maxWidth: 100, // Prevent it from being too wide
-    zIndex: 1, // Ensure it appears above the image
+    maxWidth: 100, 
+    zIndex: 1, 
   },
   categoryBadgeText: {
     color: '#FFF',
@@ -507,14 +507,14 @@ const styles = StyleSheet.create({
   },
   storyInfo: {
     flex: 1,
-    justifyContent: "space-between", // This ensures buttons stay at bottom
+    justifyContent: "space-between", 
     minWidth: 0,
     paddingRight: 5,
   },
-  // NEW: Container for title and author that keeps them together
+  
   titleAuthorContainer: {
-    flex: 0, // Don't expand this container
-    marginBottom: 15, // Space between title/author and buttons
+    flex: 0, 
+    marginBottom: 15, 
   },
   storyTitle: {
     fontSize: 19,
@@ -524,14 +524,14 @@ const styles = StyleSheet.create({
     fontFamily: 'Fredoka-SemiBold',
     flexShrink: 1,
     marginTop: 5,
-    marginBottom: 5, // Small space between title and author
+    marginBottom: 5, 
   },
   storyAuthor: {
     fontSize: 14,
     color: "#6C757D",
     fontStyle: "italic",
     flexShrink: 1,
-    // Removed marginBottom to keep author right under title
+    
   },
   actionButtons: {
     flexDirection: "row",
@@ -540,7 +540,7 @@ const styles = StyleSheet.create({
     gap: 8,
     flexWrap: "wrap",
     maxWidth: "100%",
-    // This will always be at the bottom due to justifyContent: "space-between" on parent
+    
   },
   readButton: {
     backgroundColor: "#4A90E2",
@@ -589,7 +589,7 @@ const styles = StyleSheet.create({
     padding: 20,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    width: '100%', // Ensure card takes full width of its container
+    width: '100%', 
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 8,

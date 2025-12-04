@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
-// Constants
+
 const COLORS = {
   primary: '#FFCF2D',
   primaryDark: '#E6B800',
@@ -32,7 +32,7 @@ const COLORS = {
   warning: '#FF9800',
 };
 
-// Password strength checker
+
 const checkPasswordStrength = (password) => {
   let strength = 0;
   let feedback = [];
@@ -74,11 +74,11 @@ const checkPasswordStrength = (password) => {
     score: strength,
     level: levels[strength] || 'Very Weak',
     color: colors[strength] || COLORS.error,
-    feedback: feedback.slice(0, 2), // Show only top 2 suggestions
+    feedback: feedback.slice(0, 2), 
   };
 };
 
-// Custom hook for animations
+
 const useNewPassAnimations = () => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
@@ -140,7 +140,7 @@ const useNewPassAnimations = () => {
   };
 };
 
-// Password Strength Indicator Component
+
 const PasswordStrengthIndicator = ({ password }) => {
   const strength = checkPasswordStrength(password);
   
@@ -177,7 +177,7 @@ const PasswordStrengthIndicator = ({ password }) => {
   );
 };
 
-// Enhanced Input Component
+
 const PasswordInput = ({ 
   placeholder, 
   value, 
@@ -231,7 +231,7 @@ const PasswordInput = ({
 );
 
 const NewPass = ({ navigation, route }) => {
-  // Extract data from route params
+  
   const { 
     userName = "User",
     userEmail = "",
@@ -249,7 +249,7 @@ const NewPass = ({ navigation, route }) => {
   const newPasswordRef = useRef(null);
   const confirmPasswordRef = useRef(null);
 
-  // Animation hooks
+  
   const { 
     fadeAnim, 
     slideAnim, 
@@ -260,7 +260,7 @@ const NewPass = ({ navigation, route }) => {
     createShakeAnimation
   } = useNewPassAnimations();
 
-  // Button animation values
+  
   const cancelButtonScale = useRef(new Animated.Value(1)).current;
   const updateButtonScale = useRef(new Animated.Value(1)).current;
 
@@ -341,11 +341,11 @@ const NewPass = ({ navigation, route }) => {
     setIsLoading(true);
 
     try {
-      // Simulate API call
+      
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // Simulate success/failure
-      const isSuccess = Math.random() > 0.1; // 90% success rate for demo
+      
+      const isSuccess = Math.random() > 0.1; 
       
       if (isSuccess) {
         Alert.alert(
@@ -383,7 +383,7 @@ const NewPass = ({ navigation, route }) => {
     handleUpdate();
   }, [handleUpdate]);
 
-  // Check if form is valid
+  
   const isFormValid = newPassword && confirmPassword && newPassword === confirmPassword && checkPasswordStrength(newPassword).score >= 3;
 
   return (
@@ -392,7 +392,6 @@ const NewPass = ({ navigation, route }) => {
       style={styles.background}
       resizeMode="cover"
     >
-      {/* Decorative Elements */}
       <View style={styles.bushContainer}>
         <Image source={require('../images/Bush.png')} style={styles.bush1} />
         <Image source={require('../images/Bush.png')} style={styles.bush2} />
@@ -407,7 +406,6 @@ const NewPass = ({ navigation, route }) => {
         <Image source={require('../images/Flower5.png')} style={styles.flower5} />
       </View>
 
-      {/* Stars */}
       {[1, 2, 3, 4].map(index => (
         <Image 
           key={`star-${index}`}
@@ -428,7 +426,6 @@ const NewPass = ({ navigation, route }) => {
             }
           ]}
         >
-          {/* Header */}
           <View style={styles.headerContainer}>
             <View style={styles.iconContainer}>
               <Ionicons name="key" size={32} color={COLORS.primary} />
@@ -439,7 +436,6 @@ const NewPass = ({ navigation, route }) => {
             </Text>
           </View>
 
-          {/* Password Inputs */}
           <View style={styles.inputsContainer}>
             <PasswordInput
               placeholder="New password"
@@ -469,7 +465,6 @@ const NewPass = ({ navigation, route }) => {
               returnKeyType="done"
             />
 
-            {/* Password Match Indicator */}
             {confirmPassword && (
               <View style={styles.matchContainer}>
                 <Ionicons 
@@ -487,7 +482,6 @@ const NewPass = ({ navigation, route }) => {
             )}
           </View>
 
-          {/* Action Buttons */}
           <View style={styles.buttonContainer}>
             <Animated.View style={[{ transform: [{ scale: cancelButtonScale }] }]}>
               <TouchableOpacity
@@ -549,7 +543,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  // Header Styles
+  
   headerContainer: {
     marginBottom: 30,
     alignItems: 'center',
@@ -578,7 +572,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
 
-  // Input Styles
+  
   inputsContainer: {
     width: '100%',
     marginBottom: 30,
@@ -617,7 +611,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
 
-  // Password Strength Styles
+  
   strengthContainer: {
     width: '100%',
     marginBottom: 16,
@@ -661,7 +655,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
 
-  // Match Indicator Styles
+  
   matchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -673,7 +667,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  // Button Styles
+  
   buttonContainer: {
     flexDirection: "row",
     justifyContent: "center",
@@ -731,7 +725,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  // Decorative Elements
+  
   rainbow: {
     position: 'absolute',
     top: -130,

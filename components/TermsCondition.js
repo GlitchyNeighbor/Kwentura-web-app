@@ -1,4 +1,4 @@
-// e:\Kwentura\Kwentura_Mobile\components\TermsCondition.js
+
 import React, { useState, useCallback } from "react";
 import {
   View,
@@ -139,7 +139,7 @@ const TermsCondition = ({ navigation }) => {
 
   return (
     <ImageBackground
-      source={require('../images/About.png')} // Using same background as About.js
+      source={require('../images/About.png')} 
       style={styles.background}
       resizeMode="cover"
     >

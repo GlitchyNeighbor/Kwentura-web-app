@@ -45,8 +45,8 @@ import { rewardsConfig } from "./rewardsConfig";
 
 const Rewards = ({ navigation }) => {
   const route = useRoute();
-  // const { starsEarned } = route.params || {}; // Removed as stars are added in ComQuestions.js
-  // const starsAddedRef = useRef(false); // Removed as stars are added in ComQuestions.js
+  
+  
 
   const [stories, setStories] = useState([]);
   const [filteredStories, setFilteredStories] = useState([]);
@@ -74,10 +74,10 @@ const Rewards = ({ navigation }) => {
   const unlockedAvatarScale = useRef(new Animated.Value(1)).current;
   const [clappingSound, setClappingSound] = useState();
 
-  // Create animated values for each reward for bounce animation
+  
   const animatedValues = useRef({});
   
-  // Initialize animated values for all rewards
+  
   useEffect(() => {
     rewardsConfig.forEach(reward => {
       if (!animatedValues.current[reward.id]) {
@@ -86,7 +86,7 @@ const Rewards = ({ navigation }) => {
     });
   }, []);
 
-  // Keys for AsyncStorage
+  
   const RECENT_SEARCHES_KEY = "@recent_searches";
   const SEARCH_HISTORY_KEY = "@search_history";
 
@@ -104,7 +104,7 @@ const Rewards = ({ navigation }) => {
     generateQuickSearchData();
   }, [stories]);
 
-  // Listen for authentication state changes and load user data
+  
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -121,7 +121,7 @@ const Rewards = ({ navigation }) => {
     return () => unsubscribeAuth();
   }, []);
 
-  // Cleanup speech on component unmount
+  
   useEffect(() => {
     return () => {
       Speech.stop();
@@ -145,15 +145,15 @@ const Rewards = ({ navigation }) => {
     return () => clappingSound?.unloadAsync();
   }, []);
 
-  // Effect to handle stars earned from quiz - REMOVED
-  // useEffect(() => {
-  //   if (starsEarned && user && !starsAddedRef.current) {
-  //     addStars(starsEarned, "quiz completion");
-  //     starsAddedRef.current = true; // Mark stars as added
-  //   }
-  // }, [starsEarned, user]);
+  
+  
+  
+  
+  
+  
+  
 
-  // Load user's stars and unlocked rewards
+  
   const loadUserRewardsData = (userId) => {
     setUserRewardsLoading(true);
     const userDocRef = doc(db, "students", userId);
@@ -164,7 +164,7 @@ const Rewards = ({ navigation }) => {
           setUserStars(userData.stars || 0);
           setUnlockedRewards(new Set(userData.unlockedRewards || []));
         } else {
-          // Create user document if it doesn't exist
+          
           await setDoc(userDocRef, {
             stars: 0,
             unlockedRewards: [],
@@ -185,7 +185,7 @@ const Rewards = ({ navigation }) => {
     return unsubscribe;
   };
 
-  // Function to unlock a reward
+  
   const unlockReward = async (rewardId) => {
     if (!user) {
       Alert.alert("Login Required", "Please log in to unlock rewards.");
@@ -211,7 +211,7 @@ const Rewards = ({ navigation }) => {
 
     try {
       const userDocRef = doc(db, "students", user.uid);
-      const userDocSnap = await getDoc(userDocRef); // Fetch current user data
+      const userDocSnap = await getDoc(userDocRef); 
       
       if (!userDocSnap.exists()) {
         Alert.alert("Error", "User data not found. Please try again.");
@@ -229,20 +229,20 @@ const Rewards = ({ navigation }) => {
         return;
       }
 
-      // Update user document
+      
       await updateDoc(userDocRef, {
         stars: increment(-reward.starsRequired),
         unlockedRewards: [...Array.from(unlockedRewards), rewardId],
       });
 
-      // Update local state (this will also be updated by the onSnapshot listener)
+      
       setUnlockedRewards(prev => new Set([...prev, rewardId]));
 
-      // Show styled unlocked modal instead of alert
+      
       setUnlockedReward(reward);
       setUnlockedModalVisible(true);
 
-      // Congratulate the user with speech
+      
       const speechMessage = `Congratulations ! You've unlocked the ${reward.title}!`;
       Speech.speak(speechMessage, { language: 'en-US' });
 
@@ -256,7 +256,7 @@ const Rewards = ({ navigation }) => {
     }
   };
 
-  // Function to add stars (you can call this when user completes actions)
+  
   const addStars = async (amount, reason = "Story completion") => {
     if (!user) return;
 
@@ -276,7 +276,7 @@ const Rewards = ({ navigation }) => {
     }
   };
 
-  // Load stored search data from AsyncStorage
+  
   const loadStoredSearchData = async () => {
     try {
       const storedRecentSearches = await AsyncStorage.getItem(
@@ -298,7 +298,7 @@ const Rewards = ({ navigation }) => {
     }
   };
 
-  // Save search data to AsyncStorage
+  
   const saveSearchData = async (searches, history) => {
     try {
       await AsyncStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(searches));
@@ -308,28 +308,28 @@ const Rewards = ({ navigation }) => {
     }
   };
 
-  // Generate trending searches, popular authors, and quick filters
+  
   const generateQuickSearchData = () => {
     if (stories.length === 0) return;
 
-    // Generate trending searches based on story titles and categories
+    
     const categoryCount = {};
     const authorCount = {};
     const titleWords = [];
 
     stories.forEach((story) => {
-      // Count categories
+      
       if (story.category) {
         categoryCount[story.category] =
           (categoryCount[story.category] || 0) + 1;
       }
 
-      // Count authors
+      
       if (story.author) {
         authorCount[story.author] = (authorCount[story.author] || 0) + 1;
       }
 
-      // Extract meaningful words from titles
+      
       if (story.title) {
         const words = story.title
           .split(" ")
@@ -352,7 +352,7 @@ const Rewards = ({ navigation }) => {
       }
     });
 
-    // Set trending searches (top categories and popular title words)
+    
     const topCategories = Object.entries(categoryCount)
       .sort(([, a], [, b]) => b - a)
       .slice(0, 3)
@@ -362,7 +362,7 @@ const Rewards = ({ navigation }) => {
 
     setTrendingSearches([...topCategories, ...topTitleWords]);
 
-    // Set popular authors
+    
     const topAuthors = Object.entries(authorCount)
       .sort(([, a], [, b]) => b - a)
       .slice(0, 5)
@@ -370,7 +370,7 @@ const Rewards = ({ navigation }) => {
 
     setPopularAuthors(topAuthors);
 
-    // Set quick filters
+    
     const filters = [
       "Latest Stories",
       "Most Popular",
@@ -380,7 +380,7 @@ const Rewards = ({ navigation }) => {
     setQuickFilters(filters);
   };
 
-  // Generate search suggestions based on current query
+  
   const generateSearchSuggestions = () => {
     if (!searchQuery.trim() || searchQuery.length < 2) {
       setSearchSuggestions([]);
@@ -390,7 +390,7 @@ const Rewards = ({ navigation }) => {
     const query = searchQuery.toLowerCase();
     const suggestions = [];
 
-    // Add matching story titles
+    
     stories.forEach((story) => {
       if (story.title && story.title.toLowerCase().includes(query)) {
         suggestions.push({
@@ -402,7 +402,7 @@ const Rewards = ({ navigation }) => {
       }
     });
 
-    // Add matching authors
+    
     const uniqueAuthors = [
       ...new Set(stories.map((s) => s.author).filter(Boolean)),
     ];
@@ -417,7 +417,7 @@ const Rewards = ({ navigation }) => {
       }
     });
 
-    // Add matching categories
+    
     const uniqueCategories = [
       ...new Set(stories.map((s) => s.category).filter(Boolean)),
     ];
@@ -470,8 +470,8 @@ const Rewards = ({ navigation }) => {
         return {
           id: doc.id,
           ...data,
-          imageUrl: data.image, // Map Firestore 'image' to 'imageUrl'
-          synopsis: data.generatedSynopsis || data.synopsis, // Map 'generatedSynopsis' or 'synopsis'
+          imageUrl: data.image, 
+          synopsis: data.generatedSynopsis || data.synopsis, 
         };
       });
 
@@ -510,12 +510,12 @@ const Rewards = ({ navigation }) => {
   const handleSearch = (text) => {
     setSearchQuery(text);
 
-    // Clear previous timeout
+    
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
 
-    // Set new timeout for search tracking
+    
     searchTimeoutRef.current = setTimeout(() => {
       if (text.trim() && text.length > 2) {
         trackSearch(text.trim());
@@ -531,19 +531,19 @@ const Rewards = ({ navigation }) => {
       resultsCount: filteredStories.length,
     };
 
-    // Update recent searches
+    
     const updatedRecent = [
       searchTerm,
       ...recentSearches.filter((s) => s !== searchTerm),
     ].slice(0, 5);
 
-    // Update search history
+    
     const updatedHistory = [searchEntry, ...searchHistory].slice(0, 20);
 
     setRecentSearches(updatedRecent);
     setSearchHistory(updatedHistory);
 
-    // Save to storage
+    
     await saveSearchData(updatedRecent, updatedHistory);
   };
 
@@ -576,7 +576,7 @@ const Rewards = ({ navigation }) => {
         filteredResults = stories.slice(0, 10);
         break;
       case "Most Popular":
-        // Sort by some popularity metric (you can customize this)
+        
         filteredResults = stories
           .sort((a, b) => (b.views || 0) - (a.views || 0))
           .slice(0, 10);
@@ -612,7 +612,7 @@ const Rewards = ({ navigation }) => {
   };
 
   const handleViewStory = (story) => {
-    // Navigate to the HomeTab, then to the ViewStory screen within HomeStack
+    
     navigation.navigate("HomeTab", {
       screen: "ViewStory",
       params: { storyId: story.id, story: story },
@@ -664,12 +664,12 @@ const Rewards = ({ navigation }) => {
     setFilteredStories(stories);
   };
 
-  // Function to handle unlocked animal clicks with bounce animation and sound
+  
   const handleUnlockedAnimalClick = async (rewardId) => {
     const animatedValue = animatedValues.current[rewardId];
     const reward = rewardsConfig.find(r => r.id === rewardId);
     
-    // Play the sound if it's loaded
+    
     if (reward && reward.sound) {
       try {
         const { sound: boinkSound } = await Audio.Sound.createAsync(reward.sound);
@@ -679,7 +679,7 @@ const Rewards = ({ navigation }) => {
       await boinkSound.replayAsync();
     }
     
-    // Create bounce animation
+    
     Animated.sequence([
       Animated.timing(animatedValue, {
         toValue: 1.3,
@@ -701,16 +701,16 @@ const Rewards = ({ navigation }) => {
     console.log(`Bounced unlocked animal ${rewardId} with its sound!`);
   };
   
-// Simple and clear renderAnimalReward function
+
 const renderAnimalReward = (reward, index) => {
   const isUnlocked = unlockedRewards.has(reward.id);
   const hasEnoughStars = userStars >= reward.starsRequired;
   const animatedValue = animatedValues.current[reward.id] || new Animated.Value(1);
   
-  // Simple logic:
-  // - If already unlocked: show as unlocked
-  // - If not unlocked BUT has enough stars: show as unlockable (can tap)
-  // - If not unlocked AND doesn't have enough stars: show as locked (cannot tap)
+  
+  
+  
+  
   
   const canUnlock = !isUnlocked && hasEnoughStars;
   const isLocked = !isUnlocked && !hasEnoughStars;
@@ -720,16 +720,16 @@ const renderAnimalReward = (reward, index) => {
       key={reward.id}
       onPress={() => {
         if (isUnlocked) {
-          // If unlocked, play animation and sound
+          
           handleUnlockedAnimalClick(reward.id);
         } else if (isLocked) {
-          // Cannot unlock - show alert
+          
           Alert.alert(
             "Not Enough Stars",
             `You need ${reward.starsRequired} stars to unlock the ${reward.title}. You currently have ${userStars} stars.`
           );
         } else {
-          // Can view/unlock - show preview
+          
           setPreviewReward({
             ...reward,
             isUnlocked,
@@ -757,8 +757,8 @@ const renderAnimalReward = (reward, index) => {
             backgroundColor: isUnlocked 
               ? reward.bgColor 
               : canUnlock
-              ? '#FFF8E1'  // Yellow for unlockable
-              : '#F0F0F0'  // Gray for locked
+              ? '#FFF8E1'  
+              : '#F0F0F0'  
           }
         ]}>
           <LinearGradient
@@ -766,13 +766,13 @@ const renderAnimalReward = (reward, index) => {
               isUnlocked
                 ? [reward.color, `${reward.color}DD`]
                 : canUnlock
-                ? ["#FFD700", "#FFA000"]  // Gold for unlockable
-                : ["#CCCCCC", "#999999"]  // Gray for locked
+                ? ["#FFD700", "#FFA000"]  
+                : ["#CCCCCC", "#999999"]  
             }
             style={styles.animalCircleInner}
           >
             {isUnlocked ? (
-              // Already unlocked - show crown
+              
               <View style={styles.unlockedAnimalContainer}>
                 <Image 
                   source={reward.image}
@@ -784,7 +784,7 @@ const renderAnimalReward = (reward, index) => {
                 </View>
               </View>
             ) : canUnlock ? (
-              // Can unlock - show TAP with star
+              
               <View style={styles.canUnlockAnimalContainer}>
                 <Image 
                   source={reward.image}
@@ -797,7 +797,7 @@ const renderAnimalReward = (reward, index) => {
                 <Text style={styles.tapToUnlockText}>TAP</Text>
               </View>
             ) : (
-              // Locked - show lock icon
+              
               <View style={styles.lockedAnimalContainer}>
                 <Image 
                   source={reward.image}
@@ -871,9 +871,9 @@ const renderAnimalReward = (reward, index) => {
     );
   };
 
-  // Handle unlocked animal avatar click with bounce animation and sound (for modal)
+  
   const handleModalUnlockedAvatarClick = async () => {
-    // Create bounce animation
+    
     Animated.sequence([
       Animated.timing(unlockedAvatarScale, {
         toValue: 1.3,
@@ -892,7 +892,7 @@ const renderAnimalReward = (reward, index) => {
       }),
     ]).start();
 
-    // Play the sound if it's loaded
+    
     const reward = rewardsConfig.find(r => r.id === unlockedReward?.id);
     if (reward && reward.sound) {
       try {
@@ -904,7 +904,7 @@ const renderAnimalReward = (reward, index) => {
     }
   };
 
-  // Demo function to add stars (for testing purposes)
+  
   const handleAddStarsDemo = () => {
     if (!user) {
       Alert.alert("Login Required", "Please log in to earn stars.");
@@ -941,17 +941,9 @@ const renderAnimalReward = (reward, index) => {
           navigation={navigation}
           leftIconType="drawer"
           showSearch={true}
-          hideStars={true}  // This will hide only the decorative stars
+          hideStars={true}  
         />
 
-          {/* Removed starsEarned display as stars are now added in ComQuestions.js */}
-          {/* {starsEarned > 0 && (
-            <View style={styles.starsEarnedContainer}>
-              <Text style={styles.starsEarnedText}>You earned {starsEarned} ⭐ from the quiz!</Text>
-            </View>
-          )} */}
-
-          {/* Demo button to add stars - remove this in production */}
           {user && (
             <View style={styles.demoContainer}>
               <TouchableOpacity style={styles.demoButton} onPress={handleAddStarsDemo}>
@@ -981,7 +973,6 @@ const renderAnimalReward = (reward, index) => {
           )}
         </ScrollView>
 
-        {/* Modal for Animal Preview */}
         <Modal
           visible={previewVisible}
           transparent={true}
@@ -1045,7 +1036,6 @@ const renderAnimalReward = (reward, index) => {
                 )}
               </View>
               
-              {/* Unlock button only for animals that can be unlocked */}
               {previewReward?.canUnlock && !previewReward?.isUnlocked && (
                 <TouchableOpacity
                   style={[
@@ -1061,7 +1051,6 @@ const renderAnimalReward = (reward, index) => {
                 </TouchableOpacity>
               )}
               
-              {/* Disabled unlock button for locked animals */}
               {previewReward?.isLocked && !previewReward?.isUnlocked && !previewReward?.canUnlock && (
                 <TouchableOpacity
                   style={[
@@ -1089,7 +1078,6 @@ const renderAnimalReward = (reward, index) => {
           </View>
         </Modal>
 
-        {/* Styled Animal Unlocked Modal */}
         <Modal
           visible={unlockedModalVisible}
           transparent={true}
@@ -1101,14 +1089,12 @@ const renderAnimalReward = (reward, index) => {
         >
           <View style={styles.unlockedOverlay}>
             <View style={styles.unlockedContainer}>
-              {/* Celebration Header */}
               <View style={styles.celebrationHeader}>
                 <Text style={styles.celebrationEmoji}>🎉</Text>
                 <Text style={styles.celebrationTitle}>Animal Friend Unlocked!</Text>
                 <Text style={styles.celebrationEmoji}>🎉</Text>
               </View>
 
-              {/* Animal Image Display */}
               <TouchableWithoutFeedback onPress={handleModalUnlockedAvatarClick}>
                 <Animated.View style={[styles.unlockedImageWrapper, { transform: [{ scale: unlockedAvatarScale }] }]}>
                   <View style={[
@@ -1130,26 +1116,17 @@ const renderAnimalReward = (reward, index) => {
                         <View style={styles.unlockedCrownContainer}>
                           <Text style={styles.unlockedCrownEmoji}>👑</Text>
                         </View>
-                        {/* Sparkle effects
-                      <View style={styles.sparkleEffect}>
-                        <Text style={[styles.sparkle, styles.sparkle1]}>✨</Text>
-                        <Text style={[styles.sparkle, styles.sparkle2]}>⭐</Text>
-                        <Text style={[styles.sparkle, styles.sparkle3]}>✨</Text>
-                        <Text style={[styles.sparkle, styles.sparkle4]}>⭐</Text>
-                      </View> */}
                       </View>
                     </LinearGradient>
                   </View>
                 </Animated.View>
               </TouchableWithoutFeedback>
               
-              {/* Animal Info */}
               <Text style={styles.unlockedAnimalName}>
                 Congratulations! You've unlocked the "{unlockedReward?.title}"!
               </Text>
               <Text style={styles.unlockedAnimalDesc}>{unlockedReward?.description}</Text>
               
-              {/* Stars Display */}
               <View style={styles.unlockedStarsRow}>
                 <Ionicons name="star" size={20} color="#FFD700" />
                 <Text style={styles.unlockedStarsText}>
@@ -1157,7 +1134,6 @@ const renderAnimalReward = (reward, index) => {
                 </Text>
               </View>
               
-              {/* Awesome Button */}
               <TouchableOpacity
                 style={styles.unlockedAwesomeButton}
                 onPress={() => {
@@ -1216,7 +1192,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  // Login Prompt Styles
+  
   loginPromptContainer: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -1253,7 +1229,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  // Loading Styles
+  
   loadingContainer: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -1266,7 +1242,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  // Rewards Grid Styles
+  
   rewardsContainer: {
     flex: 1,
     paddingHorizontal: 15,
@@ -1289,7 +1265,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
   },
   
-  // Animal Reward Styles - Updated for 3 columns
+  
   animalRewardContainer: {
     width: '30%',
     alignItems: 'center',
@@ -1306,7 +1282,7 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   
-  // Animal Circle Styles - Reduced size for 3 columns
+  
   animalCircle: {
     width: 70,
     height: 70,
@@ -1331,7 +1307,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   
-  // Animal Image Styles
+  
   animalImage: {
     width: 40,
     height: 40,
@@ -1344,7 +1320,7 @@ const styles = StyleSheet.create({
     opacity: 0.3,
   },
   
-  // Unlocked Animal Styles
+  
   unlockedAnimalContainer: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -1359,7 +1335,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   
-  // Can Unlock Animal Styles
+  
   canUnlockAnimalContainer: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -1387,7 +1363,7 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   
-  // Locked Animal Styles
+  
   lockedAnimalContainer: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -1403,7 +1379,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   
-  // Animal Reward Text Styles - Adjusted for smaller layout
+  
   animalRewardTitle: {
     fontSize: 10,
     fontWeight: '700',
@@ -1447,7 +1423,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // Preview Modal Styles - Fixed positioning and consistent with unlocked animals
+  
   previewOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -1474,7 +1450,7 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   
-  // Preview Animal Circle - matches the unlocked animal style
+  
   previewAnimalCircle: {
     width: 120,
     height: 120,
@@ -1498,7 +1474,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   
-  // Preview Animal Container - matches unlocked style
+  
   previewUnlockedAnimalContainer: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -1590,7 +1566,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // NEW: Styled Unlocked Modal Styles - matching preview container style
+  
   unlockedOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
@@ -1613,7 +1589,7 @@ const styles = StyleSheet.create({
     borderWidth: 4,
   },
   
-  // Celebration Header
+  
   celebrationHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1631,7 +1607,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Fredoka-SemiBold',
   },
   
-  // Unlocked Animal Image Display
+  
   unlockedImageWrapper: {
     alignItems: 'center',
     marginBottom: 20,
@@ -1679,7 +1655,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
   },
   
-  // Sparkle Effects
+  
   sparkleEffect: {
     position: 'absolute',
     width: 200,
@@ -1712,7 +1688,7 @@ const styles = StyleSheet.create({
     color: '#FF5722',
   },
   
-  // Unlocked Animal Info
+  
   unlockedAnimalName: {
     fontSize: 18,
     fontWeight: 'bold',
@@ -1731,7 +1707,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   
-  // Unlocked Stars Display
+  
   unlockedStarsRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1748,7 +1724,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   
-  // Awesome Button
+  
   unlockedAwesomeButton: {
     backgroundColor: '#FF6DA8',
     borderRadius: 15,
@@ -1768,9 +1744,9 @@ const styles = StyleSheet.create({
     fontFamily: 'Fredoka-SemiBold',
   },
 
-  // New styles for earned stars display
+  
   starsEarnedContainer: {
-    backgroundColor: '#D4EDDA', // Light green background
+    backgroundColor: '#D4EDDA', 
     padding: 10,
     borderRadius: 8,
     marginHorizontal: 20,
@@ -1782,11 +1758,11 @@ const styles = StyleSheet.create({
   starsEarnedText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#155724', // Dark green text
+    color: '#155724', 
     textAlign: 'center',
   },
 
-  // Existing styles from original component
+  
   bookItem: {
     borderRadius: 8,
     textAlign: "center",

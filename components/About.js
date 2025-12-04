@@ -19,8 +19,8 @@ const { width, height } = Dimensions.get('window');
 
 const CONTACT_INFO = {
   email: "lopenafv@students.nu-moa.edu.ph",
-  phone: "+63-XXX-XXX-XXXX", // Add actual phone number
-  website: "https://kwentura-39597.web.app/contact", // Add actual website
+  phone: "+63-XXX-XXX-XXXX", 
+  website: "https://kwentura-39597.web.app/contact"
 };
 
 const SYSTEM_FEATURES = [
@@ -83,8 +83,8 @@ const About = ({ navigation }) => {
           return;
       }
 
-      // Directly attempt to open the URL. `canOpenURL` is unreliable for mailto on Android.
-      // The catch block will handle cases where no email client is available.
+      
+      
       await Linking.openURL(url);
     } catch (error) {
       console.error(`Error opening ${type}:`, error);

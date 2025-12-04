@@ -1,4 +1,4 @@
-// e:\Kwentura\Kwentura_Mobile\components\PrivacyPolicy.js
+
 import React, { useState, useCallback } from "react";
 import {
   View,
@@ -160,7 +160,7 @@ const PrivacyPolicy = ({ navigation }) => {
 
   return (
     <ImageBackground
-      source={require('../images/About.png')} // Using same background
+      source={require('../images/About.png')} 
       style={styles.background}
       resizeMode="cover"
     >
@@ -178,7 +178,6 @@ const PrivacyPolicy = ({ navigation }) => {
             />
             
             <View style={styles.textContainer}>
-              {/* Header Section */}
               <View style={styles.headerSection}>
                 <Text style={styles.title}>Privacy Policy</Text>
                 <Text style={styles.subtitle}>
@@ -186,13 +185,11 @@ const PrivacyPolicy = ({ navigation }) => {
                 </Text>
               </View>
 
-              {/* Effective Date Card */}
               <View style={styles.dateCard}>
                 <Ionicons name="calendar-outline" size={20} color="#FFCF2D" />
                 <Text style={styles.effectiveDate}>Effective Date: June 4, 2025</Text>
               </View>
 
-              {/* Introduction Card */}
               <View style={styles.introCard}>
                 <View style={styles.privacyIconContainer}>
                   <Ionicons name="shield-checkmark" size={24} color="#4CAF50" />
@@ -209,13 +206,11 @@ const PrivacyPolicy = ({ navigation }) => {
                 </Text>
               </View>
 
-              {/* Privacy Sections */}
               <View style={styles.section}>
                 <Text style={styles.mainSectionTitle}>Privacy Policy Details</Text>
                 {PRIVACY_SECTIONS.map(section => renderExpandableSection(section))}
               </View>
 
-              {/* Data Protection Highlight */}
               <View style={styles.protectionCard}>
                 <View style={styles.protectionHeader}>
                   <Ionicons name="lock-closed" size={20} color="#FFCF2D" />
@@ -227,7 +222,6 @@ const PrivacyPolicy = ({ navigation }) => {
                 </Text>
               </View>
 
-              {/* Contact Section */}
               <View style={styles.contactSection}>
                 <Text style={styles.contactTitle}>Contact Us</Text>
                 <Text style={styles.contactSubtitle}>
@@ -253,7 +247,6 @@ const PrivacyPolicy = ({ navigation }) => {
                 </View>
               </View>
 
-              {/* Consent Section */}
               <View style={styles.consentCard}>
                 <Ionicons name="hand-right" size={24} color="#2196F3" style={styles.consentIcon} />
                 <Text style={styles.consentText}>
@@ -262,7 +255,6 @@ const PrivacyPolicy = ({ navigation }) => {
                 </Text>
               </View>
 
-              {/* Footer */}
               <View style={styles.footer}>
                 <Text style={styles.footerText}>
                   © 2025 Kwentura - Monlimar Development Academy

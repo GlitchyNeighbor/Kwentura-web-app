@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Image, StatusBar } from "react-native";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { auth, db } from "../FirebaseConfig"; // Adjust path as needed
+import { auth, db } from "../FirebaseConfig"; 
 import { doc, onSnapshot } from "firebase/firestore";
 import { useProfile } from '../context/ProfileContext';
 

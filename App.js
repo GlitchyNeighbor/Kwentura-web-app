@@ -1,18 +1,18 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useFonts } from 'expo-font';
-// import * as SplashScreen from 'expo-splash-screen';
+
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { NavigationContainer, CommonActions } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { StyleSheet, Image, View, Text, TouchableOpacity, AppState } from "react-native"; // Import AppState
+import { StyleSheet, Image, View, Text, TouchableOpacity, AppState } from "react-native"; 
 import {
   createDrawerNavigator,
   DrawerContentScrollView,
   DrawerItemList,
   DrawerItem,
 } from "@react-navigation/drawer";
-import { ActivityIndicator, Alert } from "react-native"; // Import Alert from react-native
+import { ActivityIndicator, Alert } from "react-native"; 
 import { auth, db } from "./FirebaseConfig";
 import { signOut as firebaseSignOut } from "firebase/auth";
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
@@ -42,231 +42,16 @@ import ForgotPassComplete from "./components/ForgotPassComplete";
 import TermsCondition from "./components/TermsCondition"; 
 import PrivacyPolicy from "./components/PrivacyPolicy";
 import ChangePasswordScreen from "./components/ChangePasswordScreen";
-import ReadStory from "./components/ReadStory"; // Import ReadStory
+import ReadStory from "./components/ReadStory"; 
 import About from "./components/About"; 
-import ComQuestions from "./components/ComQuestions"; // Import ComQuestions
+import ComQuestions from "./components/ComQuestions"; 
 
-import OtpVerificationScreen from "./components/OtpVerificationScreen"; // Import the new screen
+import OtpVerificationScreen from "./components/OtpVerificationScreen"; 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
+const DAILY_USAGE_LIMIT_MS = 90 * 60 * 1000; 
 
-// --- Timer Configuration (moved from index.html) ---
-const DAILY_USAGE_LIMIT_MS = 90 * 60 * 1000; // 90 minutes in milliseconds
-
-// User-specific keys will be generated dynamically based on UID
-// function CustomDrawerContent({ navigation, timerDisplay, appIsSleeping, ...restProps }) {
-//   const [studentName, setStudentName] = useState("");
-//   const [loading, setLoading] = useState(true);
-//   const [avatarConfig, setAvatarConfig] = useState(null);
-
-//   useEffect(() => {
-//     let unsubscribe;
-//     const currentUser = auth.currentUser;
-//     if (currentUser) {
-//       const docRef = doc(db, "students", currentUser.uid);
-//       // Use onSnapshot for real-time updates
-//       unsubscribe = onSnapshot(
-//         docRef,
-//         (docSnap) => {
-//           if (docSnap.exists()) {
-//             const data = docSnap.data();
-//             setStudentName(
-//               `${data.studentFirstName || ""} ${
-//                 data.studentLastName || ""
-//               }`.trim() || "Error Retrieving Data"
-//             );
-//             if (typeof data.avatarConfig === "number") {
-//               setAvatarConfig(AVATAR_OPTIONS[data.avatarConfig]);
-//             } else {
-//               setAvatarConfig(data.avatarConfig ?? null);
-//             }
-//           } else {
-//             setStudentName("Error Retrieving Data");
-//             setAvatarConfig(null);
-//           }
-//           setLoading(false);
-//         },
-//         () => {
-//           setStudentName("Error Retrieving Data");
-//           setAvatarConfig(null);
-//           setLoading(false);
-//         }
-//       );
-//     } else {
-//       setStudentName("Error Retrieving Data");
-//       setAvatarConfig(null);
-//       setLoading(false);
-//     }
-//     return () => {
-//       if (unsubscribe) unsubscribe();
-//     };
-//   }, []);
-
-
-//   const handleSignOut = async () => {
-//     try {
-//       await firebaseSignOut(auth);
-//       console.log("User signed out successfully");
-//     } catch (error) {
-//       console.error("Sign out error:", error);
-//       alert("Sign out failed: " + error.message);
-//     }
-//   };
-
-//   return (
-//     <DrawerContentScrollView
-//       {...restProps}
-//       style={{ flex: 1, backgroundColor: "#f8fafc" }}
-//       contentContainerStyle={{ padding: 0 }}
-//     >
-//       <View
-//         style={{
-//           backgroundColor: "#FF7FB3",
-//           paddingVertical: 28,
-//           paddingHorizontal: 0, // Remove horizontal padding
-//           flexDirection: "row",
-//           alignItems: "center",
-//           width: "100%",
-//           borderRadius: 0,
-//           alignSelf: "stretch", // Ensure full width
-//         }}
-//       >
-//         <View
-//           style={{
-//             flexDirection: "row",
-//             alignItems: "center",
-//             paddingLeft: 18,
-//             width: "100%",
-//           }}
-//         >
-
-//           {avatarConfig ? (
-//             <Image
-//               source={avatarConfig}
-//               style={{
-//                 width: 54,
-//                 height: 54,
-//                 borderRadius: 27,
-//                 marginRight: 12,
-//                 borderWidth: 2,
-//                 borderColor: "#fff",
-//                 backgroundColor: "#eee",
-//               }}
-//             />
-            
-//           ) : (
-//             <Image
-//               source={require("./assets/avatars/default_profile.png")}
-//               style={{
-//                 width: 54,
-//                 height: 54,
-//                 borderRadius: 27,
-//                 marginRight: 12,
-//                 borderWidth: 2,
-//                 borderColor: "#fff",
-//                 backgroundColor: "#eee",
-//               }}
-//             />
-//           )}
-//           <Text
-//             style={{
-//               color: "#fff",
-//               fontWeight: "bold",
-//               fontSize: 16,
-//               flexShrink: 1,
-//               flexWrap: "wrap",
-//             }}
-//           >
-//             {loading ? "Loading..." : studentName}
-//           </Text>
-//         </View>
-//       </View>
-
-//        {/* Converted Timer Display for React Native */}
-//       <View
-//         style={{
-//           padding: 10,
-//           borderTopWidth: 1,
-//           borderTopColor: "#ccc",
-//           backgroundColor: "#f0f0f0", // Example background
-//           alignItems: 'center',
-//         }}
-//       >
-//         <Text style={{ fontWeight: "bold" }}>
-//           Time Remaining:
-//           <Text style={{ fontWeight: "bold", marginLeft: 5 }}>
-//             {appIsSleeping ? "Resting" : timerDisplay}
-//           </Text>
-//         </Text>
-//       </View>
-
-      
-//       <View style={{ marginTop: 18, width: "100%", alignSelf: "stretch" }}>
-//         <DrawerItem
-//           label="Home"
-//           icon={({ color, size }) => (
-//             <Ionicons name="home-outline" size={size} color={color} />
-//           )}
-//           labelStyle={{ fontWeight: "bold", fontSize: 15 }}
-//           style={{ marginHorizontal: 0, borderRadius: 0, width: "100%" }}
-//           activeTintColor="#ff4081"
-//           inactiveTintColor="#222"
-//           onPress={() => {
-//             navigation.closeDrawer();
-//             navigation.navigate("KwenturaHome", { screen: "Home" });
-//           }}
-//         />
-//         <DrawerItem
-//           label="Rewards"
-//           icon={({ color, size }) => (
-//             <Ionicons name="paw-outline" size={size} color={color} />
-//           )}
-//           labelStyle={{ fontWeight: "bold", fontSize: 15 }}
-//           style={{ marginHorizontal: 0, borderRadius: 0, width: "100%" }}
-//           activeTintColor="#ff4081"
-//           inactiveTintColor="#222"
-//           onPress={() => {
-//             navigation.closeDrawer();
-//             navigation.navigate("KwenturaHome", { screen: "RewardsTab" });
-//           }}
-//         />
-//         <DrawerItem
-//           label="Library"
-//           icon={({ color, size }) => (
-//             <Ionicons name="library" size={size} color={color} />
-//           )}
-//           labelStyle={{ fontWeight: "bold", fontSize: 15 }}
-//           style={{ marginHorizontal: 0, borderRadius: 0, width: "100%" }}
-//           activeTintColor="#ff4081"
-//           inactiveTintColor="#222"
-//           onPress={() => {
-//             navigation.closeDrawer();
-//             navigation.navigate("KwenturaHome", { screen: "LibraryTab" });
-//           }}
-//         />
-//         <View style={{ flex: 1, justifyContent: "flex-end", width: "100%" }}>
-//           <DrawerItem
-//             label="Logout"
-//             icon={({ color, size }) => (
-//               <Ionicons name="log-out-outline" size={size} color="#ff4081" />
-//             )}
-//             labelStyle={{ color: "#ff4081", fontWeight: "bold", fontSize: 15 }}
-//             style={{
-//               marginBottom: 10,
-//               marginHorizontal: 0,
-//               borderRadius: 0,
-//               width: "100%",
-//             }}
-//             onPress={handleSignOut}
-//           />
-//         </View>
-//       </View>
-//     </DrawerContentScrollView>
-//   );
-// }
-
-// Define a new stack for Profile related screens
 function ProfileStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -312,7 +97,7 @@ function AppTabs() {
         tabBarActiveTintColor: "#fac411ff",
         tabBarInactiveTintColor: "#919393",
         tabBarStyle: (() => {
-          // Get the current route name from the HomeStack if we're on HomeTab
+          
           if (route.name === "HomeTab") {
             const routeState = navigation.getState();
             const activeRoute = routeState?.routes[routeState.index];
@@ -320,7 +105,7 @@ function AppTabs() {
             
             if (homeTabState) {
               const activeHomeRoute = homeTabState.routes[homeTabState.index];
-              // Hide tab bar for ViewStory and ReadStory screens
+              
                if (activeHomeRoute?.name === "ViewStory" || 
                   activeHomeRoute?.name === "ReadStory" || 
                   activeHomeRoute?.name === "ComQuestions") {
@@ -329,7 +114,7 @@ function AppTabs() {
             }
           }
           
-          // Default tab bar style
+          
           return {
             height: 60,
             paddingBottom: 5,
@@ -363,43 +148,43 @@ function AppTabs() {
 
 
 function AppDrawer() {
-  // --- Timer State and Logic now in AppDrawer ---
-  const currentUser = auth.currentUser; // Get current user
+  
+  const currentUser = auth.currentUser; 
   const [appIsGloballySleeping, setAppIsGloballySleeping] = useState(false);
   const [timerDisplay, setTimerDisplay] = useState("--:--:--");
-  const [timerTrigger, setTimerTrigger] = useState(0); // New state to trigger timer reset
+  const [timerTrigger, setTimerTrigger] = useState(0); 
 
-  // Refs for managing timer and app state
+  
   const usageTimeoutIdRef = useRef(null);
   const countdownIntervalIdRef = useRef(null);
   const appStateRef = useRef(AppState.currentState);
-  // const usageEndTimeRef = useRef(null); // Replaced by active session tracking
-  const activeSessionStartTimeRef = useRef(null); // Timestamp when current active session started
-  const initialDurationForCountdownRef = useRef(0); // Duration timer was started with for current session
+  
+  const activeSessionStartTimeRef = useRef(null); 
+  const initialDurationForCountdownRef = useRef(0); 
 
   useEffect(() => {
     const userId = currentUser?.uid;
     console.log(`AppDrawer: Timer useEffect triggered. User: ${userId}, Trigger count: ${timerTrigger}`);
 
-    // Clear any lingering timers from previous effect runs or states
+    
     if (usageTimeoutIdRef.current) clearTimeout(usageTimeoutIdRef.current);
     if (countdownIntervalIdRef.current) clearInterval(countdownIntervalIdRef.current);
 
     if (!userId) {
-      // No user logged in, or user just logged out.
-      // Reset timer display and state.
+      
+      
       activeSessionStartTimeRef.current = null;
       setTimerDisplay("--:--:--");
       setAppIsGloballySleeping(false);
       console.log("AppDrawer: No user or user logged out, timer inactive.");
-      return; // Stop further execution of timer logic
+      return; 
     }
 
-    // --- User-specific AsyncStorage key generation ---
+    
     const getSleepKey = () => `appSleepUntilNextDayTimestamp_${userId}`;
     const getCumulativeUsageKey = () => `appCumulativeUsageMs_${userId}`;
     const getLastUsageDateKey = () => `appLastUsageDate_${userId}`;
-    // --- End User-specific AsyncStorage key generation ---
+    
 
 
 
@@ -418,15 +203,15 @@ function AppDrawer() {
     const saveCurrentUsage = async (userIdForSave, isBackgrounding = false) => {
       if (!userIdForSave) {
           console.log(`AppDrawer (saveCurrentUsage): No userIdForSave provided, cannot save.`);
-          // Attempt to get current user if not provided, though userIdForSave should be prioritized
+          
           const fallbackUserId = auth.currentUser?.uid;
-          if (!fallbackUserId) return 0; // Still no user, cannot proceed
+          if (!fallbackUserId) return 0; 
           userIdForSave = fallbackUserId;
       }
       const getCumulativeUsageKeyForSave = () => `appCumulativeUsageMs_${userIdForSave}`;
       const getLastUsageDateKeyForSave = () => `appLastUsageDate_${userIdForSave}`;
 
-      if (activeSessionStartTimeRef.current && !appIsGloballySleeping) { // appIsGloballySleeping check is for the current app state
+      if (activeSessionStartTimeRef.current && !appIsGloballySleeping) { 
         const timeSpentActiveInSessionMs = Date.now() - activeSessionStartTimeRef.current;
         let cumulativeUsageMs = 0;
         const storedCumulativeUsageStr = await AsyncStorage.getItem(getCumulativeUsageKeyForSave());
@@ -443,34 +228,34 @@ function AppDrawer() {
              const remainingTotal = DAILY_USAGE_LIMIT_MS - newCumulativeUsage;
              setTimerDisplay(formatTime(Math.max(0, remainingTotal)));
         }
-        activeSessionStartTimeRef.current = null; // Mark session as ended after saving
+        activeSessionStartTimeRef.current = null; 
         return newCumulativeUsage;
       }
-      // If no active session, return previously stored cumulative usage
+      
       const storedCumulativeUsageStr = await AsyncStorage.getItem(getCumulativeUsageKeyForSave());
       return storedCumulativeUsageStr ? (parseInt(storedCumulativeUsageStr, 10) || 0) : 0;
     };
 
     const activateRestMode = async () => {
-      // userId is from the useEffect closure
+      
       console.log(`AppDrawer (User ${userId}): Activating rest mode...`); 
       if (appIsGloballySleeping && usageTimeoutIdRef.current === null && countdownIntervalIdRef.current === null) {
-        // Already in rest mode and timers are cleared, prevent re-entry if called multiple times
+        
         return;
       }
 
-      await saveCurrentUsage(userId); // Save any pending usage for the current user
+      await saveCurrentUsage(userId); 
 
       setAppIsGloballySleeping(true);
       if (usageTimeoutIdRef.current) clearTimeout(usageTimeoutIdRef.current);
       if (countdownIntervalIdRef.current) clearInterval(countdownIntervalIdRef.current);
-      usageTimeoutIdRef.current = null; // Explicitly nullify
+      usageTimeoutIdRef.current = null; 
       countdownIntervalIdRef.current = null;
       activeSessionStartTimeRef.current = null;
 
       try {
         await AsyncStorage.setItem(getSleepKey(), new Date().toISOString());
-        await AsyncStorage.setItem(getCumulativeUsageKey(), DAILY_USAGE_LIMIT_MS.toString()); // Mark as fully used
+        await AsyncStorage.setItem(getCumulativeUsageKey(), DAILY_USAGE_LIMIT_MS.toString()); 
         await AsyncStorage.setItem(getLastUsageDateKey(), new Date().toDateString());
         console.log(`AppDrawer (User ${userId}): Sleep timestamp and final cumulative usage saved.`);
       } catch (e) {
@@ -478,8 +263,8 @@ function AppDrawer() {
       }
     };
 
-    const startTimer = (durationMs) => { // durationMs is REMAINING ACTIVE TIME for the day
-      // userId is from the useEffect closure
+    const startTimer = (durationMs) => { 
+      
       console.log(`AppDrawer (User ${userId}): Active timer started. Allowed for ${formatTime(durationMs)}.`); 
       setAppIsGloballySleeping(false);
       activeSessionStartTimeRef.current = Date.now();
@@ -488,7 +273,7 @@ function AppDrawer() {
       if (usageTimeoutIdRef.current) clearTimeout(usageTimeoutIdRef.current);
       if (countdownIntervalIdRef.current) clearInterval(countdownIntervalIdRef.current);
 
-      // This timeout triggers rest mode after the total remaining active time elapses
+      
       usageTimeoutIdRef.current = setTimeout(activateRestMode, durationMs); 
 
       const updateDisplay = () => {
@@ -504,7 +289,7 @@ function AppDrawer() {
           setTimerDisplay(formatTime(0));
           if (countdownIntervalIdRef.current) clearInterval(countdownIntervalIdRef.current);
           countdownIntervalIdRef.current = null;
-          // activateRestMode will be called by the setTimeout if not already
+          
         } else {
           setTimerDisplay(formatTime(currentRemainingTime));
         }
@@ -514,7 +299,7 @@ function AppDrawer() {
     };
 
     const checkAppStatusAndInitializeTimer = async () => {
-      // userId is from the useEffect closure
+      
       console.log(`AppDrawer (User ${userId}): Checking app status and initializing timer...`); 
       const now = new Date();
       const todayDateStr = now.toDateString();
@@ -528,7 +313,7 @@ function AppDrawer() {
           if (usageTimeoutIdRef.current) clearTimeout(usageTimeoutIdRef.current);
           if (countdownIntervalIdRef.current) clearInterval(countdownIntervalIdRef.current);
           activeSessionStartTimeRef.current = null;
-          setTimerDisplay(formatTime(0)); // Will show "Resting" due to appIsGloballySleeping
+          setTimerDisplay(formatTime(0)); 
           return;
         } else {
           console.log(`AppDrawer (User ${userId}): Rest period ended.`);
@@ -538,7 +323,7 @@ function AppDrawer() {
         }
       }
       
-      setAppIsGloballySleeping(false); // Default if not caught by above
+      setAppIsGloballySleeping(false); 
 
       let cumulativeUsageMs = 0;
       const lastUsageDateStr = await AsyncStorage.getItem(getLastUsageDateKey());
@@ -567,12 +352,12 @@ function AppDrawer() {
     const handleAppStateChange = async (nextAppState) => {
       const currentAppState = appStateRef.current;
       appStateRef.current = nextAppState;
-      // userId is from the useEffect closure
+      
       console.log(`AppDrawer (User ${userId}): AppState changed from ${currentAppState} to ${nextAppState}`); 
 
       if (appIsGloballySleeping) {
         console.log(`AppDrawer (User ${userId}): AppState changed but app is globally sleeping.`); 
-        if (nextAppState === 'active') { // Ensure timers are off if app becomes active while sleeping
+        if (nextAppState === 'active') { 
             if (usageTimeoutIdRef.current) clearTimeout(usageTimeoutIdRef.current);
             if (countdownIntervalIdRef.current) clearInterval(countdownIntervalIdRef.current);
             activeSessionStartTimeRef.current = null;
@@ -583,35 +368,35 @@ function AppDrawer() {
 
       if (currentAppState.match(/inactive|background/) && nextAppState === 'active') {
         console.log(`AppDrawer (User ${userId}): App has come to the foreground!`); 
-        if (usageTimeoutIdRef.current) clearTimeout(usageTimeoutIdRef.current); // Clear any stray timers
+        if (usageTimeoutIdRef.current) clearTimeout(usageTimeoutIdRef.current); 
         if (countdownIntervalIdRef.current) clearInterval(countdownIntervalIdRef.current);
-        await checkAppStatusAndInitializeTimer(); // Re-check and initialize based on stored cumulative time
+        await checkAppStatusAndInitializeTimer(); 
       } else if (currentAppState === 'active' && nextAppState.match(/inactive|background/)) {
         console.log(`AppDrawer (User ${userId}): App has gone to the background or became inactive.`); 
         if (usageTimeoutIdRef.current) clearTimeout(usageTimeoutIdRef.current);
         if (countdownIntervalIdRef.current) clearInterval(countdownIntervalIdRef.current);
-        await saveCurrentUsage(userId, true); // Pass userId, true to update display for background state
+        await saveCurrentUsage(userId, true); 
       }
     };
 
     const appStateSubscription = AppState.addEventListener('change', handleAppStateChange);
 
-    checkAppStatusAndInitializeTimer(); // Initialize timer on mount or user change
+    checkAppStatusAndInitializeTimer(); 
 
     return () => {
-      // Capture the userId from the closure of this specific useEffect instance
+      
       const effectInstanceUserId = userId;
 
       const cleanup = async () => {
-        // Save usage for the user whose session is ending (e.g., on logout or component unmount for this user)
-        // Only save if there was an active session for this user and the app wasn't already globally sleeping
+        
+        
         if (effectInstanceUserId && activeSessionStartTimeRef.current && !appIsGloballySleeping) {
             console.log(`AppDrawer (User ${effectInstanceUserId}): Cleanup - saving current usage.`);
-            await saveCurrentUsage(effectInstanceUserId, false); // Pass false for isBackgrounding
-            // activeSessionStartTimeRef.current is nullified inside saveCurrentUsage
+            await saveCurrentUsage(effectInstanceUserId, false); 
+            
         }
 
-        appStateSubscription.remove(); // Remove the listener for this instance
+        appStateSubscription.remove(); 
         
         if (usageTimeoutIdRef.current) clearTimeout(usageTimeoutIdRef.current); usageTimeoutIdRef.current = null;
         if (countdownIntervalIdRef.current) clearInterval(countdownIntervalIdRef.current); countdownIntervalIdRef.current = null;
@@ -619,7 +404,7 @@ function AppDrawer() {
       };
       cleanup().catch(e => console.error(`AppDrawer (User ${effectInstanceUserId}): Error in timer cleanup:`, e));
     };
-  }, [currentUser?.uid, timerTrigger]); // Depend on currentUser.uid and timerTrigger
+  }, [currentUser?.uid, timerTrigger]); 
 
   const handleRestartCountdown = async () => {
     const userId = currentUser?.uid;
@@ -628,12 +413,12 @@ function AppDrawer() {
         return;
     }
     console.log(`AppDrawer (User ${userId}): Restarting countdown...`);
-    // Clear current timer refs immediately
+    
     if (usageTimeoutIdRef.current) clearTimeout(usageTimeoutIdRef.current); usageTimeoutIdRef.current = null;
     if (countdownIntervalIdRef.current) clearInterval(countdownIntervalIdRef.current); countdownIntervalIdRef.current = null;
     activeSessionStartTimeRef.current = null;
 
-    // --- User-specific AsyncStorage key generation for restart ---
+    
     const getSleepKey = () => `appSleepUntilNextDayTimestamp_${userId}`;
     const getCumulativeUsageKey = () => `appCumulativeUsageMs_${userId}`;
     const getLastUsageDateKey = () => `appLastUsageDate_${userId}`;
@@ -647,7 +432,7 @@ function AppDrawer() {
       console.error(`AppDrawer (User ${userId}): Failed to clear AsyncStorage keys on restart:`, e);
     }
     setAppIsGloballySleeping(false); 
-    setTimerTrigger(prev => prev + 1); // Trigger the useEffect to re-run and start a fresh timer
+    setTimerTrigger(prev => prev + 1); 
   };
 
   if (appIsGloballySleeping) {
@@ -678,7 +463,7 @@ function AppDrawer() {
 
 return (
   <Drawer.Navigator
-    // drawerContent={(props) =>  <CustomDrawerContent {...props} timerDisplay={timerDisplay} appIsSleeping={appIsGloballySleeping} />}
+    
     drawerLockmode={false}
     screenOptions={{
       headerShown: false,
@@ -725,39 +510,39 @@ function RootNavigator() {
   const [initializing, setInitializing] = useState(true);
   const [user, setUser] = useState(null);
   const [isProfileComplete, setIsProfileComplete] = useState(null);
-  const [hasInitialDocument, setHasInitialDocument] = useState(null); // New state to track doc existence
+  const [hasInitialDocument, setHasInitialDocument] = useState(null); 
   const { isVerifyingEmail, registrationCompleted } = useAuthFlow();
 
-  // Use a ref to hold the latest value of isVerifyingEmail to avoid stale closures in the listener.
+  
   const isVerifyingEmailRef = useRef(isVerifyingEmail);
   useEffect(() => {
     isVerifyingEmailRef.current = isVerifyingEmail;
   }, [isVerifyingEmail]);
   
-  // This effect handles the initial auth state check.
-  // It only sets the user and does not check for profile completeness yet.
-  // This prevents navigation races during registration.
+  
+  
+  
   useEffect(() => {
     setInitializing(true);
 
     const unsubscribeAuth = auth.onAuthStateChanged((userAuth) => {
-      // By reading from the ref, we get the *current* value of the flag,
-      // avoiding the race condition where the listener fires before the state update completes.
+      
+      
       if (!isVerifyingEmailRef.current) {
         setUser(userAuth);
         if (!userAuth) {
           setInitializing(false);
           setIsProfileComplete(null);
-          setHasInitialDocument(null); // Reset new state on logout
+          setHasInitialDocument(null); 
         }
       }
     });
     return unsubscribeAuth;
-  }, []); // This effect should only run once on mount.
+  }, []); 
 
-  // This effect handles multi-device session validation.
-  // It runs only when the user object is available.
-  // This useEffect handles multi-device session validation
+  
+  
+  
   useEffect(() => {
     if (user) {
       const docRef = doc(db, "students", user.uid);
@@ -768,7 +553,7 @@ function RootNavigator() {
           const localSessionId = await AsyncStorage.getItem("userSessionId");
 
           if (localSessionId && remoteSessionId && localSessionId !== remoteSessionId) {
-            unsubscribe(); // Stop listening to prevent multiple alerts
+            unsubscribe(); 
 
             Alert.alert(
               "Session Expired",
@@ -788,16 +573,13 @@ function RootNavigator() {
         }
       });
 
-      return () => unsubscribe(); // Cleanup listener
+      return () => unsubscribe(); 
     }
   }, [user]);
-
-  // This effect checks for profile completeness once a user is authenticated.
-  // It's separate from the auth state listener to avoid race conditions.
-  // It's responsible for deciding the navigation path (App vs. CompleteProfile).
+  
   useEffect(() => {
     if (user) {
-      // Only reset states when the user changes, not on every registration check.
+      
       if (isProfileComplete === null) {
         setIsProfileComplete(null);
       }
@@ -809,11 +591,11 @@ function RootNavigator() {
           setHasInitialDocument(docExists);
 
           if (docExists) {
-            // A document exists. Now, check if it's fully complete (has a schoolId).
-            // This will be `false` after registration, triggering the navigation to StudDetails.
+            
+            
             setIsProfileComplete(!!docSnap.data()?.schoolId);
           } else {
-            // No document exists, so the profile is definitely not complete.
+            
             setIsProfileComplete(false);
           }
           setInitializing(false);
@@ -827,12 +609,12 @@ function RootNavigator() {
       );
       return () => unsubscribeSnapshot();
     } else {
-      // No user, reset all states
+      
       setInitializing(false);
       setHasInitialDocument(null);
       setIsProfileComplete(null);
     }
-  }, [user?.uid, registrationCompleted]); // Add registrationCompleted as a dependency
+  }, [user?.uid, registrationCompleted]); 
 
   if (initializing || (user && (isProfileComplete === null || hasInitialDocument === null))) {
     return (
@@ -846,19 +628,19 @@ function RootNavigator() {
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!user ? (
-          // 1. If no user, show Auth flow.
+          
           <Stack.Screen name="Auth" component={AuthStack} />
         ) : hasInitialDocument === false ? (
-          // 2. User is verified, but NO Firestore doc exists. This is the state right after email verification.
-          // Keep them in the Auth stack to complete the registration form.
+          
+          
           <Stack.Screen name="Auth" component={AuthStack} />
         ) : isProfileComplete === true ? (
-          // 3. User is verified, doc exists, and profile is complete. Show the main app.
+          
           <Stack.Screen name="App">
             {() => <ProfileProvider><AppDrawer /></ProfileProvider>}
           </Stack.Screen>
         ) : (
-          // 4. User is verified, doc exists, but profile is INCOMPLETE. Route to StudDetails.
+          
           <Stack.Screen name="CompleteProfile" component={StudDetails} initialParams={{ userId: user.uid }} options={{ gestureEnabled: false }} />
         )}
       </Stack.Navigator>
@@ -882,10 +664,10 @@ import { preloadAllStories } from "./services/preloadService";
 export default function AppWrapper() {
   const [fontsLoaded, fontError] = useFonts({
     'Fredoka-SemiBold': require('./assets/fonts/Fredoka-SemiBold.ttf'),
-    // 'Poppins-Bold': require('./assets/fonts/Poppins-Bold.ttf'),
-    // 'Poppins-Medium': require('./assets/fonts/Poppins-Medium.ttf'),
-    // 'Poppins-Regular': require('./assets/fonts/Poppins-Regular.ttf'),
-    // 'Poppins-SemiBold': require('./assets/fonts/Poppins-SemiBold.ttf'),
+    
+    
+    
+    
   });
 
   useEffect(() => {
@@ -958,7 +740,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.9)', // Dark overlay
+    backgroundColor: 'rgba(0, 0, 0, 0.9)', 
     padding: 30,
   },
   timeoutOverlayTitle: {
@@ -976,12 +758,12 @@ const styles = StyleSheet.create({
   },
   restartButton: {
     marginTop: 30,
-    backgroundColor: '#FF6DA8', // Or your app's primary color
+    backgroundColor: '#FF6DA8', 
     paddingVertical: 12,
     paddingHorizontal: 30,
     borderRadius: 25,
     borderWidth: 1,
-    borderColor: '#fff', // Optional: white border for contrast
+    borderColor: '#fff', 
   },
   restartButtonText: {
     color: '#fff',

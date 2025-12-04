@@ -1,4 +1,4 @@
-// e:\Kwentura\Kwentura_Mobile\components\StudDetails.js
+
 
 import {
   TextInput,
@@ -23,22 +23,22 @@ import {
   serverTimestamp,
   deleteDoc,
 } from "firebase/firestore";
-import { signOut as firebaseSignOut, deleteUser } from "firebase/auth"; // Ensure signOut is imported
+import { signOut as firebaseSignOut, deleteUser } from "firebase/auth"; 
 import { auth, db } from "../FirebaseConfig";
-// No need for CommonActions for this specific change
+
 
 const StudDetails = ({ navigation, route }) => {
   const userId = route?.params?.userId;
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [schoolId, setSchoolId] = useState(""); // Changed: Now user input instead of auto-generated
+  const [schoolId, setSchoolId] = useState(""); 
   const [gradeLevel, setGradeLevel] = useState("");
   const [section, setSection] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-  const [isCancelling, setIsCancelling] = useState(false); // Renamed for clarity
-  const [schoolIdError, setSchoolIdError] = useState(""); // State for school ID error message
+  const [isCancelling, setIsCancelling] = useState(false); 
+  const [schoolIdError, setSchoolIdError] = useState(""); 
 
-  // New function to check if school ID exists
+  
   const checkSchoolIdExists = async (id, currentUserId) => {
     if (!id) {
       setSchoolIdError("");
@@ -86,18 +86,18 @@ const StudDetails = ({ navigation, route }) => {
         "Error",
         "An error occurred. Cannot proceed without user identification."
       );
-      // Attempt to sign out if userId is missing unexpectedly
+      
       firebaseSignOut(auth).catch((err) =>
         console.error("Sign out failed:", err)
       );
-      // Optionally navigate back immediately if userId is missing
-      // if (navigation.canGoBack()) {
-      //   navigation.goBack();
-      // }
+      
+      
+      
+      
     }
-  }, [userId, navigation]); // Added navigation dependency
+  }, [userId, navigation]); 
 
-  // --- saveStudentDetails function updated to include schoolId validation ---
+  
   const saveStudentDetails = async () => {
     if (!userId) return;
     if (!firstName || !lastName || !schoolId || !gradeLevel || !section) {
@@ -107,7 +107,7 @@ const StudDetails = ({ navigation, route }) => {
       );
       return;
     }
-    // Check for existing school ID error before saving
+    
     if (schoolIdError) {
       Alert.alert(
         "Invalid School ID",
@@ -161,32 +161,32 @@ const StudDetails = ({ navigation, route }) => {
           onPress: async () => {
             setIsCancelling(true);
             try {
-              // Delete the student document from Firestore
+              
               await deleteDoc(doc(db, "students", userId));
-              // Delete the user from Firebase Authentication
+              
               const user = auth.currentUser;
               if (user) {
                 try {
-                  // Deleting the user from Auth also signs them out automatically.
+                  
                   await deleteUser(user);
                 } catch (authError) {
                   if (authError.code === 'auth/requires-recent-login') {
-                    // This is expected if the user took too long.
-                    // We can't re-authenticate, so we'll just sign them out.
+                    
+                    
                     console.log('Cancellation: User requires recent login. Signing out.');
                     await firebaseSignOut(auth);
                   } else {
-                    // Re-throw other auth errors
+                    
                     throw authError;
                   }
                 }
               }
-              // Route the user back to the Landing page after cancellation.
+              
               navigation.navigate("Landing");
 
             } catch (error) {
               console.error("Error during cancellation:", error);
-              // Generic error for any failure in the process
+              
               Alert.alert(
                 "Error",
                 "Could not complete the action. Please try again."
@@ -199,7 +199,7 @@ const StudDetails = ({ navigation, route }) => {
     );
   };
 
-  // --- Main Component Return (JSX) ---
+  
   return (
     <ImageBackground
       source={require('../images/Signup.png')}
@@ -306,10 +306,10 @@ const StudDetails = ({ navigation, route }) => {
         <TouchableOpacity
           style={[
             styles.backButton,
-            (isSaving || isCancelling) && styles.disabledButton, // Use isCancelling
+            (isSaving || isCancelling) && styles.disabledButton, 
           ]}
           onPress={handleBackPress}
-          disabled={isSaving || isCancelling} // Use isCancelling
+          disabled={isSaving || isCancelling} 
         >
           <Text style={styles.backButtonText}>
             {isCancelling ? "Cancelling..." : "Cancel"}
@@ -319,10 +319,10 @@ const StudDetails = ({ navigation, route }) => {
         <TouchableOpacity
           style={[
             styles.nextButton,
-            (isSaving || isCancelling) && styles.disabledButton, // Use isCancelling
+            (isSaving || isCancelling) && styles.disabledButton, 
           ]}
           onPress={saveStudentDetails}
-          disabled={isSaving || isCancelling || !userId} // Use isCancelling
+          disabled={isSaving || isCancelling || !userId} 
         >
           <Text style={styles.nextButtonText}>
             {isSaving ? "Saving..." : "Confirm"}
@@ -334,7 +334,7 @@ const StudDetails = ({ navigation, route }) => {
   );
 };
 
-// --- Styles ---
+
 const styles = StyleSheet.create({
   background: {
     flex: 1,
@@ -350,8 +350,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 20,
-    justifyContent: "center", // Center content vertically
-    alignItems: "center", // Center content horizontally
+    justifyContent: "center", 
+    alignItems: "center", 
   },
   heading: {
     fontSize: 26,
@@ -415,7 +415,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     width: "90%",
-    marginTop: 10, // Add margin above buttons
+    marginTop: 10, 
   },
   backButton: {
     flex: 1,
@@ -455,7 +455,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   errorText: {
-    color: '#E63B3B', // A reddish color for errors
+    color: '#E63B3B', 
     fontSize: 12,
     marginTop: 4,
     marginLeft: 8,
@@ -490,63 +490,63 @@ const styles = StyleSheet.create({
   },
   flowerContainer: {
     position: 'absolute',
-    bottom: -20, // Allow flowers to slightly overflow the bottom
+    bottom: -20, 
     left: -40,
     right: -40,
     flexDirection: 'row',
     justifyContent: 'center',
-    alignItems: 'flex-end', // Align items to the bottom
+    alignItems: 'flex-end', 
   },
   flower1: {
     width: 110,
     height: 110,
-    left: '10%', // Adjusts the horizontal position of the flower
-    bottom: '-10%', // Adjusts the vertical position of the flower
+    left: '10%', 
+    bottom: '-10%', 
     transform: [{ rotate: '50deg' }],
   },
   flower2: {
-    width: 100, // Reduce width
-    height: 100, // Reduce height
-    left: '7%', // Adjusts the horizontal position of the flower
-    bottom: '-15%', // Adjusts the vertical position of the flower
+    width: 100, 
+    height: 100, 
+    left: '7%', 
+    bottom: '-15%', 
   },
   flower3: {
-    width: 100, // Reduce width
-    height: 100, // Reduce height
-    left: '2%', // Adjusts the horizontal position of the flower
+    width: 100, 
+    height: 100, 
+    left: '2%', 
     bottom: '-15%',
   },
   flower4: {
-    width: 100, // Reduce width
-    height: 100, // Reduce height
-    right: '5%', // Adjusts the horizontal position of the flower
+    width: 100, 
+    height: 100, 
+    right: '5%', 
     bottom: '-11.5%'
   },
   flower5: {
-    width: 130, // Reduce width
-    height: 130, // Reduce height
-    right: '10%', // Adjusts the horizontal position of the flower
-    bottom: '-25%', // Reduce bottom margin
+    width: 130, 
+    height: 130, 
+    right: '10%', 
+    bottom: '-25%', 
     transform: [{ rotate: '-20deg' }]
   },
   bushContainer: {
     position: 'absolute',
-    bottom: '-2%', // Allow flowers to slightly overflow the bottom
+    bottom: '-2%', 
     flexDirection: 'row',
     justifyContent: 'center',
-    alignItems: 'flex-end', // Align items to the bottom
+    alignItems: 'flex-end', 
   },
   bush1: {
     width: 200,
     height: 100,
-    bottom: '-20%', // Adjusts the vertical position of the flower
-    left: '-10%' // Adjusts the horizontal position of the flower
+    bottom: '-20%', 
+    left: '-10%' 
   },
   bush2: {
     width: 200,
     height: 100,
-    bottom: '-20%', // Adjusts the vertical position of the flower
-    left: '-20%', // Adjusts the horizontal position of the flower
+    bottom: '-20%', 
+    left: '-20%', 
   },
   bush3: {
     width: 200,

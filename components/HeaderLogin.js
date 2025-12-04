@@ -10,7 +10,6 @@ const HeaderLogin = ({ navigation, leftIconType = "drawer" }) => {
 
   return (    
     <View style={styles.container}>
-      {/* Stars positioned relative to the header container */}
       <Image source={require('../images/Star.png')} style={styles.star1} />
       <Image source={require('../images/Star.png')} style={styles.star2} />
       <Image source={require('../images/Star.png')} style={styles.star3} />
@@ -18,7 +17,6 @@ const HeaderLogin = ({ navigation, leftIconType = "drawer" }) => {
       <Image source={require('../images/Star.png')} style={styles.star5} />
       <Image source={require('../images/Star.png')} style={styles.star6} />
     
-      {/* Rainbow positioned at the top */}
       <Image source={require('../images/Rainbow.png')} style={styles.Rainbow} />   
     </View>
   );
@@ -26,24 +24,24 @@ const HeaderLogin = ({ navigation, leftIconType = "drawer" }) => {
 
 const styles = StyleSheet.create({
   container: {
-    position: 'absolute', // Make it absolute positioned
-    top: 0, // Position at the very top
+    position: 'absolute', 
+    top: 0, 
     left: 0,
     right: 0,
     width: "100%",
-    height: 200, // Give it a specific height for the decorative area
-    zIndex: 10, // Ensure it appears above background elements
+    height: 200, 
+    zIndex: 10, 
   },
 
   Rainbow: {
     position: 'absolute',
-    top: '-10%', // Fixed the syntax error - was missing value
+    top: '-10%', 
    width: '100%',
-    height: '100%',// Specific height instead of percentage
+    height: '100%',
     alignSelf: 'center',
   },
   
-  // Stars positioned relative to the header container
+  
   star1: {
     position: 'absolute',
     top: '25%',

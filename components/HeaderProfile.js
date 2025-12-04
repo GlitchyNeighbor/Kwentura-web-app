@@ -2,73 +2,12 @@ import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Image, useState } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
-
-  // const [avatarConfig, setAvatarConfig] = useState(null);
-
-  // const AVATAR_OPTIONS = [
-  // require("./assets/avatars/boy.png"),
-  // require("./assets/avatars/boy2.png"),
-  // require("./assets/avatars/boy3.png"),
-  // require("./assets/avatars/boy4.png"),
-  // require("./assets/avatars/boy5.png"),
-  // require("./assets/avatars/boy6.png"),
-  // require("./assets/avatars/girl.png"),
-  // require("./assets/avatars/girl2.png"),
-  // require("./assets/avatars/girl3.png"),
-  // require("./assets/avatars/girl4.png"),
-  // require("./assets/avatars/girl5.png"),
-  // require("./assets/avatars/girl6.png"),
-  // ];
-
   const HeaderProfile = ({ navigation, leftIconType = "drawer" }) => {
   const handleLeftIconPress = () => {
     if (leftIconType === "drawer") {
       navigation.openDrawer();
     }
   };
-
-  // useEffect(() => {
-  //   let unsubscribe;
-  //   const currentUser = auth.currentUser;
-  //   if (currentUser) {
-  //     const docRef = doc(db, "students", currentUser.uid);
-  //     // Use onSnapshot for real-time updates
-  //     unsubscribe = onSnapshot(
-  //       docRef,
-  //       (docSnap) => {
-  //         if (docSnap.exists()) {
-  //           const data = docSnap.data();
-  //           setStudentName(
-  //             `${data.studentFirstName || ""} ${
-  //               data.studentLastName || ""
-  //             }`.trim() || "Error Retrieving Data"
-  //           );
-  //           if (typeof data.avatarConfig === "number") {
-  //             setAvatarConfig(AVATAR_OPTIONS[data.avatarConfig]);
-  //           } else {
-  //             setAvatarConfig(data.avatarConfig ?? null);
-  //           }
-  //         } else {
-  //           setStudentName("Error Retrieving Data");
-  //           setAvatarConfig(null);
-  //         }
-  //         setLoading(false);
-  //       },
-  //       () => {
-  //         setStudentName("Error Retrieving Data");
-  //         setAvatarConfig(null);
-  //         setLoading(false);
-  //       }
-  //     );
-  //   } else {
-  //     setStudentName("Error Retrieving Data");
-  //     setAvatarConfig(null);
-  //     setLoading(false);
-  //   }
-  //   return () => {
-  //     if (unsubscribe) unsubscribe();
-  //   };
-  // }, []);
 
   return (    
       <View style={styles.container}>
@@ -87,13 +26,6 @@ import Ionicons from "react-native-vector-icons/Ionicons";
         >          
           <Ionicons name="arrow-back" size={20} color="white" />
         </TouchableOpacity>  
-
-        {/* <View style={[styles.ratingBox, { marginLeft: 'auto' }]}>
-          <View style={styles.ratingContainer}>
-            <Ionicons name="star" size={15} color="#ffde24ff" style={styles.starIcon} />
-            <Text style={styles.ratingNumber}>12</Text>
-          </View>
-        </View>         */}
       </View>
     </View>
   );

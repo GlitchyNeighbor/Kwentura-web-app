@@ -18,7 +18,7 @@ import {
   collection,
   onSnapshot,
   doc,
-  getDoc, // Import getDoc
+  getDoc, 
   deleteDoc,
   orderBy,
   query,
@@ -42,7 +42,7 @@ const Library = ({ navigation }) => {
   
 
   useEffect(() => {
-    // Listen for authentication state changes
+    
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
@@ -71,7 +71,7 @@ const Library = ({ navigation }) => {
           if (storySnap.exists()) {
             return { id: bookmarkDoc.id, ...bookmarkDoc.data() };
           } else {
-            // Story doesn't exist, so delete the bookmark
+            
             console.log(`Story with ID ${bookmarkDoc.id} not found, deleting bookmark.`);
             await deleteDoc(doc(db, "students", userId, "bookmarks", bookmarkDoc.id));
             return null;
@@ -109,7 +109,7 @@ const Library = ({ navigation }) => {
               return { id: progressDoc.id, ...data };
             }
           } else {
-            // Story doesn't exist, so delete the progress entry
+            
             console.log(`Story with ID ${progressDoc.id} not found, deleting progress entry.`);
             await deleteDoc(doc(db, "students", userId, "progress", progressDoc.id));
           }
@@ -129,7 +129,7 @@ const Library = ({ navigation }) => {
   };
 
   const handleViewStory = (story) => {
-    // Navigate to the HomeTab, then to the ViewStory screen within HomeStack
+    
     navigation.navigate("HomeTab", {
       screen: "ViewStory",
       params: { storyId: story.id, story: story },
@@ -137,13 +137,13 @@ const Library = ({ navigation }) => {
   };
 
   const handleContinueStory = (story) => {
-    // Navigate to ReadStory through the proper navigation hierarchy
+    
     navigation.navigate("HomeTab", {
       screen: "ReadStory",
       params: { 
         storyId: story.id, 
         initialPage: story.currentPage,
-        story: story // Pass the entire story object for additional data if needed
+        story: story 
       },
     });
   };
@@ -253,12 +253,10 @@ const Library = ({ navigation }) => {
             </LinearGradient>
           )}
           
-          {/* Category Badge */}
           <View style={styles.categoryBadge}>
             <Text style={styles.categoryBadgeText}>{item.category}</Text>
           </View>
           
-          {/* Remove Bookmark Button */}
           <TouchableOpacity
             style={styles.bookmarkContainer}
             onPress={() => handleRemoveBookmark(item)}
@@ -317,14 +315,12 @@ const Library = ({ navigation }) => {
             </LinearGradient>
           )}
           
-          {/* Progress Badge */}
           <View style={styles.progressBadge}>
             <Text style={styles.progressBadgeText}>
               {item.currentPage + 1}/{item.totalPages}
             </Text>
           </View>
           
-          {/* Remove Progress Button */}
           <TouchableOpacity
             style={styles.bookmarkContainer}
             onPress={() => handleRemoveProgress(item)}
@@ -354,7 +350,6 @@ const Library = ({ navigation }) => {
             </Text>
           )}
           
-          {/* Progress Bar */}
           <View style={styles.progressBarContainer}>
             <View style={styles.progressBar}>
               <View 
@@ -445,7 +440,7 @@ const Library = ({ navigation }) => {
           navigation={navigation}
           leftIconType="drawer"
           showSearch={true}
-          hideStars={true}  // This will hide only the decorative stars
+          hideStars={true}  
         />
 
         <Text style={styles.libText}>My Library</Text>
@@ -474,7 +469,7 @@ const Library = ({ navigation }) => {
             flex: 1,
             justifyContent: "center",
             alignItems: "center",
-            paddingVertical: 20, // reduced from 50 for less space below the note
+            paddingVertical: 20, 
           }}>
             <Text style={{ color: "#666", fontSize: 14, fontStyle: "italic", textAlign: "center", marginBottom: 20 }}>
               You have no unfinished stories.
@@ -557,7 +552,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    marginBottom: 10, // tighter spacing
+    marginBottom: 10, 
   },
   sectionTitle: {
     fontSize: 16,
@@ -577,7 +572,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   
-  // Enhanced container styles copied from Home.js
+  
   bookItemContainer: {
     width: width * 0.35,
     marginRight: 20,
@@ -695,7 +690,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  // Progress-related styles
+  
   progressScrollView: {
     marginBottom: 20,
   },
@@ -740,13 +735,13 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
   },
   bookActions: {
-    // Copied from Home.js
+    
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
   readButton: {
-    // Copied from Home.js
+    
     backgroundColor: "#FF6DA8",
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -755,21 +750,21 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   readButtonText: {
-    // Copied from Home.js
+    
     color: "#FFFFFF",
     fontSize: 12,
     fontWeight: "600",
     textAlign: "center",
   },
   bookmarkButton: {
-    // Copied from Home.js
+    
     padding: 6,
-    minWidth: 28, // Ensures touchable area
+    minWidth: 28, 
     alignItems: "center",
     justifyContent: "center",
   },
   bookmarkButtonDisabled: {
-    // Copied from Home.js
+    
     opacity: 0.6,
   },
   loadingContainer: {

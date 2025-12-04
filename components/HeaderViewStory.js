@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { auth, db } from "../FirebaseConfig"; // Adjust path as needed
+import { auth, db } from "../FirebaseConfig"; 
 import { doc, onSnapshot } from "firebase/firestore";
 import { useProfile } from '../context/ProfileContext';
 

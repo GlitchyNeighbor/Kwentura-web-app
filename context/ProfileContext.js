@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { auth, db } from '../FirebaseConfig';
 import { doc, getDoc, updateDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
-import { getUnlockedAnimalAvatars } from '../components/rewardsConfig'; // Adjust path as needed
+import { getUnlockedAnimalAvatars } from '../components/rewardsConfig'; 
 
 const ProfileContext = createContext(null);
 
@@ -30,7 +30,7 @@ export const ProfileProvider = ({ children }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [unlockedAnimalAvatars, setUnlockedAnimalAvatars] = useState([]);
 
-  // Effect to listen for unlocked animal avatars
+  
   useEffect(() => {
     const handleUserData = (user) => {
       if (user) {
@@ -41,13 +41,13 @@ export const ProfileProvider = ({ children }) => {
           if (docSnap.exists()) {
             const data = docSnap.data();
             
-            // Process unlocked avatars
+            
             const unlockedRewardsArr = data.unlockedRewards || [];
             const unlockedSet = new Set(unlockedRewardsArr);
             const animalAvatars = getUnlockedAnimalAvatars(unlockedSet);
             setUnlockedAnimalAvatars(animalAvatars.length > 0 ? animalAvatars : []);
   
-            // Determine avatarConfig
+            
             let avatarConfig = null;
             if (animalAvatars.length > 0) {
               if (typeof data.avatarConfig === "number" && animalAvatars[data.avatarConfig]) {
@@ -59,7 +59,7 @@ export const ProfileProvider = ({ children }) => {
               }
             }
   
-            // Set profile data
+            
             setProfileData({
               parentFirstName: data.parentFirstName || "",
               parentLastName: data.parentLastName || "",
@@ -73,7 +73,7 @@ export const ProfileProvider = ({ children }) => {
               avatarConfig: avatarConfig,
             });
           } else {
-            // Handle case where user document doesn't exist
+            
             setProfileData({
               parentFirstName: "",
               parentLastName: "",
@@ -96,7 +96,7 @@ export const ProfileProvider = ({ children }) => {
   
         return unsubscribe;
       } else {
-        // Handle user logout
+        
         setProfileData({
           parentFirstName: "",
           parentLastName: "",
@@ -137,7 +137,7 @@ export const ProfileProvider = ({ children }) => {
       return true;
     } catch (error) {
       console.error("Error updating avatar:", error);
-      // Alert.alert("Error", "Failed to save avatar: " + error.message);
+      
       return false;
     }
   }, [unlockedAnimalAvatars]);
@@ -155,11 +155,11 @@ export const ProfileProvider = ({ children }) => {
       });
       
       setProfileData(prev => ({ ...prev, ...updates }));
-      // Alert.alert("Success", "Changes saved successfully!");
+      
       return true;
     } catch (error) {
       console.error("Error saving changes:", error);
-      // Alert.alert("Error", "Failed to save changes: " + error.message);
+      
       return false;
     } finally {
       setIsSaving(false);

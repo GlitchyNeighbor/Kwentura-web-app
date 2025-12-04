@@ -15,9 +15,9 @@ import AppHeader from "./HeaderLanding";
 
 const Landing = ({ navigation }) => {
 
-  // Create animated values for each animal
+  
   const animatedValues = {
-    // For bounce on click
+    
     bee: useRef(new Animated.Value(1)).current,
     parrot: useRef(new Animated.Value(1)).current,
     ladybug: useRef(new Animated.Value(1)).current,
@@ -30,7 +30,7 @@ const Landing = ({ navigation }) => {
     ostrich: useRef(new Animated.Value(1)).current,
     snail: useRef(new Animated.Value(1)).current,
 
-    // For continuous floating movement
+    
     beePos: useRef(new Animated.ValueXY({ x: 0, y: 0 })).current,
     parrotPos: useRef(new Animated.ValueXY({ x: 0, y: 0 })).current,
     ladybugPos: useRef(new Animated.ValueXY({ x: 0, y: 0 })).current,
@@ -80,7 +80,7 @@ useEffect(() => {
   const preloadImages = async () => {
     try {
       const uris = images.map(img => Image.resolveAssetSource(img).uri);
-      await Promise.all(uris.map(uri => Image.prefetch(uri))); // load in parallel
+      await Promise.all(uris.map(uri => Image.prefetch(uri))); 
       if (isMounted) {
         console.log('✅ All images preloaded successfully');
       }
@@ -92,32 +92,32 @@ useEffect(() => {
   preloadImages();
 
   return () => {
-    isMounted = false; // cleanup to avoid setState or log after unmount
+    isMounted = false; 
   };
 }, []);
 
-  // Function for continuous, random floating animation
+  
   const createFloatingAnimation = (positionValue) => {
-    const randomX = Math.random() * 10 - 5; // Random value between -5 and 5
-    const randomY = Math.random() * 10 - 5; // Random value between -5 and 5
-    const duration = Math.random() * 2000 + 3000; // Random duration between 3-5 seconds
+    const randomX = Math.random() * 10 - 5; 
+    const randomY = Math.random() * 10 - 5; 
+    const duration = Math.random() * 2000 + 3000; 
 
     Animated.timing(positionValue, {
       toValue: { x: randomX, y: randomY },
       duration: duration,
       useNativeDriver: true,
     }).start(() => {
-      // Loop the animation
+      
       createFloatingAnimation(positionValue);
     });
   };
 
-  // Start floating animations for all animals on mount
+  
   useEffect(() => {
     Object.keys(animatedValues).forEach(key => {
       if (key.endsWith('Pos')) {
         const positionValue = animatedValues[key];
-        // Start each animation with a random delay to desynchronize them
+        
         const randomDelay = Math.random() * 2000;
         setTimeout(() => {
           createFloatingAnimation(positionValue);
@@ -126,7 +126,7 @@ useEffect(() => {
     });
   }, []);
 
-  // Map animal names to their sound files
+  
   const animalSounds = {
     bee: require('../assets/sounds/animals/bee.mp3'),
     parrot: require('../assets/sounds/animals/parrot.mp3'),
@@ -141,12 +141,12 @@ useEffect(() => {
     snail: require('../assets/sounds/animals/snail.mp3'),
   };
 
-  // Function to handle animal clicks with bounce animation and sound
+  
   const handleAnimalClick = async (animalName) => {
     const lowerCaseAnimalName = animalName.toLowerCase();
     const animatedValue = animatedValues[lowerCaseAnimalName];
     
-    // Play the corresponding animal sound
+    
     const soundSource = animalSounds[lowerCaseAnimalName];
     if (soundSource) {
       try {
@@ -157,7 +157,7 @@ useEffect(() => {
       }
     }
     
-    // Create bounce animation
+    
     Animated.sequence([
       Animated.timing(animatedValue, {
         toValue: 1.3,
@@ -210,38 +210,30 @@ useEffect(() => {
       source={require('../images/Background.png')}
       style={styles.background}
       resizeMode="cover"
-      accessible={false} // Mark background as not important for accessibility
+      accessible={false} 
     >
-      {/* Header with stars and rainbow at the top */}
       <AppHeader
         navigation={navigation}
         leftIconType="drawer"
         showSearch={true}
       />
-
-      {/* Main container for all interactive and decorative elements */}
       <View style={styles.mainContainer}>
-        {/* Animals positioned in the background layer */}
         <View style={styles.animalsContainer}>
-          {/* Top area animals - smaller and more distant */}
           {renderAnimal('Bee', require('../images/animals/Bee.png'), styles.bee)}
           {renderAnimal('Parrot', require('../images/animals/Parrot.png'), styles.parrot)}
           {renderAnimal('Ladybug', require('../images/animals/Ladybug.png'), styles.ladybug)}
           
-          {/* Middle area animals - medium size */}
           {renderAnimal('Squirrel', require('../images/animals/Squirrel.png'), styles.squirrel)}
           {renderAnimal('Fox', require('../images/animals/Fox.png'), styles.fox)}
           {renderAnimal('Frog', require('../images/animals/Frog.png'), styles.frog)}
           {renderAnimal('Chicken', require('../images/animals/Chicken.png'), styles.chicken)}
           
-          {/* Lower area animals - larger and closer */}
           {renderAnimal('Lion', require('../images/animals/Lion.png'), styles.lion)}
           {renderAnimal('Capybara', require('../images/animals/Capybara.png'), styles.capybara)}
           {renderAnimal('Ostrich', require('../images/animals/Ostrich.png'), styles.ostrich)}
           {renderAnimal('Snail', require('../images/animals/Snail.png'), styles.snail)}
         </View>
 
-        {/* Decorative elements */}
         <View style={styles.bushContainer}>
           <Image source={require('../images/Bush.png')} style={styles.bush1} />
           <Image source={require('../images/Bush.png')} style={styles.bush2} />
@@ -255,7 +247,6 @@ useEffect(() => {
           <Image source={require('../images/Flower5.png')} style={styles.flower5} />
         </View>       
 
-        {/* UI elements (Title and Buttons) */}
         <SafeAreaView style={styles.safeArea} pointerEvents="box-none">
           <View style={styles.contentContainer} pointerEvents="box-none">
             <View style={styles.titleContainer}>
@@ -307,8 +298,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     alignItems: 'center',
     paddingTop: 60,
-    // This zIndex ensures the buttons are on top of the animals
-    // within the mainContainer.
+    
+    
   },
   contentContainer: {
     flex: 1,
@@ -444,23 +435,23 @@ const styles = StyleSheet.create({
     bottom: '-20%',
     right: '30%'
   },
-  // Animals container
+  
   animalsContainer: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    // This zIndex places the animals behind the buttons.
-    // It's absolutely positioned to fill the mainContainer.
+    
+    
   },
-  // Common style for animal images
+  
   animalImage: {
     width: '100%',
     height: '100%',
     resizeMode: 'contain',
   },
-  // Top area animals (smaller, more distant)
+  
   bee: {
     position: 'absolute',
     width: 35,
@@ -485,7 +476,7 @@ const styles = StyleSheet.create({
     right: '37%',
     opacity: 0.8,
   },
-  // Middle area animals (medium size)
+  
   squirrel: {
     position: 'absolute',
     width: 50,
@@ -526,7 +517,7 @@ const styles = StyleSheet.create({
     left: '40%',
     opacity: 0.9,
   },
-  // Lower area animals (larger, closer)
+  
   lion: {
     position: 'absolute',
     width: 120,

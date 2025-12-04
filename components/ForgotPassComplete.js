@@ -17,22 +17,18 @@ import { MaterialIcons } from '@expo/vector-icons';
 const { width, height } = Dimensions.get('window');
 
 const ForgotPasswordComplete = ({ navigation }) => {
-  // Animation refs
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.5)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const checkIconAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Staggered animation sequence
     const animationSequence = Animated.sequence([
-      // Fade in background elements
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 800,
         useNativeDriver: true,
       }),
-      // Scale up the circle with spring animation
       Animated.spring(scaleAnim, {
         toValue: 1,
         tension: 50,
@@ -73,16 +69,13 @@ const ForgotPasswordComplete = ({ navigation }) => {
         style={styles.background}
         resizeMode="cover"
       >
-        {/* Animated decorative elements */}
         <Animated.View style={[styles.decorativeContainer, { opacity: fadeAnim }]}>
-          {/* Bush Container */}
           <View style={styles.bushContainer}>
             <Image source={require('../images/Bush.png')} style={styles.bush1} />
             <Image source={require('../images/Bush.png')} style={styles.bush2} />
             <Image source={require('../images/Bush.png')} style={styles.bush3} />
           </View>
 
-          {/* Flower Container */}
           <View style={styles.flowerContainer}>
             <Image source={require('../images/Flower1.png')} style={styles.flower1} />
             <Image source={require('../images/Flower2.png')} style={styles.flower2} />
@@ -91,19 +84,16 @@ const ForgotPasswordComplete = ({ navigation }) => {
             <Image source={require('../images/Flower5.png')} style={styles.flower5} />
           </View>
 
-          {/* Stars */}
           <Image source={require('../images/Star.png')} style={styles.star1} />
           <Image source={require('../images/Star.png')} style={styles.star2} />
           <Image source={require('../images/Star.png')} style={styles.star3} />
           <Image source={require('../images/Star.png')} style={styles.star4} />
 
-          {/* Rainbow */}
           <Image source={require('../images/Rainbow.png')} style={styles.rainbow} />
         </Animated.View>
 
         <SafeAreaView style={styles.container}>
           <View style={styles.content}>
-            {/* Main heading */}
             <Animated.Text 
               style={[
                 styles.heading, 
@@ -116,7 +106,6 @@ const ForgotPasswordComplete = ({ navigation }) => {
               Password Updated
             </Animated.Text>
 
-            {/* Success circle with check icon */}
             <Animated.View 
               style={[
                 styles.circle, 
@@ -147,7 +136,6 @@ const ForgotPasswordComplete = ({ navigation }) => {
               </Animated.View>
             </Animated.View>
 
-            {/* Success message */}
             <Animated.Text 
               style={[
                 styles.subheading,
@@ -161,7 +149,6 @@ const ForgotPasswordComplete = ({ navigation }) => {
               You can now login with your new password.
             </Animated.Text>
 
-            {/* Login button */}
             <Animated.View 
               style={[
                 styles.buttonContainer,

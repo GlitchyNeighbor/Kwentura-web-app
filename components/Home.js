@@ -55,21 +55,21 @@ const Home = ({ navigation }) => {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [inProgressStories, setInProgressStories] = useState([]);
   
-  // New state for recently viewed stories
+  
   const [recentlyViewedStories, setRecentlyViewedStories] = useState([]);
   
-  // New state variables for multi-row approach
+  
   const [featuredStories, setFeaturedStories] = useState([]);
   const [categorizedStories, setCategorizedStories] = useState({});
   
   const searchTimeoutRef = useRef(null);
 
-  // Keys for AsyncStorage
+  
   const RECENT_SEARCHES_KEY = "@recent_searches";
   const SEARCH_HISTORY_KEY = "@search_history";
   const RECENTLY_VIEWED_KEY = "@recently_viewed_stories";
 
-  // Category items with icons
+  
   const categoryItems = [
     { name: "All"},
     { name: "Fables"},
@@ -79,23 +79,23 @@ const Home = ({ navigation }) => {
     { name: "Legend"},
   ];
 
-  // Add focus effect to reset any problematic states when returning to Home
+  
   useFocusEffect(
     React.useCallback(() => {
-      // This runs when the screen comes into focus
+      
       console.log('Home screen focused - resetting any layout issues');
       
-      // Force StatusBar reset
+      
       StatusBar.setBarStyle("dark-content", true);
       
       return () => {
-        // Cleanup when screen loses focus
+        
         console.log('Home screen unfocused');
       };
     }, [])
   );
 
-  // Helper function to get stories by category
+  
   const getStoriesByCategory = (category) => {
     return stories.filter(story => 
       story.category?.toLowerCase() === category.toLowerCase()
@@ -116,13 +116,13 @@ const Home = ({ navigation }) => {
     generateQuickSearchData();
   }, [stories]);
 
-  // Add this useEffect to organize stories by category
+  
   useEffect(() => {
     if (stories.length > 0) {
-      // Set featured stories (all stories or you can add logic to pick featured ones)
+      
       setFeaturedStories(stories);
       
-      // Organize stories by category
+      
       const organized = {};
       categoryItems.forEach(categoryItem => {
         if (categoryItem.name !== "All") {
@@ -137,11 +137,11 @@ const Home = ({ navigation }) => {
   }, [stories]);
     
   useEffect(() => {
-    // Listen for authentication state changes
+    
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
-        // Load user's bookmarks when user is authenticated
+        
         loadUserBookmarks(currentUser.uid);
       } else {
         setBookmarkedStories(new Set());
@@ -196,7 +196,7 @@ const Home = ({ navigation }) => {
     return () => unsubscribe();
   }, []);
 
-  // Function to load recently viewed stories from AsyncStorage
+  
   const loadRecentlyViewedStories = async () => {
     try {
       const recentlyViewedData = await AsyncStorage.getItem(RECENTLY_VIEWED_KEY);
@@ -209,7 +209,7 @@ const Home = ({ navigation }) => {
     }
   };
 
-  // Function to save recently viewed stories to AsyncStorage
+  
   const saveRecentlyViewedStories = async (stories) => {
     try {
       await AsyncStorage.setItem(RECENTLY_VIEWED_KEY, JSON.stringify(stories));
@@ -218,7 +218,7 @@ const Home = ({ navigation }) => {
     }
   };
 
-  // Function to add a story to recently viewed
+  
   const addToRecentlyViewed = async (story) => {
     try {
       const storyWithTimestamp = {
@@ -226,15 +226,15 @@ const Home = ({ navigation }) => {
         viewedAt: new Date().toISOString(),
       };
 
-      // Remove the story if it already exists in the list
+      
       const filteredStories = recentlyViewedStories.filter(
         (viewedStory) => viewedStory.id !== story.id
       );
 
-      // Add the story to the beginning of the list
+      
       const updatedStories = [storyWithTimestamp, ...filteredStories];
 
-      // Keep only the most recent 10 stories
+      
       const limitedStories = updatedStories.slice(0, 10);
 
       setRecentlyViewedStories(limitedStories);
@@ -269,7 +269,7 @@ const Home = ({ navigation }) => {
     );
   };
 
-  // Save search data to AsyncStorage
+  
   const saveSearchData = async (searches, history) => {
     try {
       await AsyncStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(searches));
@@ -300,7 +300,7 @@ const Home = ({ navigation }) => {
     }
   };
 
-  // Generate search suggestions based on current query
+  
   const generateSearchSuggestions = () => {
     if (!searchQuery.trim() || searchQuery.length < 2) {
       setSearchSuggestions([]);
@@ -310,7 +310,7 @@ const Home = ({ navigation }) => {
     const query = searchQuery.toLowerCase();
     const suggestions = [];
 
-    // Add matching story titles
+    
     stories.forEach((story) => {
       if (story.title && story.title.toLowerCase().includes(query)) {
         suggestions.push({
@@ -322,7 +322,7 @@ const Home = ({ navigation }) => {
       }
     });
 
-    // Add matching authors
+    
     const uniqueAuthors = [
       ...new Set(stories.map((s) => s.author).filter(Boolean)),
     ];
@@ -337,7 +337,7 @@ const Home = ({ navigation }) => {
       }
     });
 
-    // Add matching categories
+    
     const uniqueCategories = [
       ...new Set(stories.map((s) => s.category).filter(Boolean)),
     ];
@@ -355,28 +355,28 @@ const Home = ({ navigation }) => {
     setSearchSuggestions(suggestions.slice(0, 6));
   };
 
-  // Generate trending searches, popular authors, and quick filters
+  
   const generateQuickSearchData = () => {
     if (stories.length === 0) return;
 
-    // Generate trending searches based on story titles and categories
+    
     const categoryCount = {};
     const authorCount = {};
     const titleWords = [];
 
     stories.forEach((story) => {
-      // Count categories
+      
       if (story.category) {
         categoryCount[story.category] =
           (categoryCount[story.category] || 0) + 1;
       }
 
-      // Count authors
+      
       if (story.author) {
         authorCount[story.author] = (authorCount[story.author] || 0) + 1;
       }
 
-      // Extract meaningful words from titles
+      
       if (story.title) {
         const words = story.title
           .split(" ")
@@ -399,7 +399,7 @@ const Home = ({ navigation }) => {
       }
     });
 
-    // Set trending searches (top categories and popular title words)
+    
     const topCategories = Object.entries(categoryCount)
       .sort(([, a], [, b]) => b - a)
       .slice(0, 3)
@@ -409,7 +409,7 @@ const Home = ({ navigation }) => {
 
     setTrendingSearches([...topCategories, ...topTitleWords]);
 
-    // Set popular authors
+    
     const topAuthors = Object.entries(authorCount)
       .sort(([, a], [, b]) => b - a)
       .slice(0, 5)
@@ -417,7 +417,7 @@ const Home = ({ navigation }) => {
 
     setPopularAuthors(topAuthors);
 
-    // Set quick filters
+    
     const filters = [
       "Latest Stories",
       "Most Popular",
@@ -431,7 +431,7 @@ const Home = ({ navigation }) => {
     try {
       const bookmarksRef = collection(db, "students", userId, "bookmarks");
 
-      // Real-time listener for bookmarks
+      
       const unsubscribe = onSnapshot(
         bookmarksRef,
         (snapshot) => {
@@ -452,18 +452,18 @@ const Home = ({ navigation }) => {
     }
   };
 
-  // Updated filterStories function to handle the new layout
+  
   const filterStories = () => {
     let filtered = stories;
 
-    // Filter by category (for search functionality)
+    
     if (selectedCategory !== "All") {
       filtered = filtered.filter(
         (story) => story.category?.toLowerCase() === selectedCategory.toLowerCase()
       );
     }
 
-    // Filter by search query
+    
     if (searchQuery.trim()) {
       const searchTerm = searchQuery.toLowerCase();
       filtered = filtered.filter((story) => {
@@ -481,7 +481,7 @@ const Home = ({ navigation }) => {
 
     setFilteredStories(filtered);
     
-    // Update featured stories based on filters (for search results)
+    
     if (searchQuery.trim() || selectedCategory !== "All") {
       setFeaturedStories(filtered);
     } else {
@@ -492,12 +492,12 @@ const Home = ({ navigation }) => {
   const handleSearch = (text = "") => {
     setSearchQuery(text);
 
-    // Clear previous timeout
+    
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
 
-    // Set new timeout for search tracking
+    
     searchTimeoutRef.current = setTimeout(() => {
       if (text.trim() && text.length > 2) {
         trackSearch(text.trim());
@@ -513,27 +513,27 @@ const Home = ({ navigation }) => {
       resultsCount: filteredStories.length,
     };
 
-    // Update recent searches
+    
     const updatedRecent = [
       searchTerm,
       ...recentSearches.filter((s) => s !== searchTerm),
     ].slice(0, 5);
 
-    // Update search history
+    
     const updatedHistory = [searchEntry, ...searchHistory].slice(0, 20);
 
     setRecentSearches(updatedRecent);
     setSearchHistory(updatedHistory);
 
-    // Save to storage
+    
     await saveSearchData(updatedRecent, updatedHistory);
   };
 
   const handleViewStory = async (story) => {
-    // Add to recently viewed before navigating
+    
     await addToRecentlyViewed(story);
     
-    // Navigate directly to ViewStory as it's in the same HomeStack
+    
     navigation.navigate("ViewStory", {
       storyId: story.id,
       story: story,
@@ -556,11 +556,11 @@ const Home = ({ navigation }) => {
       const isBookmarked = bookmarkedStories.has(story.id);
 
       if (isBookmarked) {
-        // Remove bookmark
+        
         await deleteDoc(bookmarkRef);
         console.log("Bookmark removed:", story.title);
       } else {
-        // Add bookmark
+        
         const bookmarkData = {
           storyId: story.id,
           title: story.title,
@@ -585,7 +585,7 @@ const Home = ({ navigation }) => {
     }
   };
 
-  // Enhanced renderBookItem with improved container but original alignment
+  
   const renderBookItem = (item, index) => (
     <View key={item.id} style={styles.bookItemContainer}>
       <TouchableOpacity
@@ -609,12 +609,10 @@ const Home = ({ navigation }) => {
             </LinearGradient>
           )}
           
-          {/* Category Badge */}
           <View style={styles.categoryBadge}>
             <Text style={styles.categoryBadgeText}>{item.category}</Text>
           </View>
           
-          {/* Bookmark Button */}
           <TouchableOpacity
             style={styles.bookmarkContainer}
             onPress={() => handleBookmark(item)}
@@ -649,7 +647,7 @@ const Home = ({ navigation }) => {
   };
 
   const handleViewAllCategory = (categoryName) => {
-    // Navigate to a dedicated category screen
+    
     navigation.navigate("CategoryScreen", {
       categoryName: categoryName,
       stories: getStoriesByCategory(categoryName)
@@ -832,7 +830,6 @@ const Home = ({ navigation }) => {
           style={styles.scrollView}
           contentContainerStyle={styles.scrollViewContent}
         >
-         {/* Move AppHeader outside of ScrollView to fix positioning */}
         <AppHeader
           navigation={navigation}
           leftIconType="drawer"
@@ -864,10 +861,8 @@ const Home = ({ navigation }) => {
             </View>
           </View>
 
-          {/* Enhanced Quick Search Suggestions */}
           {isSearchFocused && (
             <View style={styles.suggestionsContainer}>
-              {/* Live Search Suggestions */}
               {searchQuery.trim() && searchSuggestions.length > 0 && (
                 <View style={styles.liveSearchContainer}>
                   <Text style={styles.suggestionSectionTitle}>Suggestions</Text>
@@ -875,7 +870,6 @@ const Home = ({ navigation }) => {
                 </View>
               )}
 
-              {/* Recent Searches */}
               {!searchQuery.trim() && recentSearches.length > 0 && (
                 <>
                   <View style={styles.sectionHeaderWithAction}>
@@ -900,7 +894,6 @@ const Home = ({ navigation }) => {
             </View>
           )}
 
-          {/* Search Results Header */}
           {searchQuery.trim() && (
             <View style={styles.searchResultsHeader}>
               <Text style={styles.searchResultsText}>
@@ -910,7 +903,6 @@ const Home = ({ navigation }) => {
             </View>
           )}
 
-        {/* Explore now section - only show when "All" is selected and no search query */}
         {selectedCategory === "All" && !searchQuery.trim() && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -934,7 +926,6 @@ const Home = ({ navigation }) => {
           </View>
         )}
 
-          {/* Recently Viewed Stories Row - Show only when stories exist and no search query */}
           {selectedCategory === "All" && !searchQuery.trim() && recentlyViewedStories.length > 0 && (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
@@ -956,7 +947,6 @@ const Home = ({ navigation }) => {
             </View>
           )}
 
-          {/* Featured Stories Row - Show appropriate stories based on selected category */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>
@@ -1012,7 +1002,6 @@ const Home = ({ navigation }) => {
             )}
           </View>
 
-          {/* Category Rows - Only show when "All" is selected and no search query */}
           {selectedCategory === "All" && !searchQuery.trim() && 
             Object.entries(categorizedStories).map(([categoryName, categoryStories]) => (
               <View key={categoryName} style={styles.section}>
@@ -1048,7 +1037,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollViewContent: {
-    paddingBottom: 20, // Add bottom padding to prevent content cutoff
+    paddingBottom: 20, 
   },
   welcomeSection: {
     paddingHorizontal: 20,
@@ -1089,13 +1078,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
   },
   
-  // Add horizontal scroll content styles
+  
   horizontalScrollContent: {
     paddingLeft: 20,
     paddingRight: 20,
   },
   
-  // Updated bookItemContainer for horizontal scrolling
+  
   bookItemContainer: {
     width: width * 0.35,
     marginRight: 15,
@@ -1198,7 +1187,7 @@ storyAuthor: {
   textAlign: "center",
   textTransform: 'none',
 },
-  // Updated stories grid to maintain original layout
+  
   storiesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1246,7 +1235,7 @@ storyAuthor: {
   },
   searchContainer: {
     paddingHorizontal: 20,
-    marginTop: 20, // Add top margin since header is now outside ScrollView
+    marginTop: 20, 
   },
   searchInputContainer: {
     flexDirection: "row",
@@ -1491,7 +1480,7 @@ storyAuthor: {
     justifyContent: 'center',
   },
   
-  // Enhanced Category Styles
+  
   categoryContainer: {
     backgroundColor: 'transparent',
     marginTop: 20
@@ -1549,7 +1538,7 @@ storyAuthor: {
     height: 6,
     borderRadius: 3,
   },
-  // New styles for the category label feature
+  
   showAllButton: {
     backgroundColor: 'rgba(255, 207, 45, 0.2)',
     paddingHorizontal: 12,

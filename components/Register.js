@@ -31,7 +31,7 @@ import {
   serverTimestamp,
   signInWithEmailAndPassword,
 } from "firebase/firestore";
-import { auth, db } from "../FirebaseConfig"; // Corrected import
+import { auth, db } from "../FirebaseConfig"; 
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { Checkbox } from "react-native-paper";
 import { useAuthFlow } from "../context/AuthFlowContext";
@@ -65,9 +65,9 @@ const Register = ({ navigation }) => {
   const [passwordError, setPasswordError] = useState("");
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
-  const [sessionExpired, setSessionExpired] = useState(false); // New state for session expiry
-  const [countdown, setCountdown] = useState(0); // State for the countdown timer
-  const [isCodeSent, setIsCodeSent] = useState(false); // New state for disabling button
+  const [sessionExpired, setSessionExpired] = useState(false); 
+  const [countdown, setCountdown] = useState(0); 
+  const [isCodeSent, setIsCodeSent] = useState(false); 
   const [showSessionWarning, setShowSessionWarning] = useState(false);
   const { setIsVerifyingEmail, setRegistrationCompleted } = useAuthFlow();
   const verificationInterval = useRef(null);
@@ -102,7 +102,7 @@ const Register = ({ navigation }) => {
   preload();
 }, []);
 
-  // Countdown timer effect
+  
   useEffect(() => {
     let timer;
     if (countdown > 0) {
@@ -112,13 +112,13 @@ const Register = ({ navigation }) => {
   }, [countdown]);
 
   
-  // Effect to check if a user is already signed in (e.g. from a previous attempt)
+  
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(user => {
       if (user && user.emailVerified) {
         setEmail(user.email);
         setIsEmailVerified(true);
-        setSessionExpired(false); // Reset on user change
+        setSessionExpired(false); 
       }
     });
     return () => unsubscribe();
@@ -137,7 +137,7 @@ const Register = ({ navigation }) => {
     if (!/[!@#$%^&*(),.?":{}|<>]/.test(pwd)) {
       return "Password must contain at least one symbol.";
     }
-    return ""; // No error
+    return ""; 
   };
 
 
@@ -231,7 +231,7 @@ const Register = ({ navigation }) => {
         [{
           text: "OK",
           onPress: async () => {
-            await handleCancel(true); // Pass true to navigate to Landing
+            await handleCancel(true); 
           }
         }]
       );
@@ -252,7 +252,7 @@ const Register = ({ navigation }) => {
       clearTimeout(sessionWarningTimer.current);
     }
 
-    setSessionExpired(false); // Reset session expired state on new verification attempt
+    setSessionExpired(false); 
     setIsVerifying(true);
     setIsVerifyingEmail(true);
 
@@ -272,10 +272,10 @@ const Register = ({ navigation }) => {
         user = tempUser.user;
         global._tempAuth = { email: email.trim(), password: tempPassword };
 
-        // Start a 4.5-minute timer to warn about session expiry
+        
         sessionWarningTimer.current = setTimeout(() => {
           setShowSessionWarning(true);
-        }, 270000); // 4.5 minutes in ms
+        }, 270000); 
       } else if (user.emailVerified) {
         setIsEmailVerified(true);
         setIsVerifyingEmail(false);
@@ -286,13 +286,13 @@ const Register = ({ navigation }) => {
         Alert.alert("Verification Resent", `A verification link has been sent to ${email.trim()}, check your inbox and spam folder.\n\nOnce verified, this will automatically detect`);
       }
 
-      setIsVerifying(false); // Stop loading indicator to show countdown
-      setCountdown(60); // Start 60-second countdown
+      setIsVerifying(false); 
+      setCountdown(60); 
 
-      stopVerification.current = false; // reset flag
+      stopVerification.current = false; 
 
       verificationInterval.current = setInterval(async () => {
-        if (stopVerification.current) return; // stop immediately if cancelled
+        if (stopVerification.current) return; 
 
         try {
           await user.reload();
@@ -306,7 +306,7 @@ const Register = ({ navigation }) => {
             Alert.alert("Success", "Your email has been verified! You can now continue.");
           }
         } catch (error) {
-          if (stopVerification.current) return; // suppress any late reloads
+          if (stopVerification.current) return; 
 
           if (error.code === "auth/user-token-expired" && global._tempAuth) {
             console.warn("Reauthenticating temporary user...");
@@ -327,7 +327,7 @@ const Register = ({ navigation }) => {
 
     const handleCancel = async (navigateToLanding = false) => {
       try {
-        // Stop verification loop immediately
+        
         stopVerification.current = true;
         if (verificationInterval.current) {
           clearTimeout(sessionWarningTimer.current);
@@ -339,7 +339,7 @@ const Register = ({ navigation }) => {
 
         const user = auth.currentUser;
 
-        // Delete only if user exists and is unverified
+        
         if (user && !user.emailVerified) {
           try {
             await deleteUser(user);
@@ -354,25 +354,25 @@ const Register = ({ navigation }) => {
                 console.log("Temporary user deleted after re-authentication.");
               } catch (reauthDeleteError) {
                 console.error("Failed to delete user even after re-authentication:", reauthDeleteError);
-                // Fallback to just signing out if deletion fails again
+                
                 await auth.signOut();
               }
             } else {
               console.error("Failed to delete temporary user on cancel:", deleteError);
-              // Fallback for other errors
+              
               await auth.signOut();
             }
-            await auth.signOut(); // fallback
+            await auth.signOut(); 
           }
         }
 
-        // Reset context and states
+        
         setIsVerifyingEmail(false);
         setIsVerifying(false);
         setIsEmailVerified(false);
         global._tempAuth = null;
 
-        // Navigate back
+        
         if (navigateToLanding) {
           navigation.navigate("Landing");
         } else {
@@ -425,7 +425,6 @@ const Register = ({ navigation }) => {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Header */}
 
           <Modal
             transparent={true}
@@ -609,7 +608,7 @@ const Register = ({ navigation }) => {
   );
 };
 
-// --- Styles ---
+
 const styles = StyleSheet.create({
   background: {
     flex: 1,
@@ -669,8 +668,8 @@ const styles = StyleSheet.create({
   headerView: {
     flexDirection: "row",
     alignItems: "center",
-    alignSelf: "flex-start", // Align to the start of the scroll view content
-    marginBottom: 30, // Space below header
+    alignSelf: "flex-start", 
+    marginBottom: 30, 
   },
   logo: {
     width: 50,
@@ -758,7 +757,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   linkButton: {
-    // Remove any padding or margin that might affect alignment
+    
   },
   buttonContainer: {
     flexDirection: "row",
@@ -829,30 +828,30 @@ const styles = StyleSheet.create({
   
   flowerContainer: {
     position: 'absolute',
-    bottom: -20, // Allow flowers to slightly overflow the bottom
+    bottom: -20, 
     left: -40,
     right: -40,
     flexDirection: 'row',
     justifyContent: 'center',
-    alignItems: 'flex-end', // Align items to the bottom
+    alignItems: 'flex-end', 
   },
   flower1: {
     width: 110,
     height: 110,
-    left: '10%', // Adjusts the horizontal position of the flower
-    bottom: '-10%', // Adjusts the vertical position of the flower
+    left: '10%', 
+    bottom: '-10%', 
     transform: [{ rotate: '50deg' }],
   },
   flower2: {
-    width: 100, // Reduce width
-    height: 100, // Reduce height
-    left: '7%', // Adjusts the horizontal position of the flower
-    bottom: '-15%', // Adjusts the vertical position of the flower
+    width: 100, 
+    height: 100, 
+    left: '7%', 
+    bottom: '-15%', 
   },
   flower3: {
-    width: 100, // Reduce width
-    height: 100, // Reduce height
-    left: '2%', // Adjusts the horizontal position of the flower
+    width: 100, 
+    height: 100, 
+    left: '2%', 
     bottom: '-15%',
   },
   flower4: {
@@ -862,18 +861,18 @@ const styles = StyleSheet.create({
     bottom: '-11.5%'
   },
   flower5: {
-    width: 130, // Reduce width
-    height: 130, // Reduce height
-    right: '10%', // Adjusts the horizontal position of the flower
-    bottom: '-25%', // Reduce bottom margin
+    width: 130, 
+    height: 130, 
+    right: '10%', 
+    bottom: '-25%', 
     transform: [{ rotate: '-20deg' }]
   },
   bushContainer: {
     position: 'absolute',
-    bottom: '-2%', // Allow flowers to slightly overflow the bottom
+    bottom: '-2%', 
     flexDirection: 'row',
     justifyContent: 'center',
-    alignItems: 'flex-end', // Align items to the bottom
+    alignItems: 'flex-end', 
   },
   bush1: {
     width: 200,
@@ -953,7 +952,7 @@ countdownText: {
   fontWeight: 'bold',
   marginLeft: 8,
 },
-  // Modal Styles
+  
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',

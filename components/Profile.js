@@ -44,7 +44,7 @@ const useTimer = (userId) => {
   const activeSessionStartTimeRef = useRef(null);
   const initialDurationForCountdownRef = useRef(0);
 
-  // Utility functions
+  
   const formatTime = useCallback((ms) => {
     if (ms < 0) ms = 0;
     let totalSeconds = Math.floor(ms / 1000);
@@ -57,7 +57,7 @@ const useTimer = (userId) => {
 });
 
 
-  // Storage key generators
+  
   const getSleepKey = useCallback((id) => `appSleepUntilNextDayTimestamp_${id}`, []);
   const getCumulativeUsageKey = useCallback((id) => `appCumulativeUsageMs_${id}`, []);
   const getLastUsageDateKey = useCallback((id) => `appLastUsageDate_${id}`, []);
@@ -267,7 +267,7 @@ const useTimer = (userId) => {
     setTimerTrigger(prev => prev + 1);
   }, [userId, getSleepKey, getCumulativeUsageKey, getLastUsageDateKey]);
 
-  // Timer effect
+  
   useEffect(() => {
     if (!userId) {
       activeSessionStartTimeRef.current = null;
@@ -311,7 +311,7 @@ const useTimer = (userId) => {
 
 
 
-// Components
+
 const LoadingScreen = () => (
   <SafeAreaView style={styles.loadingContainer}>
     <ActivityIndicator size="large" color="#FFCF2D" />
@@ -351,19 +351,19 @@ const RestModeOverlay = ({ onRestart, formatTime }) => {
 const AvatarPicker = ({ visible, onClose, onSave, currentAvatar, avatarOptions, navigation }) => {
   const [selectedAvatar, setSelectedAvatar] = useState(null);
 
-  // Map avatar images to their sound files
+  
   const avatarSounds = useMemo(() => {
     const soundMap = {};
     rewardsConfig.forEach(reward => {
-      // Assuming reward.image is a require() result with a `uri` or similar identifier
-      // A more robust way might be to use reward.id or reward.title
+      
+      
       const imagePath = Image.resolveAssetSource(reward.image).uri;
       const animalName = reward.title.split(' ')[1].toLowerCase();
       const soundFile = `../assets/sounds/animals/${animalName}.mp3`;
       
-      // This is a bit of a hack to get the sound file.
-      // A better approach would be to have the sound file in rewardsConfig.
-      // For now, we'll use a switch for known animals.
+      
+      
+      
       const soundRequire = rewardsConfig.find(r => r.title.toLowerCase().includes(animalName))?.sound;
       if (soundRequire) {
         soundMap[imagePath] = soundRequire;
@@ -393,10 +393,10 @@ const AvatarPicker = ({ visible, onClose, onSave, currentAvatar, avatarOptions, 
     navigation.navigate("Rewards");
   }, [onClose, navigation]);
 
-  // Create animated values for each avatar option
+  
   const animatedValues = useRef(new Map()).current;
 
-  // Get or create animated value for an item
+  
   const getAnimatedValue = useCallback((item) => {
     const key = typeof item === 'object' ? JSON.stringify(item) : item;
     if (!animatedValues.has(key)) {
@@ -405,11 +405,11 @@ const AvatarPicker = ({ visible, onClose, onSave, currentAvatar, avatarOptions, 
     return animatedValues.get(key);
   }, [animatedValues]);
 
-  // Handle animal avatar click with bounce animation and sound
+  
   const handleAvatarClick = useCallback(async (item) => {
     const bounceValue = getAnimatedValue(item);
     
-    // Create bounce animation
+    
     Animated.sequence([
       Animated.timing(bounceValue, {
         toValue: 1.3,
@@ -428,7 +428,7 @@ const AvatarPicker = ({ visible, onClose, onSave, currentAvatar, avatarOptions, 
       }),
     ]).start();
 
-    // Play the sound if it's loaded
+    
     const imagePath = Image.resolveAssetSource(item).uri;
     const soundSource = avatarSounds[imagePath];
 
@@ -442,7 +442,7 @@ const AvatarPicker = ({ visible, onClose, onSave, currentAvatar, avatarOptions, 
       }
     }
     
-    // Set selected avatar
+    
     setSelectedAvatar(item);
   }, [getAnimatedValue, avatarSounds]);
 
@@ -474,10 +474,10 @@ const AvatarPicker = ({ visible, onClose, onSave, currentAvatar, avatarOptions, 
     );
   }, [selectedAvatar, currentAvatar, handleAvatarClick, getAnimatedValue]);
 
-  // Check if save button should be disabled
+  
   const isSaveDisabled = !selectedAvatar || selectedAvatar === currentAvatar;
 
-  // Show empty state when no avatars are available
+  
   if (!avatarOptions || avatarOptions.length === 0) {
     return (
       <Modal
@@ -582,10 +582,10 @@ const TimerDisplay = ({ timerDisplay, appIsGloballySleeping }) => (
   </View>
 );
 
-// Main Component
+
 const Profile = ({ navigation }) => {
   const currentUser = auth.currentUser;
-  // FIX: Add unlockedAnimalAvatars to destructure from useProfileData
+  
   const { profileData, loading, updateAvatar, unlockedAnimalAvatars } = useProfile();
   const { appIsGloballySleeping, timerDisplay, handleRestartCountdown, formatTime } = useTimer(currentUser?.uid);
   const [avatarModalVisible, setAvatarModalVisible] = useState(false);
@@ -602,28 +602,28 @@ const Profile = ({ navigation }) => {
           onPress: async () => {
             const user = auth.currentUser;
             if (!user) {
-              // Should not happen if on this screen, but handle defensively.
+              
               firebaseSignOut(auth).catch(err => console.error("Sign out error (no user):", err));
               return;
             }
 
             try {
-              // Perform cleanup tasks that must succeed before logging out.
+              
               const userDocRef = doc(db, "students", user.uid);
               await updateDoc(userDocRef, {
                 activeSessionId: null,
               });
-              await AsyncStorage.removeItem("userSessionId"); // Clear local session ID
+              await AsyncStorage.removeItem("userSessionId"); 
 
-              // Initiate sign out. We don't show an alert in a .catch()
-              // to prevent a race condition where the component unmounts
-              // before the Alert can be displayed.
+              
+              
+              
               firebaseSignOut(auth).catch(err => {
                 console.error("Firebase sign out failed:", err);
-                // The user will remain logged in. They can try again.
+                
               });
             } catch (error) {
-              // This catches errors from cleanup (updateDoc, AsyncStorage).
+              
               console.error("Sign out cleanup error:", error);
               Alert.alert("Error", "An error occurred during sign-out. Please try again.");
             }
@@ -765,7 +765,7 @@ const styles = StyleSheet.create({
   },
   scrollContentContainer: {
     flexGrow: 1,
-    paddingBottom: 20, // Add padding to prevent content cutoff
+    paddingBottom: 20, 
   },
   loadingContainer: {
     flex: 1,
@@ -782,7 +782,7 @@ const styles = StyleSheet.create({
   section: {
     flex: 1,
     padding: 20,
-    paddingBottom: 0, // Remove bottom padding to let bottomSection handle spacing
+    paddingBottom: 0, 
   },
   sectionTitle: {
     fontSize: 28,
@@ -846,7 +846,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 10,
   },
-  // Timer styles
+  
   timerContainer: {
     marginTop: 10,
     alignItems: 'center',
@@ -877,7 +877,7 @@ const styles = StyleSheet.create({
     color: "#999",
     fontStyle: 'italic',
   },
-  // Menu styles
+  
   menuContainer: {
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: 15,
@@ -887,7 +887,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.18,
     shadowRadius: 1.0,
-    marginBottom: 20, // Add margin to separate from bottom section
+    marginBottom: 20, 
   },
   menuItem: {
     borderBottomWidth: 1,
@@ -914,10 +914,10 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#333',
   },
-  // Bottom section styles - FIXED
+  
   bottomSection: {
     paddingHorizontal: 20,
-    paddingBottom: 20, // Ensure proper bottom spacing
+    paddingBottom: 20, 
     paddingTop: 10,
     backgroundColor: 'transparent',
   },
@@ -943,7 +943,7 @@ const styles = StyleSheet.create({
   attributionContainer: {
     alignItems: 'center',
     paddingVertical: 10,
-    paddingBottom: 20, // Extra bottom padding for attribution text
+    paddingBottom: 20, 
   },
   attributionText: {
     fontSize: 12,
@@ -952,7 +952,7 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
     opacity: 0.8,
   },
-  // Rest mode overlay styles
+  
   timeoutOverlayContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -996,7 +996,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
   },
-  // Modal styles
+  
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',

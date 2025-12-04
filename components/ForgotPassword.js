@@ -23,7 +23,7 @@ const ForgotPassword = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
-  // Email validation regex
+  
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   const validateInput = (input) => {
@@ -53,7 +53,7 @@ const ForgotPassword = ({ navigation }) => {
     setIsLoading(true);
 
     try {
-      // Check if email exists in students collection
+      
       const studentsRef = collection(db, "students");
       const q = query(studentsRef, where("email", "==", emailOrPhone.trim()));
       const querySnapshot = await getDocs(q);
@@ -100,29 +100,24 @@ const ForgotPassword = ({ navigation }) => {
       resizeMode="cover"
       accessibilityLabel="Colorful garden background"
     >
-      {/* Decorative Elements */}
       <View style={styles.decorativeContainer}>
-        {/* Rainbow */}
         <DecorativeElement 
           source={require('../images/Rainbow.png')} 
           style={styles.rainbow} 
           accessibilityLabel="Rainbow decoration"
         />
         
-        {/* Stars */}
         <DecorativeElement source={require('../images/Star.png')} style={styles.star1} />
         <DecorativeElement source={require('../images/Star.png')} style={styles.star2} />
         <DecorativeElement source={require('../images/Star.png')} style={styles.star3} />
         <DecorativeElement source={require('../images/Star.png')} style={styles.star4} />
 
-        {/* Bushes */}
         <View style={styles.bushContainer}>
           <DecorativeElement source={require('../images/Bush.png')} style={styles.bush1} />
           <DecorativeElement source={require('../images/Bush.png')} style={styles.bush2} />
           <DecorativeElement source={require('../images/Bush.png')} style={styles.bush3} />
         </View>
 
-        {/* Flowers */}
         <View style={styles.flowerContainer}>
           <DecorativeElement source={require('../images/Flower1.png')} style={styles.flower1} />
           <DecorativeElement source={require('../images/Flower2.png')} style={styles.flower2} />
@@ -371,7 +366,7 @@ const styles = StyleSheet.create({
   buttonTextDisabled: {
     opacity: 0.7,
   },
-  // Decorative element styles
+  
   flowerContainer: {
     position: 'absolute',
     bottom: -20,

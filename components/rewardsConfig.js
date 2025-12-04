@@ -151,7 +151,7 @@ export const rewardsConfig = [
   },
 ];
 
-// Utility to get unlocked animal images for a user
+
 export const getUnlockedAnimalAvatars = (unlockedSet) => {
   return rewardsConfig
     .filter(reward => unlockedSet.has(reward.id))

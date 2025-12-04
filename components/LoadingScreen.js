@@ -21,7 +21,7 @@ const LoadingScreen = ({ loadingText = "Discovering amazing stories..." }) => {
   const [currentDot, setCurrentDot] = useState(0);
 
   useEffect(() => {
-    // Main container animation
+    
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -36,7 +36,7 @@ const LoadingScreen = ({ loadingText = "Discovering amazing stories..." }) => {
       }),
     ]).start();
 
-    // Book floating animation
+    
     const bookFloat = Animated.loop(
       Animated.sequence([
         Animated.timing(bookAnim, {
@@ -53,7 +53,7 @@ const LoadingScreen = ({ loadingText = "Discovering amazing stories..." }) => {
     );
     bookFloat.start();
 
-    // Progress bar animation
+    
     const progressLoop = Animated.loop(
       Animated.timing(progressAnim, {
         toValue: 1,
@@ -63,7 +63,7 @@ const LoadingScreen = ({ loadingText = "Discovering amazing stories..." }) => {
     );
     progressLoop.start();
 
-    // Dots animation
+    
     const dotAnimation = () => {
       Animated.timing(dotAnim, {
         toValue: 1,
@@ -151,7 +151,7 @@ const LoadingScreen = ({ loadingText = "Discovering amazing stories..." }) => {
 
   return (
     <ImageBackground
-      source={require('../images/About.png')} // Adjust path as needed
+      source={require('../images/About.png')} 
       style={styles.container}
       resizeMode="cover"
     >
@@ -240,33 +240,6 @@ const LoadingScreen = ({ loadingText = "Discovering amazing stories..." }) => {
               </View>
               <Text style={styles.progressText}>Loading stories...</Text>
             </View>
-
-            {/* Decorative Elements
-            <View style={styles.decorativeElements}>
-              {['⭐', '✨', '🌟', '💫'].map((star, index) => (
-                <Animated.View
-                  key={index}
-                  style={[
-                    styles.decorativeStar,
-                    {
-                      top: (index % 2) * 100 + 20,
-                      left: (index * 80) + 20,
-                      opacity: fadeAnim,
-                      transform: [
-                        {
-                          rotate: bookAnim.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: ['0deg', '360deg'],
-                          }),
-                        },
-                      ],
-                    },
-                  ]}
-                >
-                  <Text style={styles.starEmoji}>{star}</Text>
-                </Animated.View>
-              ))}
-            </View> */}
           </View>
         </Animated.View>
       </View>
